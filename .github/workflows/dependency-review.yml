@@ -1,0 +1,23 @@
+# Dependency Review Action
+#
+# This action checks pull requests for dependency changes and fails if any
+# vulnerabilities or invalid licenses are being introduced.
+
+name: Dependency Review
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4

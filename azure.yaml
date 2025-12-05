@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+# ============================================================================
+# Azure Developer CLI (azd) Configuration
+# ============================================================================
+# This file configures the Azure Developer CLI for deploying the Fencemark
+# .NET Aspire application to Azure Container Apps.
+# ============================================================================
+
+name: fencemark
+metadata:
+  template: fencemark@0.0.1
+
+# ============================================================================
+# Infrastructure Configuration
+# ============================================================================
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+# ============================================================================
+# Services Configuration
+# ============================================================================
+
+services:
+  apiservice:
+    project: ./fencemark.ApiService
+    host: containerapp
+    language: dotnet
+
+  webfrontend:
+    project: ./fencemark.Web
+    host: containerapp
+    language: dotnet
+
+# ============================================================================
+# Hooks
+# ============================================================================
+# Uncomment to add custom hooks for build/deploy lifecycle events
+# hooks:
+#   preprovision:
+#     shell: pwsh
+#     run: ./scripts/preprovision.ps1
+#   postprovision:
+#     shell: pwsh
+#     run: ./scripts/postprovision.ps1
