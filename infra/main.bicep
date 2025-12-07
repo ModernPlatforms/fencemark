@@ -99,6 +99,26 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
 }
 
 // ============================================================================
+// Azure Maps Account
+// ============================================================================
+
+resource mapsAccount 'Microsoft.Maps/accounts@2024-01-01-preview' = {
+  name: '${abbrs.mapsAccounts}${resourceToken}'
+  location: 'global'
+  tags: defaultTags
+  sku: {
+    name: 'G2'
+  }
+  kind: 'Gen2'
+  properties: {
+    disableLocalAuth: false
+    cors: {
+      corsRules: []
+    }
+  }
+}
+
+// ============================================================================
 // Container Apps Environment
 // ============================================================================
 
@@ -215,6 +235,10 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'services__apiservice__https__0'
             value: 'https://${abbrs.appContainerApps}apiservice-${resourceToken}'
           }
+          {
+            name: 'AzureMaps__ClientId'
+            value: mapsAccount.id
+          }
         ]
         probes: [
           {
@@ -291,3 +315,9 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 
 @description('The URL of the Web Frontend')
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
+
+@description('The name of the Azure Maps Account')
+output mapsAccountName string = mapsAccount.name
+
+@description('The resource ID of the Azure Maps Account')
+output mapsAccountResourceId string = mapsAccount.id

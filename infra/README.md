@@ -29,6 +29,11 @@ The infrastructure deploys the following Azure resources:
 │  │  (Basic SKU)        │      │           (30-day retention)            │  │
 │  └─────────────────────┘      └─────────────────────────────────────────┘  │
 │                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                       Azure Maps Account                            │    │
+│  │                       (Gen2 / G2 SKU)                               │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -41,6 +46,7 @@ The infrastructure deploys the following Azure resources:
 | Container Apps Environment | Managed environment for running Container Apps |
 | API Service Container App | Backend API service (internal ingress) |
 | Web Frontend Container App | Blazor Server frontend (external ingress) |
+| Azure Maps Account | Location-based services (maps, geocoding, routing) |
 
 ## Prerequisites
 
@@ -120,6 +126,8 @@ az deployment group create \
 | `webFrontendName` | Name of the Web Frontend Container App |
 | `webFrontendFqdn` | FQDN of the Web Frontend Container App |
 | `webFrontendUrl` | Full URL of the Web Frontend |
+| `mapsAccountName` | Name of the Azure Maps Account |
+| `mapsAccountResourceId` | Resource ID of the Azure Maps Account |
 
 ## Azure Verified Modules
 
