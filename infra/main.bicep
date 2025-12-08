@@ -53,6 +53,9 @@ param webFrontendMinReplicas int = 0
 @description('Maximum number of replicas for the Web frontend')
 param webFrontendMaxReplicas int = 3
 
+@description('The name of the resource group')
+param resourceGroupName string
+
 // ============================================================================
 // Azure Entra External ID Parameters
 // ============================================================================
@@ -108,6 +111,15 @@ var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
 var azureAdInstance = 'https://login.microsoftonline.com/'
+
+// ============================================================================
+// Resource Group
+// ============================================================================
+
+resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+  name: resourceGroupName
+  location: location
+}
 
 // ============================================================================
 // Log Analytics Workspace
