@@ -54,6 +54,51 @@ param webFrontendMinReplicas int = 0
 param webFrontendMaxReplicas int = 3
 
 // ============================================================================
+// Azure Entra External ID Parameters
+// ============================================================================
+
+@description('Enable Azure Entra External ID configuration')
+param enableEntraExternalId bool = false
+
+@description('The tenant ID of the Azure Entra External ID tenant')
+param externalIdTenantId string = ''
+
+@description('The primary domain of the Azure Entra External ID tenant (e.g., contoso.onmicrosoft.com)')
+param externalIdPrimaryDomain string = ''
+
+@description('Custom domain name for sign-in experience (e.g., login.fencemark.com)')
+param customDomain string = ''
+
+@description('Company/organization name for branding')
+param companyName string = 'Fencemark'
+
+@description('Privacy policy URL for branding')
+param privacyPolicyUrl string = ''
+
+@description('Terms of use URL for branding')
+param termsOfUseUrl string = ''
+
+@description('Enable custom branding configuration')
+param enableCustomBranding bool = true
+
+@description('Background color for sign-in page (hex color code, e.g., #FFFFFF)')
+param brandingBackgroundColor string = '#0078D4'
+
+@description('Banner logo URL for custom branding')
+param brandingBannerLogoUrl string = ''
+
+@description('Square logo URL for custom branding')
+param brandingSquareLogoUrl string = ''
+
+@description('Sign-in audience for the application')
+@allowed([
+  'AzureADMyOrg'
+  'AzureADMultipleOrgs'
+  'AzureADandPersonalMicrosoftAccount'
+])
+param signInAudience string = 'AzureADMyOrg'
+
+// ============================================================================
 // Variables
 // ============================================================================
 
@@ -239,6 +284,26 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'AzureMaps__ClientId'
             value: mapsAccount.id
           }
+          {
+            name: 'AzureAd__Instance'
+            value: enableEntraExternalId ? 'https://login.microsoftonline.com/' : ''
+          }
+          {
+            name: 'AzureAd__TenantId'
+            value: enableEntraExternalId ? externalIdTenantId : ''
+          }
+          {
+            name: 'AzureAd__ClientId'
+            value: enableEntraExternalId ? '' : 'not-configured' // Set after deployment via update script
+          }
+          {
+            name: 'AzureAd__Domain'
+            value: enableEntraExternalId ? externalIdPrimaryDomain : ''
+          }
+          {
+            name: 'AzureAd__CallbackPath'
+            value: '/signin-oidc'
+          }
         ]
         probes: [
           {
@@ -286,6 +351,34 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
 }
 
 // ============================================================================
+// Azure Entra External ID Configuration
+// ============================================================================
+
+module entraExternalId './entra-external-id.bicep' = if (enableEntraExternalId) {
+  name: 'entraExternalId'
+  params: {
+    environmentName: environmentName
+    location: location
+    tags: defaultTags
+    externalIdTenantId: externalIdTenantId
+    externalIdPrimaryDomain: externalIdPrimaryDomain
+    customDomain: customDomain
+    companyName: companyName
+    privacyPolicyUrl: privacyPolicyUrl
+    termsOfUseUrl: termsOfUseUrl
+    webFrontendRedirectUri: enableEntraExternalId ? 'https://${webFrontend.outputs.fqdn}/signin-oidc' : ''
+    signInAudience: signInAudience
+    enableCustomBranding: enableCustomBranding
+    brandingBackgroundColor: brandingBackgroundColor
+    brandingBannerLogoUrl: brandingBannerLogoUrl
+    brandingSquareLogoUrl: brandingSquareLogoUrl
+  }
+  dependsOn: [
+    webFrontend
+  ]
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -321,3 +414,32 @@ output mapsAccountName string = mapsAccount.name
 
 @description('The resource ID of the Azure Maps Account')
 output mapsAccountResourceId string = mapsAccount.id
+
+// ============================================================================
+// Azure Entra External ID Outputs
+// ============================================================================
+
+@description('The application (client) ID for Azure Entra External ID')
+output entraExternalIdApplicationId string = enableEntraExternalId ? entraExternalId.outputs.applicationId : ''
+
+@description('The tenant ID for Azure Entra External ID')
+output entraExternalIdTenantId string = enableEntraExternalId ? entraExternalId.outputs.tenantId : ''
+
+@description('The primary domain for Azure Entra External ID')
+output entraExternalIdPrimaryDomain string = enableEntraExternalId ? entraExternalId.outputs.primaryDomain : ''
+
+@description('The authority URL for authentication')
+output entraExternalIdAuthorityUrl string = enableEntraExternalId ? entraExternalId.outputs.authorityUrl : ''
+
+@description('The OIDC configuration endpoint')
+output entraExternalIdOidcEndpoint string = enableEntraExternalId ? entraExternalId.outputs.oidcConfigurationEndpoint : ''
+
+@description('The Key Vault name storing Entra External ID secrets')
+output entraExternalIdKeyVaultName string = enableEntraExternalId ? entraExternalId.outputs.keyVaultName : ''
+
+@description('The custom domain for sign-in (if configured)')
+output entraExternalIdCustomDomain string = enableEntraExternalId ? entraExternalId.outputs.customDomain : ''
+
+@description('DNS zone name servers for custom domain verification')
+output entraExternalIdDnsNameServers array = enableEntraExternalId ? entraExternalId.outputs.dnsZoneNameServers : []
+
