@@ -111,7 +111,7 @@ jobs:
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
           template-file: ./infra/main.bicep
-          parameters-file: ./infra/dev.bicepparam resourceGroupName=rg-fencemark-dev location=${{ env.AZURE_LOCATION }}
+          parameters-file: ./infra/dev.bicepparam
           
 
       - name: Deployment summary
@@ -193,7 +193,7 @@ jobs:
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
           template-file: ./infra/main.bicep
-          parameters-file: ./infra/prod.bicepparam resourceGroupName=rg-fencemark-prod location=${{ env.AZURE_LOCATION }}
+          parameters-file: ./infra/prod.bicepparam
 
       - name: Deployment summary
         run: |
