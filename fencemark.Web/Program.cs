@@ -1,5 +1,8 @@
 using fencemark.Web;
 using fencemark.Web.Components;
+using fencemark.Web.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,12 +15,30 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddOutputCache();
 
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
+
+builder.Services.AddAuthentication()
+    .AddCookie();
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {
         // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
         client.BaseAddress = new("https+http://apiservice");
     });
+
+// Add HttpClient for API calls
+builder.Services.AddHttpClient("API", client =>
+{
+    client.BaseAddress = new("https+http://apiservice");
+});
+
+// Register API clients
+builder.Services.AddScoped<AuthApiClient>();
+builder.Services.AddScoped<OrganizationApiClient>();
 
 var app = builder.Build();
 
