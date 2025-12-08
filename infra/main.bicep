@@ -5,7 +5,7 @@
 // .NET Aspire application on Azure Container Apps.
 // ============================================================================
 
-targetScope = 'resourceGroup'
+targetScope = 'subscription'
 
 // ============================================================================
 // Parameters
@@ -18,7 +18,7 @@ param environmentName string
 
 @minLength(1)
 @description('Primary location for all resources')
-param location string = resourceGroup().location
+param location string
 
 @description('Tags to apply to all resources')
 param tags object = {}
@@ -106,11 +106,11 @@ param signInAudience string = 'AzureADMyOrg'
 // ============================================================================
 
 var abbrs = loadJsonContent('abbreviations.json')
-var resourceToken = toLower(uniqueString(subscription().id, resourceGroup().id, environmentName))
+var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, environmentName))
 var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
-var azureAdInstance = 'https://login.microsoftonline.com/'
+var azureAdInstance = environment().authentication.loginEndpoint
 
 // ============================================================================
 // Resource Group
@@ -127,6 +127,7 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
 
 module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.11.1' = {
   name: 'logAnalytics'
+  scope: rg
   params: {
     name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
     location: location
@@ -138,6 +139,7 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.11.1' = 
 // Reference to get the shared key for Log Analytics
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+  scope: rg
   dependsOn: [logAnalytics]
 }
 
@@ -147,6 +149,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 
 module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' = {
   name: 'containerRegistry'
+  scope: rg
   params: {
     name: '${abbrs.containerRegistryRegistries}${resourceToken}'
     location: location
@@ -160,19 +163,12 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
 // Azure Maps Account
 // ============================================================================
 
-resource mapsAccount 'Microsoft.Maps/accounts@2024-01-01-preview' = {
-  name: '${abbrs.mapsAccounts}${resourceToken}'
-  location: 'global'
-  tags: defaultTags
-  sku: {
-    name: 'G2'
-  }
-  kind: 'Gen2'
-  properties: {
-    disableLocalAuth: false
-    cors: {
-      corsRules: []
-    }
+module mapsAccount './maps-account.bicep' = {
+  name: 'mapsAccount'
+  scope: rg
+  params: {
+    name: '${abbrs.mapsAccounts}${resourceToken}'
+    tags: defaultTags
   }
 }
 
@@ -182,6 +178,7 @@ resource mapsAccount 'Microsoft.Maps/accounts@2024-01-01-preview' = {
 
 module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.0' = {
   name: 'containerAppsEnvironment'
+  scope: rg
   params: {
     name: '${abbrs.appManagedEnvironments}${resourceToken}'
     location: location
@@ -203,6 +200,7 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 
 module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
   name: 'apiService'
+  scope: rg
   params: {
     name: '${abbrs.appContainerApps}apiservice-${resourceToken}'
     location: location
@@ -269,6 +267,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
 
 module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
   name: 'webFrontend'
+  scope: rg
   params: {
     name: '${abbrs.appContainerApps}webfrontend-${resourceToken}'
     location: location
@@ -295,7 +294,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'AzureMaps__ClientId'
-            value: mapsAccount.id
+            value: mapsAccount.outputs.resourceId
           }
           {
             name: 'AzureAd__Instance'
@@ -369,6 +368,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
 
 module entraExternalId './entra-external-id.bicep' = if (enableEntraExternalId) {
   name: 'entraExternalId'
+  scope: rg
   params: {
     environmentName: environmentName
     location: location
@@ -386,9 +386,6 @@ module entraExternalId './entra-external-id.bicep' = if (enableEntraExternalId) 
     brandingBannerLogoUrl: brandingBannerLogoUrl
     brandingSquareLogoUrl: brandingSquareLogoUrl
   }
-  dependsOn: [
-    webFrontend
-  ]
 }
 
 // ============================================================================
@@ -423,36 +420,36 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
 
 @description('The name of the Azure Maps Account')
-output mapsAccountName string = mapsAccount.name
+output mapsAccountName string = mapsAccount.outputs.name
 
 @description('The resource ID of the Azure Maps Account')
-output mapsAccountResourceId string = mapsAccount.id
+output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 // ============================================================================
 // Azure Entra External ID Outputs
 // ============================================================================
 
 @description('The application (client) ID for Azure Entra External ID')
-output entraExternalIdApplicationId string = enableEntraExternalId ? entraExternalId.outputs.applicationId : ''
+output entraExternalIdApplicationId string = entraExternalId.?outputs.?applicationId ?? ''
 
 @description('The tenant ID for Azure Entra External ID')
-output entraExternalIdTenantId string = enableEntraExternalId ? entraExternalId.outputs.tenantId : ''
+output entraExternalIdTenantId string = entraExternalId.?outputs.?tenantId ?? ''
 
 @description('The primary domain for Azure Entra External ID')
-output entraExternalIdPrimaryDomain string = enableEntraExternalId ? entraExternalId.outputs.primaryDomain : ''
+output entraExternalIdPrimaryDomain string = entraExternalId.?outputs.?primaryDomain ?? ''
 
 @description('The authority URL for authentication')
-output entraExternalIdAuthorityUrl string = enableEntraExternalId ? entraExternalId.outputs.authorityUrl : ''
+output entraExternalIdAuthorityUrl string = entraExternalId.?outputs.?authorityUrl ?? ''
 
 @description('The OIDC configuration endpoint')
-output entraExternalIdOidcEndpoint string = enableEntraExternalId ? entraExternalId.outputs.oidcConfigurationEndpoint : ''
+output entraExternalIdOidcEndpoint string = entraExternalId.?outputs.?oidcConfigurationEndpoint ?? ''
 
 @description('The Key Vault name storing Entra External ID secrets')
-output entraExternalIdKeyVaultName string = enableEntraExternalId ? entraExternalId.outputs.keyVaultName : ''
+output entraExternalIdKeyVaultName string = entraExternalId.?outputs.?keyVaultName ?? ''
 
 @description('The custom domain for sign-in (if configured)')
-output entraExternalIdCustomDomain string = enableEntraExternalId ? entraExternalId.outputs.customDomain : ''
+output entraExternalIdCustomDomain string = entraExternalId.?outputs.?customDomain ?? ''
 
 @description('DNS zone name servers for custom domain verification')
-output entraExternalIdDnsNameServers array = enableEntraExternalId ? entraExternalId.outputs.dnsZoneNameServers : []
+output entraExternalIdDnsNameServers array = entraExternalId.?outputs.?dnsZoneNameServers ?? []
 
