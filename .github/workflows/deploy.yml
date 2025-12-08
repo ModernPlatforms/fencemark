@@ -2,7 +2,7 @@
 # Azure Deployment Workflow
 # ============================================================================
 # This workflow deploys the Fencemark application to Azure Container Apps
-# using Azure Developer CLI (azd).
+# using Bicep infrastructure as code.
 # ============================================================================
 
 name: Deploy to Azure
@@ -28,7 +28,7 @@ on:
           - prod
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'dev' }}
   cancel-in-progress: false
 
 permissions:
@@ -36,11 +36,7 @@ permissions:
   contents: read
 
 env:
-  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-  AZURE_ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
-  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastus' }}
+  AZURE_LOCATION: 'australiaeast'
 
 jobs:
   # ============================================================================
@@ -57,7 +53,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          dotnet-quality: 'preview'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -69,65 +64,121 @@ jobs:
         run: dotnet test --no-build --configuration Release --verbosity normal
 
   # ============================================================================
-  # Deploy to Azure
+  # Deploy to Dev (on push to main)
   # ============================================================================
-  deploy:
-    name: Deploy to Azure (${{ github.event.inputs.environment || 'dev' }})
+  deploy-dev:
+    name: Deploy to Dev
     runs-on: ubuntu-latest
     needs: build
-    environment: ${{ github.event.inputs.environment || 'dev' }}
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    environment: dev
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Azure Developer CLI
-        uses: Azure/setup-azd@v2
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Log in to Azure
+        uses: azure/login@v2
         with:
-          dotnet-version: '10.0.x'
-          dotnet-quality: 'preview'
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Install .NET Aspire workload
-        run: dotnet workload install aspire
-
-      - name: Log in to Azure (Federated Credentials)
-        run: |
-          azd auth login `
-            --client-id "${{ env.AZURE_CLIENT_ID }}" `
-            --federated-credential-provider "github" `
-            --tenant-id "${{ env.AZURE_TENANT_ID }}"
-        shell: pwsh
-
-      - name: Provision infrastructure
-        run: azd provision --no-prompt
-        env:
-          AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy application
-        run: azd deploy --no-prompt
-        env:
-          AZURE_ENV_NAME: ${{ env.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ env.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ env.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Get deployment outputs
-        id: outputs
-        run: |
-          $outputs = azd env get-values --output json | ConvertFrom-Json
-          echo "WEB_FRONTEND_URL=$($outputs.webFrontendUrl)" >> $env:GITHUB_OUTPUT
-        shell: pwsh
+      - name: Deploy Bicep to Dev
+        uses: azure/arm-deploy@v2
+        id: deploy
+        with:
+          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-fencemark-dev
+          template: ./infra/main.bicep
+          parameters: ./infra/dev.bicepparam
+          failOnStdErr: false
+          scope: resourcegroup
 
       - name: Deployment summary
         run: |
-          echo "## 🚀 Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Dev Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** ${{ env.AZURE_ENV_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** rg-fencemark-dev" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Deploy to Staging (manual trigger only)
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    environment: staging
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep to Staging
+        uses: azure/arm-deploy@v2
+        id: deploy
+        with:
+          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-fencemark-staging
+          template: ./infra/main.bicep
+          parameters: ./infra/staging.bicepparam
+          failOnStdErr: false
+          scope: resourcegroup
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Staging Deployment Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** rg-fencemark-staging" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Deploy to Production (manual trigger only)
+  # ============================================================================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    environment: prod
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Bicep to Production
+        uses: azure/arm-deploy@v2
+        id: deploy
+        with:
+          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          resourceGroupName: rg-fencemark-prod
+          template: ./infra/main.bicep
+          parameters: ./infra/prod.bicepparam
+          failOnStdErr: false
+          scope: resourcegroup
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** prod" >> $GITHUB_STEP_SUMMARY
+          echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** rg-fencemark-prod" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.outputs.outputs.WEB_FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
