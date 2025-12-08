@@ -152,7 +152,7 @@ jobs:
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
           template-file: ./infra/main.bicep
-          parameters-file: ./infra/staging.bicepparam resourceGroupName=rg-fencemark-staging location=${{ env.AZURE_LOCATION }}
+          parameters-file: ./infra/staging.bicepparam
           
 
       - name: Deployment summary
