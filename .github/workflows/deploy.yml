@@ -105,10 +105,11 @@ jobs:
         uses: azure/bicep-deploy@v2
         id: deploy-dev
         with:
-          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          type: deployment
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
-          template: ./infra/main.bicep
+          template-file: ./infra/main.bicep
           parameters: ./infra/dev.bicepparam resourceGroupName=rg-fencemark-dev location=${{ env.AZURE_LOCATION }}
           failOnStdErr: false
 
@@ -144,10 +145,11 @@ jobs:
         uses: azure/bicep-deploy@v2
         id: deploy-staging
         with:
-          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          type: deployment
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
-          template: ./infra/main.bicep
+          template-file: ./infra/main.bicep
           parameters: ./infra/staging.bicepparam resourceGroupName=rg-fencemark-staging location=${{ env.AZURE_LOCATION }}
           failOnStdErr: false
 
@@ -183,12 +185,12 @@ jobs:
         uses: azure/bicep-deploy@v2
         id: deploy-prod
         with:
-          subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          type: deployment
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
-          template: ./infra/main.bicep
-          parameters: ./infra/prod.bicepparam resourceGroupName=rg-fencemark-prod location=${{ env.AZURE_LOCATION }}
-          failOnStdErr: false
+          template-file: ./infra/main.bicep
+          parameters-file: ./infra/prod.bicepparam resourceGroupName=rg-fencemark-prod location=${{ env.AZURE_LOCATION }}
 
       - name: Deployment summary
         run: |
