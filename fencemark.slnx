@@ -1,4 +1,13 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/agents/azure-verified-modules-bicep.agent.md" />
+    <File Path=".github/agents/CSharpExpert.agent.md" />
+    <File Path=".github/chatmodes/Azure_Static_Web_App.chatmode.md" />
+    <File Path=".github/instructions/github-actions-ci-cd-best-practices.instructions.md" />
+    <File Path=".github/workflows/build.yml" />
+    <File Path=".github/workflows/dependency-review.yml" />
+    <File Path=".github/workflows/deploy.yml" />
+  </Folder>
   <Project Path="fencemark.ApiService/fencemark.ApiService.csproj" />
   <Project Path="fencemark.AppHost/fencemark.AppHost.csproj" />
   <Project Path="fencemark.ServiceDefaults/fencemark.ServiceDefaults.csproj" />
