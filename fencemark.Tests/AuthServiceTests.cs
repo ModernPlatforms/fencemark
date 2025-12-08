@@ -23,6 +23,7 @@ public class AuthServiceTests
     {
         var store = new Microsoft.AspNetCore.Identity.EntityFrameworkCore.UserStore<ApplicationUser>(context);
         var options = Options.Create(new IdentityOptions());
+        options.Value.Tokens.EmailConfirmationTokenProvider = "Default";
         var passwordHasher = new PasswordHasher<ApplicationUser>();
         var userValidators = new List<IUserValidator<ApplicationUser>> { new UserValidator<ApplicationUser>() };
         var passwordValidators = new List<IPasswordValidator<ApplicationUser>> { new PasswordValidator<ApplicationUser>() };
@@ -30,9 +31,14 @@ public class AuthServiceTests
         var errors = new IdentityErrorDescriber();
         var logger = new Logger<UserManager<ApplicationUser>>(new LoggerFactory());
 
-        return new UserManager<ApplicationUser>(
+        var userManager = new UserManager<ApplicationUser>(
             store, options, passwordHasher, userValidators, passwordValidators,
             keyNormalizer, errors, null!, logger);
+
+        // Register a real token provider for 'Default'
+        userManager.RegisterTokenProvider("Default", new EmailTokenProvider<ApplicationUser>());
+
+        return userManager;
     }
 
     private static SignInManager<ApplicationUser> CreateSignInManager(
