@@ -30,9 +30,28 @@ public class OrganizationServiceTests
         var errors = new IdentityErrorDescriber();
         var logger = new Logger<UserManager<ApplicationUser>>(new LoggerFactory());
 
-        return new UserManager<ApplicationUser>(
+        // Create service collection for token providers
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
+        var userManager = new UserManager<ApplicationUser>(
             store, options, passwordHasher, userValidators, passwordValidators,
-            keyNormalizer, errors, null!, logger);
+            keyNormalizer, errors, serviceProvider, logger);
+
+        // Add default token providers
+        var dataProtectionProvider = serviceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>();
+        var tokenProvider = new DataProtectorTokenProvider<ApplicationUser>(
+            dataProtectionProvider,
+            Options.Create(new DataProtectionTokenProviderOptions()),
+            new Logger<DataProtectorTokenProvider<ApplicationUser>>(new LoggerFactory()));
+
+        userManager.RegisterTokenProvider(TokenOptions.DefaultProvider, tokenProvider);
+        userManager.RegisterTokenProvider(TokenOptions.DefaultEmailProvider, tokenProvider);
+        userManager.RegisterTokenProvider(TokenOptions.DefaultPhoneProvider, tokenProvider);
+
+        return userManager;
     }
 
     private async Task<(Organization org, ApplicationUser owner, ApplicationDbContext context, OrganizationService service)> SetupTestOrganizationAsync()
