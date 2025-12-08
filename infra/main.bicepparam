@@ -40,3 +40,47 @@ param tags = {
   project: 'fencemark'
   environment: readEnvironmentVariable('AZURE_ENV_NAME', 'dev')
 }
+
+// ============================================================================
+// Azure Entra External ID Configuration
+// ============================================================================
+// IMPORTANT: Before enabling, you must first create an Azure Entra External ID
+// tenant manually through the Azure Portal. Then update the values below.
+// To create a tenant:
+// 1. Go to Azure Portal > Microsoft Entra External ID
+// 2. Create a new External ID tenant
+// 3. Note the Tenant ID and Primary Domain
+// 4. Set enableEntraExternalId to true and update the parameters below
+
+param enableEntraExternalId = false
+
+// Replace with your actual Entra External ID tenant ID
+// Example: '12345678-1234-1234-1234-123456789012'
+param externalIdTenantId = ''
+
+// Replace with your Entra External ID primary domain
+// Example: 'fencemark.onmicrosoft.com'
+param externalIdPrimaryDomain = ''
+
+// Optional: Custom domain for sign-in experience
+// Example: 'login.fencemark.com'
+// NOTE: Requires DNS configuration and domain verification
+param customDomain = ''
+
+// Branding Configuration
+param companyName = 'Fencemark'
+param privacyPolicyUrl = 'https://fencemark.com/privacy'
+param termsOfUseUrl = 'https://fencemark.com/terms'
+
+// Custom Branding Settings
+param enableCustomBranding = true
+param brandingBackgroundColor = '#0078D4' // Microsoft blue
+param brandingBannerLogoUrl = '' // URL to banner logo (recommended: 1920x1080px PNG)
+param brandingSquareLogoUrl = '' // URL to square logo (recommended: 240x240px PNG)
+
+// Sign-in audience
+// - AzureADMyOrg: Single tenant (recommended for External ID)
+// - AzureADMultipleOrgs: Multi-tenant
+// - AzureADandPersonalMicrosoftAccount: Multi-tenant + personal Microsoft accounts
+param signInAudience = 'AzureADMyOrg'
+

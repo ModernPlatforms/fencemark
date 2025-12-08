@@ -17,6 +17,7 @@ The infrastructure deploys the following Azure resources:
 │  │  │    Web Frontend         │      │    API Service          │        │  │
 │  │  │    (External Ingress)   │─────▶│    (Internal Ingress)   │        │  │
 │  │  │    Port: 8080           │      │    Port: 8080           │        │  │
+│  │  │    + Entra Auth         │      │                         │        │  │
 │  │  │                         │      │                         │        │  │
 │  │  │ /alive  - Liveness      │      │ /alive  - Liveness      │        │  │
 │  │  │ /health - Readiness     │      │ /health - Readiness     │        │  │
@@ -34,7 +35,29 @@ The infrastructure deploys the following Azure resources:
 │  │                       (Gen2 / G2 SKU)                               │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                Azure Entra External ID (Optional)                   │    │
+│  │                                                                     │    │
+│  │  ┌──────────────┐  ┌───────────────┐  ┌─────────────────────┐     │    │
+│  │  │ App          │  │  Key Vault    │  │  DNS Zone           │     │    │
+│  │  │ Registration │  │  (Secrets)    │  │  (Custom Domain)    │     │    │
+│  │  └──────────────┘  └───────────────┘  └─────────────────────┘     │    │
+│  │  ┌──────────────┐                                                 │    │
+│  │  │  Managed     │                                                 │    │
+│  │  │  Identity    │                                                 │    │
+│  │  └──────────────┘                                                 │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
+
+External:
+  ┌─────────────────────────────────────┐
+  │  Azure Entra External ID Tenant     │
+  │  (Manually created)                 │
+  │  - Customer sign-up/sign-in         │
+  │  - Custom branding                  │
+  │  - Social identity providers        │
+  └─────────────────────────────────────┘
 ```
 
 ## Resources
@@ -47,6 +70,10 @@ The infrastructure deploys the following Azure resources:
 | API Service Container App | Backend API service (internal ingress) |
 | Web Frontend Container App | Blazor Server frontend (external ingress) |
 | Azure Maps Account | Location-based services (maps, geocoding, routing) |
+| Azure Entra External ID (Optional) | Customer identity and access management (CIAM) |
+| Key Vault (Optional) | Secure storage for authentication secrets |
+| Managed Identity (Optional) | Identity for Entra configuration automation |
+| DNS Zone (Optional) | Custom domain verification and management |
 
 ## Prerequisites
 
@@ -113,6 +140,25 @@ az deployment group create \
 | `webFrontendMinReplicas` | int | 0 | Minimum replicas for Web frontend |
 | `webFrontendMaxReplicas` | int | 3 | Maximum replicas for Web frontend |
 
+### Azure Entra External ID Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enableEntraExternalId` | bool | false | Enable Azure Entra External ID configuration |
+| `externalIdTenantId` | string | '' | Tenant ID of the Entra External ID tenant |
+| `externalIdPrimaryDomain` | string | '' | Primary domain (e.g., contoso.onmicrosoft.com) |
+| `customDomain` | string | '' | Custom domain for sign-in (optional) |
+| `companyName` | string | 'Fencemark' | Company name for branding |
+| `privacyPolicyUrl` | string | '' | Privacy policy URL |
+| `termsOfUseUrl` | string | '' | Terms of use URL |
+| `enableCustomBranding` | bool | true | Enable custom branding |
+| `brandingBackgroundColor` | string | '#0078D4' | Sign-in page background color |
+| `brandingBannerLogoUrl` | string | '' | Banner logo URL |
+| `brandingSquareLogoUrl` | string | '' | Square logo URL |
+| `signInAudience` | string | 'AzureADMyOrg' | Sign-in audience type |
+
+See [ENTRA-EXTERNAL-ID-SETUP.md](./ENTRA-EXTERNAL-ID-SETUP.md) for detailed setup instructions.
+
 ## Outputs
 
 | Output | Description |
@@ -129,6 +175,19 @@ az deployment group create \
 | `mapsAccountName` | Name of the Azure Maps Account |
 | `mapsAccountResourceId` | Resource ID of the Azure Maps Account |
 
+### Azure Entra External ID Outputs
+
+| Output | Description |
+|--------|-------------|
+| `entraExternalIdApplicationId` | Application (client) ID for authentication |
+| `entraExternalIdTenantId` | Tenant ID for the External ID tenant |
+| `entraExternalIdPrimaryDomain` | Primary domain of the tenant |
+| `entraExternalIdAuthorityUrl` | Authority URL for authentication |
+| `entraExternalIdOidcEndpoint` | OIDC configuration endpoint |
+| `entraExternalIdKeyVaultName` | Key Vault storing secrets |
+| `entraExternalIdCustomDomain` | Custom domain (if configured) |
+| `entraExternalIdDnsNameServers` | DNS name servers for domain verification |
+
 ## Azure Verified Modules
 
 This infrastructure uses [Azure Verified Modules (AVM)](https://aka.ms/avm) from the Bicep public registry:
@@ -137,6 +196,9 @@ This infrastructure uses [Azure Verified Modules (AVM)](https://aka.ms/avm) from
 - `br/public:avm/res/container-registry/registry` - Container Registry
 - `br/public:avm/res/app/managed-environment` - Container Apps Environment
 - `br/public:avm/res/app/container-app` - Container Apps
+- `br/public:avm/res/managed-identity/user-assigned-identity` - Managed Identity
+- `br/public:avm/res/key-vault/vault` - Key Vault
+- `br/public:avm/res/network/dns-zone` - DNS Zone
 
 ## Files
 
@@ -144,8 +206,31 @@ This infrastructure uses [Azure Verified Modules (AVM)](https://aka.ms/avm) from
 |------|---------|
 | `main.bicep` | Main infrastructure template |
 | `main.bicepparam` | Parameters file for deployment |
+| `entra-external-id.bicep` | Azure Entra External ID configuration module |
 | `abbreviations.json` | Azure resource naming abbreviations |
+| `update-entra-settings.sh` | Script to update Container App with Entra settings |
+| `ENTRA-EXTERNAL-ID-SETUP.md` | Detailed Entra External ID setup guide |
 | `README.md` | This documentation file |
+
+## Azure Entra External ID
+
+The infrastructure supports optional integration with Azure Entra External ID for customer identity and access management (CIAM).
+
+**Key Features:**
+- Self-service customer sign-up and sign-in
+- Custom branding with company logos and colors
+- Custom domain support (e.g., login.fencemark.com)
+- Social identity provider integration
+- Enterprise-grade security with MFA and conditional access
+
+**To enable:**
+1. Create an Entra External ID tenant manually (see [setup guide](./ENTRA-EXTERNAL-ID-SETUP.md))
+2. Set `enableEntraExternalId = true` in `main.bicepparam`
+3. Configure tenant parameters (tenant ID, domain, branding)
+4. Deploy infrastructure
+5. Run `update-entra-settings.sh` to complete configuration
+
+For complete setup instructions, see [ENTRA-EXTERNAL-ID-SETUP.md](./ENTRA-EXTERNAL-ID-SETUP.md).
 
 ## Scaling
 
