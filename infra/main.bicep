@@ -107,6 +107,7 @@ var resourceToken = toLower(uniqueString(subscription().id, resourceGroup().id, 
 var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
+var azureAdInstance = 'https://login.microsoftonline.com/'
 
 // ============================================================================
 // Log Analytics Workspace
@@ -286,7 +287,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'AzureAd__Instance'
-            value: enableEntraExternalId ? 'https://login.microsoftonline.com/' : ''
+            value: enableEntraExternalId ? azureAdInstance : ''
           }
           {
             name: 'AzureAd__TenantId'
