@@ -131,7 +131,7 @@ public class OrganizationServiceTests
 
         var request = new InviteUserRequest
         {
-            Email = "anotherwner@test.com",
+            Email = "anotherowner@test.com",
             Role = "Owner"
         };
 
