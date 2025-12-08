@@ -80,21 +80,22 @@ var defaultTags = union(tags, {
 var applicationName = 'fencemark-${environmentName}'
 var keyVaultName = '${abbrs.keyVaultVaults}entra-${resourceToken}'
 var azureAdInstance = 'https://login.microsoftonline.com/'
+var managedIdentityName = '${abbrs.managedIdentityUserAssignedIdentities}entra-${resourceToken}'
 
 // ============================================================================
 // Managed Identity for Deployment Scripts
 // ============================================================================
 // This identity is used to execute deployment scripts that configure
 // Microsoft Graph resources via PowerShell
-
 module managedIdentity 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
   name: 'entraConfigIdentity'
   params: {
-    name: '${abbrs.managedIdentityUserAssignedIdentities}entra-${resourceToken}'
+    name: managedIdentityName
     location: location
     tags: defaultTags
   }
 }
+
 
 // ============================================================================
 // Key Vault for Secrets
@@ -127,7 +128,7 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
 // ============================================================================
 // Creates a DNS zone if custom domain is specified for domain verification
 
-module dnsZone 'br/public:avm/res/network/dns-zone:0.6.0' = if (!empty(customDomain)) {
+module dnsZone 'br/public:avm/res/network/dns-zone:0.5.4' = if (!empty(customDomain)) {
   name: 'entraDnsZone'
   params: {
     name: customDomain
@@ -149,15 +150,16 @@ resource configureEntraExternalId 'Microsoft.Resources/deploymentScripts@2023-08
   name: 'configure-entra-external-id'
   location: location
   tags: defaultTags
-  kind: 'AzurePowerShell'
+  kind:'AzurePowerShell'
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
-      '${managedIdentity.outputs.resourceId}': {}
+      '${resourceGroup().id}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/${managedIdentityName}': {}
     }
   }
+  
   properties: {
-    azPowerShellVersion: '10.0'
+    azPowerShellVersion: '11.0'
     retentionInterval: 'PT1H'
     timeout: 'PT30M'
     cleanupPreference: 'OnSuccess'

@@ -52,15 +52,15 @@ param tags = {
 // 3. Note the Tenant ID and Primary Domain
 // 4. Set enableEntraExternalId to true and update the parameters below
 
-param enableEntraExternalId = false
+param enableEntraExternalId = true
 
 // Replace with your actual Entra External ID tenant ID
 // Example: '12345678-1234-1234-1234-123456789012'
-param externalIdTenantId = ''
+param externalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071'
 
 // Replace with your Entra External ID primary domain
 // Example: 'fencemark.onmicrosoft.com'
-param externalIdPrimaryDomain = ''
+param externalIdPrimaryDomain = 'devfencemark.onmicrosoft.com'
 
 // Optional: Custom domain for sign-in experience
 // Example: 'login.fencemark.com'
