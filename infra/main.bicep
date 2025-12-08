@@ -286,7 +286,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'AzureAd__Instance'
-            value: enableEntraExternalId ? 'https://login.microsoftonline.com/' : ''
+            value: enableEntraExternalId ? entraExternalId.outputs.instanceUrl : ''
           }
           {
             name: 'AzureAd__TenantId'

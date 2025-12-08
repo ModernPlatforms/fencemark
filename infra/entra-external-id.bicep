@@ -79,6 +79,7 @@ var defaultTags = union(tags, {
 
 var applicationName = 'fencemark-${environmentName}'
 var keyVaultName = '${abbrs.keyVaultVaults}entra-${resourceToken}'
+var azureAdInstanceUrl = 'https://login.microsoftonline.com/'
 
 // ============================================================================
 // Managed Identity for Deployment Scripts
@@ -352,8 +353,11 @@ output primaryDomain string = externalIdPrimaryDomain
 @description('The custom domain (if configured)')
 output customDomain string = customDomain
 
+@description('The Azure AD instance URL')
+output instanceUrl string = azureAdInstanceUrl
+
 @description('The authority URL for authentication')
-output authorityUrl string = 'https://login.microsoftonline.com/${externalIdTenantId}'
+output authorityUrl string = '${azureAdInstanceUrl}${externalIdTenantId}'
 
 @description('The name of the Key Vault storing secrets')
 output keyVaultName string = keyVault.outputs.name
@@ -368,10 +372,10 @@ output configurationIdentityId string = managedIdentity.outputs.resourceId
 output dnsZoneNameServers array = !empty(customDomain) ? dnsZone.outputs.nameServers : []
 
 @description('OIDC configuration endpoint')
-output oidcConfigurationEndpoint string = 'https://login.microsoftonline.com/${externalIdTenantId}/v2.0/.well-known/openid-configuration'
+output oidcConfigurationEndpoint string = '${azureAdInstanceUrl}${externalIdTenantId}/v2.0/.well-known/openid-configuration'
 
 @description('Token endpoint')
-output tokenEndpoint string = 'https://login.microsoftonline.com/${externalIdTenantId}/oauth2/v2.0/token'
+output tokenEndpoint string = '${azureAdInstanceUrl}${externalIdTenantId}/oauth2/v2.0/token'
 
 @description('Authorization endpoint')
-output authorizationEndpoint string = 'https://login.microsoftonline.com/${externalIdTenantId}/oauth2/v2.0/authorize'
+output authorizationEndpoint string = '${azureAdInstanceUrl}${externalIdTenantId}/oauth2/v2.0/authorize'
