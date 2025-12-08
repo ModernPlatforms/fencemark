@@ -61,7 +61,21 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test --no-build --configuration Release --logger trx --results-directory TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+
+      - name: Annotate test failures
+        if: failure()
+        uses: dorny/test-reporter@v1
+        with:
+          name: dotnet-tests
+          path: TestResults/*.trx
+          reporter: dotnet-trx
 
   # ============================================================================
   # Deploy to Dev (on push to main)
