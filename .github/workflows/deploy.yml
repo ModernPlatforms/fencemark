@@ -64,13 +64,15 @@ jobs:
         run:  dotnet test --no-build --configuration Release --report-xunit-trx --results-directory TestResults
 
       - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
           path: TestResults/*.trx
+          if-no-files-found: warn
 
       - name: Annotate test failures
-        if: failure()
+        if: always()
         uses: dorny/test-reporter@v1
         with:
           name: dotnet-tests
