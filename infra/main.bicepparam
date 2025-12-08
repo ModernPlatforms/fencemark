@@ -69,8 +69,10 @@ param customDomain = ''
 
 // Branding Configuration
 param companyName = 'Fencemark'
-param privacyPolicyUrl = 'https://fencemark.com/privacy'
-param termsOfUseUrl = 'https://fencemark.com/terms'
+// TODO: Set to your actual privacy policy URL before deployment
+param privacyPolicyUrl = ''
+// TODO: Set to your actual terms of use URL before deployment
+param termsOfUseUrl = ''
 
 // Custom Branding Settings
 param enableCustomBranding = true
