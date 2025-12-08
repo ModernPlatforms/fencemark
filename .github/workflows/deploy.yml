@@ -26,6 +26,10 @@ on:
           - dev
           - staging
           - prod
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 concurrency:
   group: deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'dev' }}
