@@ -106,6 +106,7 @@ jobs:
         id: deploy-dev
         with:
           type: deployment
+          operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
@@ -146,6 +147,7 @@ jobs:
         id: deploy-staging
         with:
           type: deployment
+          operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
@@ -186,6 +188,7 @@ jobs:
         id: deploy-prod
         with:
           type: deployment
+          operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
           location: ${{env.AZURE_LOCATION}}
