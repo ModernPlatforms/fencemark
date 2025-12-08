@@ -205,6 +205,10 @@ resource configureEntraExternalId 'Microsoft.Resources/deploymentScripts@2023-08
         name: 'KEY_VAULT_NAME'
         value: keyVaultName
       }
+      {
+        name: 'PRIMARY_DOMAIN'
+        value: externalIdPrimaryDomain
+      }
     ]
     scriptContent: '''
       # Install Microsoft Graph PowerShell modules
