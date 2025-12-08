@@ -294,7 +294,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'AzureAd__ClientId'
-            value: '' // Set this after Entra External ID deployment using app settings update
+            value: enableEntraExternalId ? '' : 'not-configured' // Set after deployment via update script
           }
           {
             name: 'AzureAd__Domain'

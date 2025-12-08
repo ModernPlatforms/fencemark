@@ -107,7 +107,7 @@ module keyVault 'br/public:avm/res/key-vault/vault:0.11.0' = {
     location: location
     tags: defaultTags
     sku: 'standard'
-    enablePurgeProtection: false // Set to true for production
+    enablePurgeProtection: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
     enableRbacAuthorization: true
@@ -317,7 +317,7 @@ resource configureEntraExternalId 'Microsoft.Resources/deploymentScripts@2023-08
         applicationObjectId = $app.Id
         servicePrincipalId = $sp.Id
         tenantId = $env:TENANT_ID
-        primaryDomain = "$($env:TENANT_ID).onmicrosoft.com"
+        primaryDomain = $env:PRIMARY_DOMAIN
       }
       
       Write-Host "Configuration completed successfully"

@@ -46,7 +46,7 @@ WEB_FRONTEND_NAME=$(az deployment group show \
     -o tsv)
 
 # Check if Entra External ID is enabled
-if [ -z "$APPLICATION_ID" ] || [ "$APPLICATION_ID" == "null" ]; then
+if [ -z "$APPLICATION_ID" ] || [ "$APPLICATION_ID" == "null" ] || [ "$APPLICATION_ID" == "" ]; then
     echo "Error: Entra External ID is not enabled or application ID not found"
     echo "Please ensure enableEntraExternalId is set to true in your parameters"
     exit 1
