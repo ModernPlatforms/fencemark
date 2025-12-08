@@ -7,6 +7,7 @@
     <File Path=".github/workflows/build.yml" />
     <File Path=".github/workflows/dependency-review.yml" />
     <File Path=".github/workflows/deploy.yml" />
+    <File Path="global.json" />
   </Folder>
   <Project Path="fencemark.ApiService/fencemark.ApiService.csproj" />
   <Project Path="fencemark.AppHost/fencemark.AppHost.csproj" />
