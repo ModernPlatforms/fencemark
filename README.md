@@ -61,6 +61,19 @@ The Aspire dashboard will open in your browser, providing:
 - Health check status
 - Service endpoints
 
+The database migrations will run automatically on application startup.
+
+### First-time Setup
+
+1. Navigate to the web frontend URL (shown in Aspire dashboard)
+2. Click "Register" to create your first account
+3. Fill in:
+   - Your email address
+   - A secure password (min. 8 chars, uppercase, lowercase, number)
+   - Your organization name
+4. You'll be created as the Owner of your new organization
+5. After registration, you can invite team members from the Organization Dashboard
+
 > [!TIP]
 > The web frontend is available at the URL shown in the Aspire dashboard under the `webfrontend` resource.
 
@@ -76,21 +89,51 @@ The Aspire dashboard will open in your browser, providing:
 
 ## Running Tests
 
-Run the integration tests:
+Run all tests:
 
 ```bash
 dotnet test
 ```
 
-The tests use Aspire's `DistributedApplicationTestingBuilder` to spin up the full application for integration testing.
+Run only unit tests (faster):
+
+```bash
+dotnet test --filter "FullyQualifiedName~AuthServiceTests|FullyQualifiedName~OrganizationServiceTests"
+```
+
+The test suite includes:
+- **Unit Tests** - Comprehensive tests for authentication and organization management services
+- **Integration Tests** - Full application testing using Aspire's `DistributedApplicationTestingBuilder`
+
+### Test Coverage
+
+The test suite covers all acceptance criteria:
+- ✅ Automatic organization creation when a new user signs up
+- ✅ User is set as initial owner/admin of their organization
+- ✅ Guest status for unverified users
+- ✅ Email verification removes guest status
+- ✅ Admin can invite additional users with role assignment
+- ✅ Role-based access control (Owner, Admin, Member, Billing, ReadOnly)
+- ✅ Complete data segmentation between organizations
+- ✅ Success and error state handling
 
 ## Features
 
+- **B2B User Onboarding** - Complete organizational user management system
+  - Automatic organization creation upon user registration
+  - Owner/Admin role assignment for organizational control
+  - Guest status for unverified users
+  - Email verification workflow
+  - Multi-role support (Owner, Admin, Member, Billing, ReadOnly)
+  - User invitation system with token-based acceptance
+  - Complete data isolation between organizations
 - **Service Discovery** - Automatic service discovery between components using Aspire
 - **Health Checks** - Built-in health endpoints at `/health` for each service
 - **OpenAPI** - API documentation available in development mode
 - **Output Caching** - Response caching in the web frontend
 - **Resilience** - HTTP client resilience patterns for service-to-service communication
+- **Authentication & Authorization** - ASP.NET Core Identity with role-based access control
+- **Database** - Entity Framework Core with SQLite (development) or SQL Server/PostgreSQL (production)
 
 ## Resources
 
