@@ -7,6 +7,8 @@ using './main.bicep'
 param environmentName = 'dev'
 param location = readEnvironmentVariable('AZURE_LOCATION', 'australiaeast')
 
+param resourceGroupName = 'rg-fencemark-dev'
+
 // ============================================================================
 // Container Images
 // ============================================================================

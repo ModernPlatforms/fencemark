@@ -106,11 +106,10 @@ jobs:
         id: deploy
         with:
           subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: rg-fencemark-dev
+          scope: subscription
           template: ./infra/main.bicep
-          parameters: ./infra/dev.bicepparam
+          parameters: ./infra/dev.bicepparam resourceGroupName=rg-fencemark-dev location=${{ env.AZURE_LOCATION }}
           failOnStdErr: false
-          scope: resourcegroup
 
       - name: Deployment summary
         run: |
@@ -145,11 +144,10 @@ jobs:
         id: deploy
         with:
           subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: rg-fencemark-staging
+          scope: subscription
           template: ./infra/main.bicep
-          parameters: ./infra/staging.bicepparam
+          parameters: ./infra/staging.bicepparam resourceGroupName=rg-fencemark-staging location=${{ env.AZURE_LOCATION }}
           failOnStdErr: false
-          scope: resourcegroup
 
       - name: Deployment summary
         run: |
@@ -184,11 +182,10 @@ jobs:
         id: deploy
         with:
           subscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: rg-fencemark-prod
+          scope: subscription
           template: ./infra/main.bicep
-          parameters: ./infra/prod.bicepparam
+          parameters: ./infra/prod.bicepparam resourceGroupName=rg-fencemark-prod location=${{ env.AZURE_LOCATION }}
           failOnStdErr: false
-          scope: resourcegroup
 
       - name: Deployment summary
         run: |
