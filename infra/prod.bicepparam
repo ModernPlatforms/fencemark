@@ -43,10 +43,10 @@ param tags = {
 // ============================================================================
 
 param enableEntraExternalId = true
-param ciamTenantName = 'fencemarkprod'
-param ciamLocation = 'United States'
+param ciamTenantName = 'fencemark'
+param ciamLocation = 'Australia'
 param ciamDisplayName = 'Fencemark Identity'
-param ciamCountryCode = 'US'
+param ciamCountryCode = 'AU'
 param ciamSkuName = 'Base'
 param ciamSkuTier = 'A0'
 param customDomain = '' // TODO: Set custom domain for production (e.g., login.fencemark.com)
