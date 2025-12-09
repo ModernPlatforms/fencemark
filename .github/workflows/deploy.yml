@@ -36,9 +36,11 @@ permissions:
   checks: write
   pull-requests: write
   contents: read
+  packages: write
 
 env:
   AZURE_LOCATION: 'australiaeast'
+  DOTNET_VERSION: '10.0.x'
 
 jobs:
   # ============================================================================
@@ -47,6 +49,8 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -54,7 +58,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
         run: dotnet restore
@@ -63,7 +67,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
-        run:  dotnet test --no-build --configuration Release --report-xunit-trx --results-directory TestResults
+        run: dotnet test --no-build --configuration Release --report-xunit-trx --results-directory TestResults
 
       - name: Upload test results
         if: always()
@@ -81,6 +85,32 @@ jobs:
           path: TestResults/*.trx
           reporter: dotnet-trx
 
+      - name: Generate image metadata
+        id: meta
+        run: |
+          echo "tags=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "short-sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+      - name: Publish API Service
+        run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice
+
+      - name: Publish Web Frontend
+        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend
+
+      - name: Upload API Service artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apiservice-publish
+          path: ./publish/apiservice
+          retention-days: 1
+
+      - name: Upload Web Frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webfrontend-publish
+          path: ./publish/webfrontend
+          retention-days: 1
+
   # ============================================================================
   # Deploy to Dev (on push to main)
   # ============================================================================
@@ -90,6 +120,10 @@ jobs:
     needs: build
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     environment: dev
+    env:
+      RESOURCE_GROUP: rg-fencemark-dev
+      API_SERVICE_NAME: ca-apiservice
+      WEB_FRONTEND_NAME: ca-webfrontend
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,21 +137,70 @@ jobs:
 
       - name: Deploy Bicep to Dev
         uses: azure/bicep-deploy@v2
-        id: deploy-dev
+        id: deploy-infra
         with:
           type: deployment
           operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
-          location: ${{env.AZURE_LOCATION}}
+          location: ${{ env.AZURE_LOCATION }}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/dev.bicepparam
           deployment-name: main
-          
-      - name: Grant Key Vault Access
+
+      - name: Get deployment outputs
+        id: get-outputs
         run: |
-          chmod +x ./infra/grant-keyvault-access.sh
-          ./infra/grant-keyvault-access.sh rg-fencemark-dev main kv-ciambfwyw65gna5lu
+          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
+          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
+          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
+          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
+          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
+
+      - name: Download API Service artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apiservice-publish
+          path: ./publish/apiservice
+
+      - name: Download Web Frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webfrontend-publish
+          path: ./publish/webfrontend
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
+
+      - name: Build and push API Service image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
+          docker push $IMAGE_TAG
+          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Build and push Web Frontend image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
+          docker push $IMAGE_TAG
+          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy API Service to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.api-service-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.API_IMAGE }}
+
+      - name: Deploy Web Frontend to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.WEB_IMAGE }}
 
       - name: Deployment summary
         run: |
@@ -125,16 +208,19 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** rg-fencemark-dev" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔐 Authentication Configuration" >> $GITHUB_STEP_SUMMARY
           echo "- **CIAM Tenant:** devfencemark.onmicrosoft.com" >> $GITHUB_STEP_SUMMARY
           echo "- **Client ID:** 5b204301-0113-4b40-bd2e-e0ef8be99f48" >> $GITHUB_STEP_SUMMARY
           echo "- **Key Vault:** kv-ciambfwyw65gna5lu" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### ⚠️ Post-Deployment Steps Required" >> $GITHUB_STEP_SUMMARY
-          echo "1. Update redirect URIs in CIAM app registration" >> $GITHUB_STEP_SUMMARY
-          echo "2. See DEPLOYMENT.md for detailed instructions" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # Deploy to Staging (manual trigger only)
@@ -158,16 +244,70 @@ jobs:
 
       - name: Deploy Bicep to Staging
         uses: azure/bicep-deploy@v2
-        id: deploy-staging
+        id: deploy-infra
         with:
           type: deployment
           operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
-          location: ${{env.AZURE_LOCATION}}
+          location: ${{ env.AZURE_LOCATION }}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/staging.bicepparam
-          
+          deployment-name: main
+
+      - name: Get deployment outputs
+        id: get-outputs
+        run: |
+          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
+          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
+          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
+          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
+          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
+
+      - name: Download API Service artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apiservice-publish
+          path: ./publish/apiservice
+
+      - name: Download Web Frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webfrontend-publish
+          path: ./publish/webfrontend
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
+
+      - name: Build and push API Service image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
+          docker push $IMAGE_TAG
+          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Build and push Web Frontend image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
+          docker push $IMAGE_TAG
+          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy API Service to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.api-service-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.API_IMAGE }}
+
+      - name: Deploy Web Frontend to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.WEB_IMAGE }}
 
       - name: Deployment summary
         run: |
@@ -175,7 +315,14 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** staging" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** rg-fencemark-staging" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # Deploy to Production (manual trigger only)
@@ -199,15 +346,70 @@ jobs:
 
       - name: Deploy Bicep to Production
         uses: azure/bicep-deploy@v2
-        id: deploy-prod
+        id: deploy-infra
         with:
           type: deployment
           operation: create
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           scope: subscription
-          location: ${{env.AZURE_LOCATION}}
+          location: ${{ env.AZURE_LOCATION }}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/prod.bicepparam
+          deployment-name: main
+
+      - name: Get deployment outputs
+        id: get-outputs
+        run: |
+          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
+          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
+          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
+          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
+          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
+          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
+
+      - name: Download API Service artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apiservice-publish
+          path: ./publish/apiservice
+
+      - name: Download Web Frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: webfrontend-publish
+          path: ./publish/webfrontend
+
+      - name: Log in to Azure Container Registry
+        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
+
+      - name: Build and push API Service image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
+          docker push $IMAGE_TAG
+          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Build and push Web Frontend image
+        run: |
+          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
+          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
+          docker push $IMAGE_TAG
+          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
+
+      - name: Deploy API Service to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.api-service-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.API_IMAGE }}
+
+      - name: Deploy Web Frontend to Container App
+        run: |
+          az containerapp update \
+            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --image ${{ env.WEB_IMAGE }}
 
       - name: Deployment summary
         run: |
@@ -215,7 +417,11 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Environment:** prod" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** rg-fencemark-prod" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
+          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.outputs.outputs.WEB_FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
