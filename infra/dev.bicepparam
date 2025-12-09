@@ -31,6 +31,21 @@ param webFrontendMinReplicas = 0
 param webFrontendMaxReplicas = 2
 
 // ============================================================================
+// Azure Entra External ID Authentication
+// ============================================================================
+
+// CIAM tenant configuration
+// NOTE: Run ./infra/get-tenant-id.sh rg-fencemark-identity-dev to retrieve the tenant ID
+param entraExternalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071' 
+param entraExternalIdClientId = '5b204301-0113-4b40-bd2e-e0ef8be99f48'
+param entraExternalIdInstance = 'https://devfencemark.ciamlogin.com/'
+param entraExternalIdDomain = 'devfencemark.onmicrosoft.com'
+
+// Key Vault and Certificate
+param keyVaultUrl = 'https://kv-ciambfwyw65gna5lu.vault.azure.net/'
+param certificateName = 'dev-external-id-cert'
+
+// ============================================================================
 // Tags
 // ============================================================================
 

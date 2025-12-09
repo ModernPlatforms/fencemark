@@ -112,7 +112,12 @@ jobs:
           location: ${{env.AZURE_LOCATION}}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/dev.bicepparam
+          deployment-name: main
           
+      - name: Grant Key Vault Access
+        run: |
+          chmod +x ./infra/grant-keyvault-access.sh
+          ./infra/grant-keyvault-access.sh rg-fencemark-dev main kv-ciambfwyw65gna5lu
 
       - name: Deployment summary
         run: |
@@ -121,6 +126,15 @@ jobs:
           echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
           echo "**Resource Group:** rg-fencemark-dev" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔐 Authentication Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **CIAM Tenant:** devfencemark.onmicrosoft.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Client ID:** 5b204301-0113-4b40-bd2e-e0ef8be99f48" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key Vault:** kv-ciambfwyw65gna5lu" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⚠️ Post-Deployment Steps Required" >> $GITHUB_STEP_SUMMARY
+          echo "1. Update redirect URIs in CIAM app registration" >> $GITHUB_STEP_SUMMARY
+          echo "2. See DEPLOYMENT.md for detailed instructions" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # Deploy to Staging (manual trigger only)

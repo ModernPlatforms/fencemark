@@ -1,0 +1,307 @@
+@page "/components"
+@using fencemark.ApiService.Data.Models
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Components - Fencemark</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-boxes"></i> Components & Pricing</h2>
+        <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <i class="bi bi-plus-circle"></i> Add Component
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading components...</p>
+        </div>
+    }
+    else if (components == null || !components.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No components found. Create your first component to get started!
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Name</th>
+                        <th>SKU</th>
+                        <th>Material</th>
+                        <th>Dimensions</th>
+                        <th>Unit</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var component in components)
+                    {
+                        <tr>
+                            <td>
+                                <span class="badge bg-primary">@component.Category</span>
+                            </td>
+                            <td>
+                                <strong>@component.Name</strong>
+                                @if (!string.IsNullOrEmpty(component.Description))
+                                {
+                                    <br /><small class="text-muted">@component.Description</small>
+                                }
+                            </td>
+                            <td>@component.Sku</td>
+                            <td>@component.Material</td>
+                            <td>@component.Dimensions</td>
+                            <td>@component.UnitOfMeasure</td>
+                            <td class="price-cell">$@component.UnitPrice.ToString("F2")</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditComponent(component)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteComponent(component)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingComponent?.Id == null ? "Create" : "Edit") Component</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Name *</label>
+                            <input type="text" class="form-control" @bind="editingComponent.Name" placeholder="e.g., 6x6 Pressure Treated Post" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">SKU</label>
+                            <input type="text" class="form-control" @bind="editingComponent.Sku" placeholder="e.g., PT-POST-6X6" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" @bind="editingComponent.Description" rows="2" placeholder="Additional details about this component"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select class="form-select" @bind="editingComponent.Category">
+                                <option value="">Select category...</option>
+                                <option value="Post">Post</option>
+                                <option value="Rail">Rail</option>
+                                <option value="Panel">Panel</option>
+                                <option value="Picket">Picket</option>
+                                <option value="Hardware">Hardware</option>
+                                <option value="Gate Hardware">Gate Hardware</option>
+                                <option value="Fastener">Fastener</option>
+                                <option value="Concrete">Concrete</option>
+                                <option value="Stain/Sealer">Stain/Sealer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Material</label>
+                            <input type="text" class="form-control" @bind="editingComponent.Material" placeholder="e.g., Pressure Treated Pine" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Dimensions</label>
+                            <input type="text" class="form-control" @bind="editingComponent.Dimensions" placeholder="e.g., 6x6x8" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Unit of Measure *</label>
+                            <select class="form-select" @bind="editingComponent.UnitOfMeasure">
+                                <option value="Each">Each</option>
+                                <option value="Linear Foot">Linear Foot</option>
+                                <option value="Board Foot">Board Foot</option>
+                                <option value="Square Foot">Square Foot</option>
+                                <option value="Gallon">Gallon</option>
+                                <option value="Bag">Bag</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Unit Price *</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingComponent.UnitPrice" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveComponent" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .price-cell {
+        font-weight: 600;
+        color: #28a745;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+@code {
+    private List<Component>? components;
+    private Component editingComponent = new() { Name = "", OrganizationId = "", Category = "" };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showModal = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadComponents();
+    }
+
+    private async Task LoadComponents()
+    {
+        isLoading = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            components = await client.GetFromJsonAsync<List<Component>>("/api/components");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading components: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingComponent = new Component { Name = "", OrganizationId = "", Category = "" };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private void EditComponent(Component component)
+    {
+        editingComponent = new Component
+        {
+            Id = component.Id,
+            Name = component.Name,
+            Description = component.Description,
+            Sku = component.Sku,
+            Category = component.Category,
+            UnitOfMeasure = component.UnitOfMeasure,
+            UnitPrice = component.UnitPrice,
+            Material = component.Material,
+            Dimensions = component.Dimensions,
+            OrganizationId = component.OrganizationId
+        };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private async Task SaveComponent()
+    {
+        if (string.IsNullOrWhiteSpace(editingComponent.Name) || string.IsNullOrWhiteSpace(editingComponent.Category))
+        {
+            errorMessage = "Name and Category are required";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            
+            if (string.IsNullOrEmpty(editingComponent.Id))
+            {
+                var response = await client.PostAsJsonAsync("/api/components", editingComponent);
+                response.EnsureSuccessStatusCode();
+            }
+            else
+            {
+                var response = await client.PutAsJsonAsync($"/api/components/{editingComponent.Id}", editingComponent);
+                response.EnsureSuccessStatusCode();
+            }
+
+            await LoadComponents();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving component: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteComponent(Component component)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{component.Name}'?"))
+            return;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            var response = await client.DeleteAsync($"/api/components/{component.Id}");
+            response.EnsureSuccessStatusCode();
+            await LoadComponents();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting component: {ex.Message}";
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingComponent = new() { Name = "", OrganizationId = "", Category = "" };
+        errorMessage = null;
+    }
+}
