@@ -57,6 +57,35 @@ param webFrontendMaxReplicas int = 3
 param resourceGroupName string
 
 // ============================================================================
+// Azure Entra External ID (CIAM) Authentication Parameters
+// ============================================================================
+
+@description('The Azure Entra External ID (CIAM) tenant ID')
+param entraExternalIdTenantId string = ''
+
+@description('The Azure Entra External ID application (client) ID')
+param entraExternalIdClientId string = ''
+
+@description('The Azure Entra External ID instance URL')
+param entraExternalIdInstance string = ''
+
+@description('The Azure Entra External ID domain')
+param entraExternalIdDomain string = ''
+
+@description('The Key Vault URL containing the certificate for authentication')
+param keyVaultUrl string = ''
+
+@description('The name of the certificate in Key Vault')
+param certificateName string = ''
+
+@description('Entra External ID resource Group')
+param entraExternalIdResourceGroup string = ''
+
+// Validate authentication configuration if any auth parameter is provided
+var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
+var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
+
+// ============================================================================
 // Variables
 // ============================================================================
 
@@ -316,6 +345,14 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
       }
     ]
   }
+}
+
+// ============================================================================
+// Reference to your Key Vault resource
+// ============================================================================
+
+resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
+  name: 'kv-ciambfwyw65gna5lu'
 }
 
 // ============================================================================
