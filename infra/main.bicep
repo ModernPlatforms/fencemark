@@ -78,9 +78,6 @@ param keyVaultUrl string = ''
 @description('The name of the certificate in Key Vault')
 param certificateName string = ''
 
-@description('Entra External ID resource Group')
-param entraExternalIdResourceGroup string = ''
-
 // Validate authentication configuration if any auth parameter is provided
 var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
 var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
@@ -258,6 +255,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
       'azd-service-name': 'webfrontend'
     })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    managedIdentities: {
+      systemAssigned: true
+    }
     containers: [
       {
         name: 'webfrontend'
@@ -279,27 +279,38 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'AzureMaps__ClientId'
             value: mapsAccount.outputs.resourceId
           }
-          // Azure AD / Entra External ID settings - configure after CIAM deployment
-          // Update these values via Azure Portal or az containerapp update after deploying CIAM
+          // Azure AD / Entra External ID settings
           {
             name: 'AzureAd__Instance'
-            value: '' // Set to https://{ciamTenantName}.ciamlogin.com/ after CIAM deployment
+            value: entraExternalIdInstance
           }
           {
             name: 'AzureAd__TenantId'
-            value: '' // Set after CIAM deployment
+            value: entraExternalIdTenantId
           }
           {
             name: 'AzureAd__ClientId'
-            value: '' // Set after manual app registration in CIAM tenant
+            value: entraExternalIdClientId
           }
           {
             name: 'AzureAd__Domain'
-            value: '' // Set to {ciamTenantName}.onmicrosoft.com after CIAM deployment
+            value: entraExternalIdDomain
           }
           {
             name: 'AzureAd__CallbackPath'
             value: '/signin-oidc'
+          }
+          {
+            name: 'AzureAd__SignedOutCallbackPath'
+            value: '/signout-callback-oidc'
+          }
+          {
+            name: 'KeyVault__Url'
+            value: keyVaultUrl
+          }
+          {
+            name: 'KeyVault__CertificateName'
+            value: certificateName
           }
         ]
         probes: [
@@ -386,9 +397,29 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 @description('The URL of the Web Frontend')
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
 
+@description('The principal ID of the Web Frontend managed identity')
+output webFrontendIdentityPrincipalId string = webFrontend.outputs.systemAssignedMIPrincipalId
+
+@description('The resource group name')
+output resourceGroupName string = rg.name
+
+@description('The Azure Maps account resource ID')
+output mapsAccountResourceId string = mapsAccount.outputs.resourceId
+
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
 
-@description('The resource ID of the Azure Maps Account')
-output mapsAccountResourceId string = mapsAccount.outputs.resourceId
+// ============================================================================
+// Assign Key Vault Certificate User role to the managed identity
+// ============================================================================
+
+resource keyVaultAccess 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(keyVault.id, webFrontend.outputs.systemAssignedMIPrincipalId, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7') // Key Vault Certificate User role
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
 

@@ -8,10 +8,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\fencemark.ServiceDefaults\fencemark.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\fencemark.ApiService\fencemark.ApiService.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="3.9.0" />
+    <PackageReference Include="Microsoft.Identity.Web.UI" Version="3.9.0" />
   </ItemGroup>
 
 </Project>

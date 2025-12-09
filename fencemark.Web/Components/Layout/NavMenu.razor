@@ -1,6 +1,11 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">fencemark</a>
+        <a class="navbar-brand" href="">
+            <i class="bi bi-bricks"></i> Fencemark
+        </a>
     </div>
 </div>
 
@@ -14,16 +19,45 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+        <AuthorizeView>
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="fences">
+                        <span class="bi bi-bricks" aria-hidden="true"></span> Fences
+                    </NavLink>
+                </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="gates">
+                        <span class="bi bi-door-closed" aria-hidden="true"></span> Gates
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="components">
+                        <span class="bi bi-boxes" aria-hidden="true"></span> Components
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="jobs">
+                        <span class="bi bi-briefcase" aria-hidden="true"></span> Jobs
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <a class="nav-link" href="MicrosoftIdentity/Account/SignOut">
+                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Sign Out
+                    </a>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <a class="nav-link" href="MicrosoftIdentity/Account/SignIn">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Sign In
+                    </a>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </nav>
 </div>
