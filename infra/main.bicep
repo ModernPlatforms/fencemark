@@ -78,6 +78,10 @@ param keyVaultUrl string = ''
 @description('The name of the certificate in Key Vault')
 param certificateName string = ''
 
+// Validate authentication configuration if any auth parameter is provided
+var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
+var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -251,6 +255,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
       'azd-service-name': 'webfrontend'
     })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    managedIdentities: {
+      systemAssigned: true
+    }
     containers: [
       {
         name: 'webfrontend'
@@ -275,19 +282,19 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           // Azure AD / Entra External ID settings
           {
             name: 'AzureAd__Instance'
-            value: !empty(entraExternalIdInstance) ? entraExternalIdInstance : ''
+            value: entraExternalIdInstance
           }
           {
             name: 'AzureAd__TenantId'
-            value: !empty(entraExternalIdTenantId) ? entraExternalIdTenantId : ''
+            value: entraExternalIdTenantId
           }
           {
             name: 'AzureAd__ClientId'
-            value: !empty(entraExternalIdClientId) ? entraExternalIdClientId : ''
+            value: entraExternalIdClientId
           }
           {
             name: 'AzureAd__Domain'
-            value: !empty(entraExternalIdDomain) ? entraExternalIdDomain : ''
+            value: entraExternalIdDomain
           }
           {
             name: 'AzureAd__CallbackPath'
@@ -299,11 +306,11 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'KeyVault__Url'
-            value: !empty(keyVaultUrl) ? keyVaultUrl : ''
+            value: keyVaultUrl
           }
           {
             name: 'KeyVault__CertificateName'
-            value: !empty(certificateName) ? certificateName : ''
+            value: certificateName
           }
         ]
         probes: [
@@ -381,6 +388,15 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 
 @description('The URL of the Web Frontend')
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
+
+@description('The principal ID of the Web Frontend managed identity')
+output webFrontendIdentityPrincipalId string = webFrontend.outputs.systemAssignedMIPrincipalId
+
+@description('The resource group name')
+output resourceGroupName string = rg.name
+
+@description('The Azure Maps account resource ID')
+output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
