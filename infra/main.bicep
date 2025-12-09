@@ -401,6 +401,3 @@ output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
 
-@description('The resource ID of the Azure Maps Account')
-output mapsAccountResourceId string = mapsAccount.outputs.resourceId
-
