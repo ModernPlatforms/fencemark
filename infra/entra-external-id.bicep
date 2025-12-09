@@ -38,13 +38,13 @@ param ciamTenantName string
   'Asia Pacific'
   'Australia'
 ])
-param ciamLocation string = 'United States'
+param ciamLocation string = 'Australia'
 
 @description('The display name for the CIAM tenant')
 param ciamDisplayName string = 'Fencemark Identity'
 
 @description('Country code for data residency (e.g., US, GB, DE, AU)')
-param ciamCountryCode string = 'US'
+param ciamCountryCode string = 'AU'
 
 @description('The SKU name for the CIAM tenant')
 @allowed([
@@ -86,7 +86,7 @@ var ciamDomainName = '${ciamTenantName}.onmicrosoft.com'
 // Deploys the CIAM directory using the native Azure resource type
 
 resource ciamDirectory 'Microsoft.AzureActiveDirectory/ciamDirectories@2023-05-17-preview' = {
-  name: ciamDomainName
+  name: ciamTenantName
   location: ciamLocation
   tags: defaultTags
   sku: {
