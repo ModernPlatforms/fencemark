@@ -78,6 +78,9 @@ param keyVaultUrl string = ''
 @description('The name of the certificate in Key Vault')
 param certificateName string = ''
 
+@description('Entra External ID Resource Group')
+param externalidRg string = ''
+
 // Validate authentication configuration if any auth parameter is provided
 var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
 var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
@@ -364,6 +367,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
 
 resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
   name: 'kv-ciambfwyw65gna5lu'
+  scope: resourcGroup(externalidRg)
 }
 
 // ============================================================================
