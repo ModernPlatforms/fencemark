@@ -419,7 +419,7 @@ output mapsAccountName string = mapsAccount.outputs.name
 
 module keyVaultAccessModule './keyvault-access.bicep' = {
   name: 'keyVaultAccessModule'
-  scope: keyVault
+  scope: resourceGroup(externalidRg)
   params: {
     keyVaultId: keyVault.id
     principalId: webFrontend.outputs.systemAssignedMIPrincipalId
