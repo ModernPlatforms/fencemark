@@ -57,49 +57,44 @@ param webFrontendMaxReplicas int = 3
 param resourceGroupName string
 
 // ============================================================================
-// Azure Entra External ID Parameters
+// Azure Entra External ID (CIAM) Parameters
 // ============================================================================
 
-@description('Enable Azure Entra External ID configuration')
+@description('Enable Azure Entra External ID tenant deployment')
 param enableEntraExternalId bool = false
 
-@description('The tenant ID of the Azure Entra External ID tenant')
-param externalIdTenantId string = ''
+@description('The name of the CIAM tenant (will become {name}.onmicrosoft.com). Max 26 chars, alphanumeric only.')
+@maxLength(26)
+param ciamTenantName string = ''
 
-@description('The primary domain of the Azure Entra External ID tenant (e.g., contoso.onmicrosoft.com)')
-param externalIdPrimaryDomain string = ''
+@description('The data residency location for the CIAM tenant')
+@allowed([
+  'United States'
+  'Europe'
+  'Asia Pacific'
+  'Australia'
+])
+param ciamLocation string = 'United States'
+
+@description('The display name for the CIAM tenant')
+param ciamDisplayName string = 'Fencemark Identity'
+
+@description('Country code for data residency (e.g., US, GB, DE, AU)')
+param ciamCountryCode string = 'US'
+
+@description('The SKU name for the CIAM tenant')
+@allowed([
+  'Standard'
+  'PremiumP1'
+  'PremiumP2'
+])
+param ciamSkuName string = 'Standard'
+
+@description('The SKU tier for the CIAM tenant')
+param ciamSkuTier string = 'A0'
 
 @description('Custom domain name for sign-in experience (e.g., login.fencemark.com)')
 param customDomain string = ''
-
-@description('Company/organization name for branding')
-param companyName string = 'Fencemark'
-
-@description('Privacy policy URL for branding')
-param privacyPolicyUrl string = ''
-
-@description('Terms of use URL for branding')
-param termsOfUseUrl string = ''
-
-@description('Enable custom branding configuration')
-param enableCustomBranding bool = true
-
-@description('Background color for sign-in page (hex color code, e.g., #FFFFFF)')
-param brandingBackgroundColor string = '#0078D4'
-
-@description('Banner logo URL for custom branding')
-param brandingBannerLogoUrl string = ''
-
-@description('Square logo URL for custom branding')
-param brandingSquareLogoUrl string = ''
-
-@description('Sign-in audience for the application')
-@allowed([
-  'AzureADMyOrg'
-  'AzureADMultipleOrgs'
-  'AzureADandPersonalMicrosoftAccount'
-])
-param signInAudience string = 'AzureADMyOrg'
 
 // ============================================================================
 // Variables
@@ -110,7 +105,6 @@ var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, e
 var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
-var azureAdInstance = environment().authentication.loginEndpoint
 
 // ============================================================================
 // Resource Group
@@ -298,19 +292,20 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           }
           {
             name: 'AzureAd__Instance'
-            value: enableEntraExternalId ? azureAdInstance : ''
+            value: enableEntraExternalId ? 'https://${ciamTenantName}.ciamlogin.com/' : ''
           }
           {
             name: 'AzureAd__TenantId'
-            value: enableEntraExternalId ? externalIdTenantId : ''
+            // TenantId will be available after CIAM deployment - initially empty, update via app settings
+            value: ''
           }
           {
             name: 'AzureAd__ClientId'
-            value: enableEntraExternalId ? 'not-configured' : '' // Set after deployment via update script
+            value: '' // Set after manual app registration in CIAM tenant
           }
           {
             name: 'AzureAd__Domain'
-            value: enableEntraExternalId ? externalIdPrimaryDomain : ''
+            value: enableEntraExternalId ? '${ciamTenantName}.onmicrosoft.com' : ''
           }
           {
             name: 'AzureAd__CallbackPath'
@@ -373,18 +368,16 @@ module entraExternalId './entra-external-id.bicep' = if (enableEntraExternalId) 
     environmentName: environmentName
     location: location
     tags: defaultTags
-    externalIdTenantId: externalIdTenantId
-    externalIdPrimaryDomain: externalIdPrimaryDomain
+    ciamTenantName: ciamTenantName
+    ciamLocation: ciamLocation
+    ciamDisplayName: ciamDisplayName
+    ciamCountryCode: ciamCountryCode
+    ciamSkuName: ciamSkuName
+    ciamSkuTier: ciamSkuTier
     customDomain: customDomain
-    companyName: companyName
-    privacyPolicyUrl: privacyPolicyUrl
-    termsOfUseUrl: termsOfUseUrl
-    webFrontendRedirectUri: enableEntraExternalId ? 'https://${webFrontend.outputs.fqdn}/signin-oidc' : ''
-    signInAudience: signInAudience
-    enableCustomBranding: enableCustomBranding
-    brandingBackgroundColor: brandingBackgroundColor
-    brandingBannerLogoUrl: brandingBannerLogoUrl
-    brandingSquareLogoUrl: brandingSquareLogoUrl
+    // The redirect URI will be determined after webFrontend deployment
+    // It follows pattern: https://{containerAppName}.{envDefaultDomain}/signin-oidc
+    webFrontendRedirectUri: ''
   }
 }
 
@@ -426,17 +419,20 @@ output mapsAccountName string = mapsAccount.outputs.name
 output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 // ============================================================================
-// Azure Entra External ID Outputs
+// Azure Entra External ID (CIAM) Outputs
 // ============================================================================
 
-@description('The application (client) ID for Azure Entra External ID')
-output entraExternalIdApplicationId string = entraExternalId.?outputs.?applicationId ?? ''
-
-@description('The tenant ID for Azure Entra External ID')
+@description('The tenant ID for Azure Entra External ID CIAM')
 output entraExternalIdTenantId string = entraExternalId.?outputs.?tenantId ?? ''
 
-@description('The primary domain for Azure Entra External ID')
-output entraExternalIdPrimaryDomain string = entraExternalId.?outputs.?primaryDomain ?? ''
+@description('The domain name for Azure Entra External ID (e.g., tenant.onmicrosoft.com)')
+output entraExternalIdDomainName string = entraExternalId.?outputs.?domainName ?? ''
+
+@description('The CIAM tenant name')
+output entraExternalIdCiamTenantName string = entraExternalId.?outputs.?ciamTenantName ?? ''
+
+@description('The CIAM login URL')
+output entraExternalIdCiamLoginUrl string = entraExternalId.?outputs.?ciamLoginUrl ?? ''
 
 @description('The authority URL for authentication')
 output entraExternalIdAuthorityUrl string = entraExternalId.?outputs.?authorityUrl ?? ''
@@ -452,4 +448,7 @@ output entraExternalIdCustomDomain string = entraExternalId.?outputs.?customDoma
 
 @description('DNS zone name servers for custom domain verification')
 output entraExternalIdDnsNameServers array = entraExternalId.?outputs.?dnsZoneNameServers ?? []
+
+@description('The redirect URI to configure in app registration (use this value after deployment)')
+output entraExternalIdRedirectUri string = 'https://${webFrontend.outputs.fqdn}/signin-oidc'
 

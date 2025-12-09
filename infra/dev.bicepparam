@@ -40,18 +40,14 @@ param tags = {
 }
 
 // ============================================================================
-// Azure Entra External ID Configuration
+// Azure Entra External ID (CIAM) Configuration
 // ============================================================================
 
 param enableEntraExternalId = true
-param externalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071'
-param externalIdPrimaryDomain = 'devfencemark.onmicrosoft.com'
+param ciamTenantName = 'fencemarkdev'
+param ciamLocation = 'United States'
+param ciamDisplayName = 'Fencemark Dev Identity'
+param ciamCountryCode = 'US'
+param ciamSkuName = 'Standard'
+param ciamSkuTier = 'A0'
 param customDomain = ''
-param companyName = 'Fencemark Dev'
-param privacyPolicyUrl = ''
-param termsOfUseUrl = ''
-param enableCustomBranding = true
-param brandingBackgroundColor = '#0078D4'
-param brandingBannerLogoUrl = ''
-param brandingSquareLogoUrl = ''
-param signInAudience = 'AzureADMyOrg'

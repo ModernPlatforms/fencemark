@@ -39,19 +39,14 @@ param tags = {
 }
 
 // ============================================================================
-// Azure Entra External ID Configuration
+// Azure Entra External ID (CIAM) Configuration
 // ============================================================================
-// TODO: Create a separate Entra External ID tenant for production
 
 param enableEntraExternalId = true
-param externalIdTenantId = '' // TODO: Set production tenant ID
-param externalIdPrimaryDomain = '' // TODO: Set production domain
+param ciamTenantName = 'fencemarkprod'
+param ciamLocation = 'United States'
+param ciamDisplayName = 'Fencemark Identity'
+param ciamCountryCode = 'US'
+param ciamSkuName = 'Standard'
+param ciamSkuTier = 'A0'
 param customDomain = '' // TODO: Set custom domain for production (e.g., login.fencemark.com)
-param companyName = 'Fencemark'
-param privacyPolicyUrl = '' // TODO: Set production privacy policy URL
-param termsOfUseUrl = '' // TODO: Set production terms of use URL
-param enableCustomBranding = true
-param brandingBackgroundColor = '#0078D4'
-param brandingBannerLogoUrl = ''
-param brandingSquareLogoUrl = ''
-param signInAudience = 'AzureADMyOrg'

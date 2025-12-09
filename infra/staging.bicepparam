@@ -39,19 +39,14 @@ param tags = {
 }
 
 // ============================================================================
-// Azure Entra External ID Configuration
+// Azure Entra External ID (CIAM) Configuration
 // ============================================================================
-// TODO: Create a separate Entra External ID tenant for staging
 
 param enableEntraExternalId = true
-param externalIdTenantId = '' // TODO: Set staging tenant ID
-param externalIdPrimaryDomain = '' // TODO: Set staging domain
+param ciamTenantName = 'fencemarkstg'
+param ciamLocation = 'United States'
+param ciamDisplayName = 'Fencemark Staging Identity'
+param ciamCountryCode = 'US'
+param ciamSkuName = 'Standard'
+param ciamSkuTier = 'A0'
 param customDomain = ''
-param companyName = 'Fencemark Staging'
-param privacyPolicyUrl = ''
-param termsOfUseUrl = ''
-param enableCustomBranding = true
-param brandingBackgroundColor = '#0078D4'
-param brandingBannerLogoUrl = ''
-param brandingSquareLogoUrl = ''
-param signInAudience = 'AzureADMyOrg'
