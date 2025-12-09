@@ -48,11 +48,11 @@ param ciamCountryCode string = 'AU'
 
 @description('The SKU name for the CIAM tenant')
 @allowed([
-  'Standard'
+  'Base'
   'PremiumP1'
   'PremiumP2'
 ])
-param ciamSkuName string = 'Standard'
+param ciamSkuName string = 'Base'
 
 @description('The SKU tier for the CIAM tenant')
 param ciamSkuTier string = 'A0'
