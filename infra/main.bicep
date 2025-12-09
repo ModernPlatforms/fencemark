@@ -421,8 +421,10 @@ module keyVaultAccessModule './keyvault-access.bicep' = {
   name: 'keyVaultAccessModule'
   scope: resourceGroup(externalidRg)
   params: {
-    keyVaultId: keyVault.id
+    keyVaultName: keyVault.name
     principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalType: 'ServicePrincipal'
+    roleName: 'Key Vault Certificates User'
   }
 }
 
