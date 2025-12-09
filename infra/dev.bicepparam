@@ -36,7 +36,7 @@ param webFrontendMaxReplicas = 2
 
 // CIAM tenant configuration
 // NOTE: Run ./infra/get-tenant-id.sh rg-fencemark-identity-dev to retrieve the tenant ID
-param entraExternalIdTenantId = '' // TODO: Set this to the tenant ID from the CIAM deployment
+param entraExternalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071' 
 param entraExternalIdClientId = '5b204301-0113-4b40-bd2e-e0ef8be99f48'
 param entraExternalIdInstance = 'https://devfencemark.ciamlogin.com/'
 param entraExternalIdDomain = 'devfencemark.onmicrosoft.com'
