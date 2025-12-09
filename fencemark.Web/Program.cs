@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
+using Azure.Identity;
+using Azure.Security.KeyVault.Certificates;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,12 +34,20 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
     // Certificate-based authentication with Azure Key Vault
     try
     {
+        var defaultAzureCredentialOptions = new DefaultAzureCredentialOptions
+        {
+            ExcludeVisualStudioCredential = true
+        };
+        var credential = new DefaultAzureCredential(defaultAzureCredentialOptions);
+        var client = new CertificateClient(new Uri(keyVaultUrl), credential);
+        var certificate = await client.GetCertificateAsync(certificateName);
+
         builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
             .AddMicrosoftIdentityWebApp(
                 options =>
                 {
                     builder.Configuration.Bind("AzureAd", options);
-                    
+
                     // Configure certificate from Key Vault
                     options.ClientCertificates = new[]
                     {
@@ -111,6 +121,8 @@ app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+app.MapControllers();
 
 app.MapDefaultEndpoints();
 
