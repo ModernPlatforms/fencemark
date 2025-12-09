@@ -38,16 +38,3 @@ param tags = {
   project: 'fencemark'
   environment: 'dev'
 }
-
-// ============================================================================
-// Azure Entra External ID (CIAM) Configuration
-// ============================================================================
-
-param enableEntraExternalId = true
-param ciamTenantName = 'devfencemark'
-param ciamLocation = 'Australia'
-param ciamDisplayName = 'Fencemark Dev Identity'
-param ciamCountryCode = 'AU'
-param ciamSkuName = 'Base'
-param ciamSkuTier = 'A0'
-param customDomain = ''
