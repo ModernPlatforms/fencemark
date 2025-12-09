@@ -418,7 +418,7 @@ output mapsAccountName string = mapsAccount.outputs.name
 // ============================================================================
 
 resource keyVaultAccess 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(keyVault.id, webfrontend.name, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7') // Key Vault Certificate User role
+  name: guid(keyVault.id, webFrontend.name, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7') // Key Vault Certificate User role
   scope: keyVault
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
