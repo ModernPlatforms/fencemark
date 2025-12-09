@@ -256,3 +256,54 @@ These match the health check endpoints configured in the .NET Aspire AppHost.
 - Scale to zero when no traffic
 - Basic SKU for Container Registry
 - 30-day log retention (adjustable)
+
+## Quick Start for Authentication Setup
+
+The infrastructure is already configured with Azure Entra External ID authentication:
+
+### Prerequisites
+- Azure CLI installed and authenticated
+- CIAM tenant already deployed (confirmed by certificate in Key Vault)
+
+### Deployment Steps
+
+1. **Get the Tenant ID** (required for authentication):
+   ```bash
+   ./get-tenant-id.sh rg-fencemark-identity-dev
+   ```
+   Update `dev.bicepparam` with the tenant ID returned.
+
+2. **Deploy Infrastructure**:
+   ```bash
+   az deployment sub create \
+     --location australiaeast \
+     --template-file main.bicep \
+     --parameters dev.bicepparam \
+     --name main
+   ```
+
+3. **Grant Key Vault Access**:
+   ```bash
+   ./grant-keyvault-access.sh rg-fencemark-dev main
+   ```
+
+4. **Configure Redirect URIs**:
+   - Get the Web Frontend URL from deployment outputs
+   - Update the CIAM app registration with redirect URIs
+   - See [../DEPLOYMENT.md](../DEPLOYMENT.md) for detailed instructions
+
+### Helper Scripts
+
+- **get-tenant-id.sh** - Retrieves tenant ID from CIAM deployment
+- **grant-keyvault-access.sh** - Grants Key Vault access to managed identity
+- **update-entra-settings.sh** - Updates Container App with Entra settings
+
+### Authentication Configuration
+
+The deployment is pre-configured with:
+- **CIAM Tenant**: devfencemark.onmicrosoft.com
+- **Client ID**: 5b204301-0113-4b40-bd2e-e0ef8be99f48
+- **Key Vault**: kv-ciambfwyw65gna5lu
+- **Certificate**: dev-external-id-cert
+
+See [../DEPLOYMENT.md](../DEPLOYMENT.md) for comprehensive deployment and troubleshooting guide.
