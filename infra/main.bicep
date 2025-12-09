@@ -359,6 +359,14 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
 }
 
 // ============================================================================
+// Reference to your Key Vault resource
+// ============================================================================
+
+resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
+  name: 'kv-ciambfwyw65gna5lu'
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -400,4 +408,18 @@ output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
+
+// ============================================================================
+// Assign Key Vault Certificate User role to the managed identity
+// ============================================================================
+
+resource keyVaultAccess 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+  name: guid(keyVault.id, webFrontend.outputs.systemAssignedMIPrincipalId, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7') // Key Vault Certificate User role
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
