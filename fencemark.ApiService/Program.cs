@@ -223,6 +223,381 @@ app.MapGet("/weatherforecast", () =>
 
 app.MapDefaultEndpoints();
 
+// Fence Type endpoints
+app.MapGet("/api/fences", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var fences = await db.FenceTypes
+        .Where(f => f.OrganizationId == currentUser.OrganizationId)
+        .OrderBy(f => f.Name)
+        .ToListAsync(ct);
+    return Results.Ok(fences);
+})
+.RequireAuthorization()
+.WithName("GetFenceTypes")
+.WithTags("Fences");
+
+app.MapGet("/api/fences/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var fence = await db.FenceTypes
+        .Include(f => f.Components)
+            .ThenInclude(fc => fc.Component)
+        .FirstOrDefaultAsync(f => f.Id == id && f.OrganizationId == currentUser.OrganizationId, ct);
+    
+    return fence != null ? Results.Ok(fence) : Results.NotFound();
+})
+.RequireAuthorization()
+.WithName("GetFenceTypeById")
+.WithTags("Fences");
+
+app.MapPost("/api/fences", async (FenceType request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+    request.Id = Guid.NewGuid().ToString();
+    request.CreatedAt = DateTime.UtcNow;
+    request.UpdatedAt = DateTime.UtcNow;
+
+    db.FenceTypes.Add(request);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/fences/{request.Id}", request);
+})
+.RequireAuthorization()
+.WithName("CreateFenceType")
+.WithTags("Fences");
+
+app.MapPut("/api/fences/{id}", async (string id, FenceType request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var fence = await db.FenceTypes.FirstOrDefaultAsync(f => f.Id == id && f.OrganizationId == currentUser.OrganizationId, ct);
+    if (fence == null)
+        return Results.NotFound();
+
+    fence.Name = request.Name;
+    fence.Description = request.Description;
+    fence.HeightInFeet = request.HeightInFeet;
+    fence.Material = request.Material;
+    fence.Style = request.Style;
+    fence.PricePerLinearFoot = request.PricePerLinearFoot;
+    fence.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(fence);
+})
+.RequireAuthorization()
+.WithName("UpdateFenceType")
+.WithTags("Fences");
+
+app.MapDelete("/api/fences/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var fence = await db.FenceTypes.FirstOrDefaultAsync(f => f.Id == id && f.OrganizationId == currentUser.OrganizationId, ct);
+    if (fence == null)
+        return Results.NotFound();
+
+    db.FenceTypes.Remove(fence);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { success = true });
+})
+.RequireAuthorization()
+.WithName("DeleteFenceType")
+.WithTags("Fences");
+
+// Gate Type endpoints
+app.MapGet("/api/gates", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var gates = await db.GateTypes
+        .Where(g => g.OrganizationId == currentUser.OrganizationId)
+        .OrderBy(g => g.Name)
+        .ToListAsync(ct);
+    return Results.Ok(gates);
+})
+.RequireAuthorization()
+.WithName("GetGateTypes")
+.WithTags("Gates");
+
+app.MapGet("/api/gates/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var gate = await db.GateTypes
+        .Include(g => g.Components)
+            .ThenInclude(gc => gc.Component)
+        .FirstOrDefaultAsync(g => g.Id == id && g.OrganizationId == currentUser.OrganizationId, ct);
+    
+    return gate != null ? Results.Ok(gate) : Results.NotFound();
+})
+.RequireAuthorization()
+.WithName("GetGateTypeById")
+.WithTags("Gates");
+
+app.MapPost("/api/gates", async (GateType request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+    request.Id = Guid.NewGuid().ToString();
+    request.CreatedAt = DateTime.UtcNow;
+    request.UpdatedAt = DateTime.UtcNow;
+
+    db.GateTypes.Add(request);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/gates/{request.Id}", request);
+})
+.RequireAuthorization()
+.WithName("CreateGateType")
+.WithTags("Gates");
+
+app.MapPut("/api/gates/{id}", async (string id, GateType request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var gate = await db.GateTypes.FirstOrDefaultAsync(g => g.Id == id && g.OrganizationId == currentUser.OrganizationId, ct);
+    if (gate == null)
+        return Results.NotFound();
+
+    gate.Name = request.Name;
+    gate.Description = request.Description;
+    gate.WidthInFeet = request.WidthInFeet;
+    gate.HeightInFeet = request.HeightInFeet;
+    gate.Material = request.Material;
+    gate.Style = request.Style;
+    gate.BasePrice = request.BasePrice;
+    gate.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(gate);
+})
+.RequireAuthorization()
+.WithName("UpdateGateType")
+.WithTags("Gates");
+
+app.MapDelete("/api/gates/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var gate = await db.GateTypes.FirstOrDefaultAsync(g => g.Id == id && g.OrganizationId == currentUser.OrganizationId, ct);
+    if (gate == null)
+        return Results.NotFound();
+
+    db.GateTypes.Remove(gate);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { success = true });
+})
+.RequireAuthorization()
+.WithName("DeleteGateType")
+.WithTags("Gates");
+
+// Component endpoints
+app.MapGet("/api/components", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var components = await db.Components
+        .Where(c => c.OrganizationId == currentUser.OrganizationId)
+        .OrderBy(c => c.Category)
+        .ThenBy(c => c.Name)
+        .ToListAsync(ct);
+    return Results.Ok(components);
+})
+.RequireAuthorization()
+.WithName("GetComponents")
+.WithTags("Components");
+
+app.MapGet("/api/components/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var component = await db.Components
+        .FirstOrDefaultAsync(c => c.Id == id && c.OrganizationId == currentUser.OrganizationId, ct);
+    
+    return component != null ? Results.Ok(component) : Results.NotFound();
+})
+.RequireAuthorization()
+.WithName("GetComponentById")
+.WithTags("Components");
+
+app.MapPost("/api/components", async (Component request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+    request.Id = Guid.NewGuid().ToString();
+    request.CreatedAt = DateTime.UtcNow;
+    request.UpdatedAt = DateTime.UtcNow;
+
+    db.Components.Add(request);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/components/{request.Id}", request);
+})
+.RequireAuthorization()
+.WithName("CreateComponent")
+.WithTags("Components");
+
+app.MapPut("/api/components/{id}", async (string id, Component request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var component = await db.Components.FirstOrDefaultAsync(c => c.Id == id && c.OrganizationId == currentUser.OrganizationId, ct);
+    if (component == null)
+        return Results.NotFound();
+
+    component.Name = request.Name;
+    component.Description = request.Description;
+    component.Sku = request.Sku;
+    component.Category = request.Category;
+    component.UnitOfMeasure = request.UnitOfMeasure;
+    component.UnitPrice = request.UnitPrice;
+    component.Material = request.Material;
+    component.Dimensions = request.Dimensions;
+    component.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(component);
+})
+.RequireAuthorization()
+.WithName("UpdateComponent")
+.WithTags("Components");
+
+app.MapDelete("/api/components/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var component = await db.Components.FirstOrDefaultAsync(c => c.Id == id && c.OrganizationId == currentUser.OrganizationId, ct);
+    if (component == null)
+        return Results.NotFound();
+
+    db.Components.Remove(component);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { success = true });
+})
+.RequireAuthorization()
+.WithName("DeleteComponent")
+.WithTags("Components");
+
+// Job endpoints
+app.MapGet("/api/jobs", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var jobs = await db.Jobs
+        .Where(j => j.OrganizationId == currentUser.OrganizationId)
+        .OrderByDescending(j => j.CreatedAt)
+        .ToListAsync(ct);
+    return Results.Ok(jobs);
+})
+.RequireAuthorization()
+.WithName("GetJobs")
+.WithTags("Jobs");
+
+app.MapGet("/api/jobs/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var job = await db.Jobs
+        .Include(j => j.LineItems)
+            .ThenInclude(li => li.FenceType)
+        .Include(j => j.LineItems)
+            .ThenInclude(li => li.GateType)
+        .FirstOrDefaultAsync(j => j.Id == id && j.OrganizationId == currentUser.OrganizationId, ct);
+    
+    return job != null ? Results.Ok(job) : Results.NotFound();
+})
+.RequireAuthorization()
+.WithName("GetJobById")
+.WithTags("Jobs");
+
+app.MapPost("/api/jobs", async (Job request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+    request.Id = Guid.NewGuid().ToString();
+    request.CreatedAt = DateTime.UtcNow;
+    request.UpdatedAt = DateTime.UtcNow;
+
+    db.Jobs.Add(request);
+    await db.SaveChangesAsync(ct);
+    return Results.Created($"/api/jobs/{request.Id}", request);
+})
+.RequireAuthorization()
+.WithName("CreateJob")
+.WithTags("Jobs");
+
+app.MapPut("/api/jobs/{id}", async (string id, Job request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var job = await db.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.OrganizationId == currentUser.OrganizationId, ct);
+    if (job == null)
+        return Results.NotFound();
+
+    job.Name = request.Name;
+    job.CustomerName = request.CustomerName;
+    job.CustomerEmail = request.CustomerEmail;
+    job.CustomerPhone = request.CustomerPhone;
+    job.InstallationAddress = request.InstallationAddress;
+    job.Status = request.Status;
+    job.TotalLinearFeet = request.TotalLinearFeet;
+    job.LaborCost = request.LaborCost;
+    job.MaterialsCost = request.MaterialsCost;
+    job.TotalCost = request.TotalCost;
+    job.Notes = request.Notes;
+    job.EstimatedStartDate = request.EstimatedStartDate;
+    job.EstimatedCompletionDate = request.EstimatedCompletionDate;
+    job.UpdatedAt = DateTime.UtcNow;
+
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(job);
+})
+.RequireAuthorization()
+.WithName("UpdateJob")
+.WithTags("Jobs");
+
+app.MapDelete("/api/jobs/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
+{
+    if (!currentUser.IsAuthenticated)
+        return Results.Unauthorized();
+
+    var job = await db.Jobs.FirstOrDefaultAsync(j => j.Id == id && j.OrganizationId == currentUser.OrganizationId, ct);
+    if (job == null)
+        return Results.NotFound();
+
+    db.Jobs.Remove(job);
+    await db.SaveChangesAsync(ct);
+    return Results.Ok(new { success = true });
+})
+.RequireAuthorization()
+.WithName("DeleteJob")
+.WithTags("Jobs");
+
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

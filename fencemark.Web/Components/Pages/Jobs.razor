@@ -1,0 +1,377 @@
+@page "/jobs"
+@using fencemark.ApiService.Data.Models
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Jobs - Fencemark</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-briefcase"></i> Jobs</h2>
+        <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <i class="bi bi-plus-circle"></i> Create New Job
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading jobs...</p>
+        </div>
+    }
+    else if (jobs == null || !jobs.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No jobs found. Create your first job to get started!
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var job in jobs)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card job-card h-100">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">@job.Name</h5>
+                                <span class="badge bg-@GetStatusColor(job.Status)">@job.Status</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="job-info">
+                                <div class="info-item">
+                                    <i class="bi bi-person"></i>
+                                    <strong>@job.CustomerName</strong>
+                                </div>
+                                @if (!string.IsNullOrEmpty(job.CustomerEmail))
+                                {
+                                    <div class="info-item">
+                                        <i class="bi bi-envelope"></i>
+                                        @job.CustomerEmail
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(job.CustomerPhone))
+                                {
+                                    <div class="info-item">
+                                        <i class="bi bi-telephone"></i>
+                                        @job.CustomerPhone
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(job.InstallationAddress))
+                                {
+                                    <div class="info-item">
+                                        <i class="bi bi-geo-alt"></i>
+                                        @job.InstallationAddress
+                                    </div>
+                                }
+                                <div class="info-item mt-3">
+                                    <i class="bi bi-rulers"></i>
+                                    <strong>@job.TotalLinearFeet ft</strong> total
+                                </div>
+                            </div>
+                            <div class="job-pricing mt-3 pt-3 border-top">
+                                <div class="d-flex justify-content-between">
+                                    <span>Materials:</span>
+                                    <span>$@job.MaterialsCost.ToString("F2")</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span>Labor:</span>
+                                    <span>$@job.LaborCost.ToString("F2")</span>
+                                </div>
+                                <div class="d-flex justify-content-between fw-bold mt-2">
+                                    <span>Total:</span>
+                                    <span class="text-success">$@job.TotalCost.ToString("F2")</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-primary" @onclick="() => EditJob(job)">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-outline-danger" @onclick="() => DeleteJob(job)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingJob?.Id == null ? "Create" : "Edit") Job</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Job Name *</label>
+                            <input type="text" class="form-control" @bind="editingJob.Name" placeholder="e.g., Smith Backyard Fence" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" @bind="editingJob.Status">
+                                @foreach (JobStatus status in Enum.GetValues(typeof(JobStatus)))
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3">Customer Information</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Name *</label>
+                            <input type="text" class="form-control" @bind="editingJob.CustomerName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Email</label>
+                            <input type="email" class="form-control" @bind="editingJob.CustomerEmail" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Phone</label>
+                            <input type="tel" class="form-control" @bind="editingJob.CustomerPhone" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Installation Address</label>
+                            <input type="text" class="form-control" @bind="editingJob.InstallationAddress" />
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3">Job Details</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Total Linear Feet</label>
+                            <input type="number" step="0.1" class="form-control" @bind="editingJob.TotalLinearFeet" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Materials Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.MaterialsCost" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Labor Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.LaborCost" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Total Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.TotalCost" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Start Date</label>
+                            <input type="date" class="form-control" @bind="editingJob.EstimatedStartDate" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Completion Date</label>
+                            <input type="date" class="form-control" @bind="editingJob.EstimatedCompletionDate" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" @bind="editingJob.Notes" rows="3" placeholder="Additional notes about the job"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveJob" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .job-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e0e0e0;
+    }
+
+    .job-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .job-info .info-item {
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .job-info .info-item i {
+        width: 20px;
+        color: #667eea;
+    }
+</style>
+
+@code {
+    private List<Job>? jobs;
+    private Job editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showModal = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJobs();
+    }
+
+    private async Task LoadJobs()
+    {
+        isLoading = true;
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            jobs = await client.GetFromJsonAsync<List<Job>>("/api/jobs");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading jobs: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingJob = new Job { Name = "", CustomerName = "", OrganizationId = "" };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private void EditJob(Job job)
+    {
+        editingJob = new Job
+        {
+            Id = job.Id,
+            Name = job.Name,
+            CustomerName = job.CustomerName,
+            CustomerEmail = job.CustomerEmail,
+            CustomerPhone = job.CustomerPhone,
+            InstallationAddress = job.InstallationAddress,
+            Status = job.Status,
+            TotalLinearFeet = job.TotalLinearFeet,
+            LaborCost = job.LaborCost,
+            MaterialsCost = job.MaterialsCost,
+            TotalCost = job.TotalCost,
+            Notes = job.Notes,
+            EstimatedStartDate = job.EstimatedStartDate,
+            EstimatedCompletionDate = job.EstimatedCompletionDate,
+            OrganizationId = job.OrganizationId
+        };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private async Task SaveJob()
+    {
+        if (string.IsNullOrWhiteSpace(editingJob.Name) || string.IsNullOrWhiteSpace(editingJob.CustomerName))
+        {
+            errorMessage = "Job Name and Customer Name are required";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            
+            if (string.IsNullOrEmpty(editingJob.Id))
+            {
+                var response = await client.PostAsJsonAsync("/api/jobs", editingJob);
+                response.EnsureSuccessStatusCode();
+            }
+            else
+            {
+                var response = await client.PutAsJsonAsync($"/api/jobs/{editingJob.Id}", editingJob);
+                response.EnsureSuccessStatusCode();
+            }
+
+            await LoadJobs();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving job: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteJob(Job job)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{job.Name}'?"))
+            return;
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient("API");
+            var response = await client.DeleteAsync($"/api/jobs/{job.Id}");
+            response.EnsureSuccessStatusCode();
+            await LoadJobs();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting job: {ex.Message}";
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
+        errorMessage = null;
+    }
+
+    private string GetStatusColor(JobStatus status) => status switch
+    {
+        JobStatus.Draft => "secondary",
+        JobStatus.Quoted => "info",
+        JobStatus.Approved => "primary",
+        JobStatus.InProgress => "warning",
+        JobStatus.Completed => "success",
+        JobStatus.Cancelled => "danger",
+        _ => "secondary"
+    };
+}
