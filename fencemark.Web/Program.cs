@@ -112,6 +112,8 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
+app.MapControllers();
+
 app.MapDefaultEndpoints();
 
 app.Run();
