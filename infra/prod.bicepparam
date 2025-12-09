@@ -47,6 +47,6 @@ param ciamTenantName = 'fencemarkprod'
 param ciamLocation = 'United States'
 param ciamDisplayName = 'Fencemark Identity'
 param ciamCountryCode = 'US'
-param ciamSkuName = 'Standard'
+param ciamSkuName = 'Base'
 param ciamSkuTier = 'A0'
 param customDomain = '' // TODO: Set custom domain for production (e.g., login.fencemark.com)
