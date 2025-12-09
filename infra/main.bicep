@@ -57,6 +57,28 @@ param webFrontendMaxReplicas int = 3
 param resourceGroupName string
 
 // ============================================================================
+// Azure Entra External ID (CIAM) Authentication Parameters
+// ============================================================================
+
+@description('The Azure Entra External ID (CIAM) tenant ID')
+param entraExternalIdTenantId string = ''
+
+@description('The Azure Entra External ID application (client) ID')
+param entraExternalIdClientId string = ''
+
+@description('The Azure Entra External ID instance URL')
+param entraExternalIdInstance string = ''
+
+@description('The Azure Entra External ID domain')
+param entraExternalIdDomain string = ''
+
+@description('The Key Vault URL containing the certificate for authentication')
+param keyVaultUrl string = ''
+
+@description('The name of the certificate in Key Vault')
+param certificateName string = ''
+
+// ============================================================================
 // Variables
 // ============================================================================
 
@@ -250,27 +272,38 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'AzureMaps__ClientId'
             value: mapsAccount.outputs.resourceId
           }
-          // Azure AD / Entra External ID settings - configure after CIAM deployment
-          // Update these values via Azure Portal or az containerapp update after deploying CIAM
+          // Azure AD / Entra External ID settings
           {
             name: 'AzureAd__Instance'
-            value: '' // Set to https://{ciamTenantName}.ciamlogin.com/ after CIAM deployment
+            value: !empty(entraExternalIdInstance) ? entraExternalIdInstance : ''
           }
           {
             name: 'AzureAd__TenantId'
-            value: '' // Set after CIAM deployment
+            value: !empty(entraExternalIdTenantId) ? entraExternalIdTenantId : ''
           }
           {
             name: 'AzureAd__ClientId'
-            value: '' // Set after manual app registration in CIAM tenant
+            value: !empty(entraExternalIdClientId) ? entraExternalIdClientId : ''
           }
           {
             name: 'AzureAd__Domain'
-            value: '' // Set to {ciamTenantName}.onmicrosoft.com after CIAM deployment
+            value: !empty(entraExternalIdDomain) ? entraExternalIdDomain : ''
           }
           {
             name: 'AzureAd__CallbackPath'
             value: '/signin-oidc'
+          }
+          {
+            name: 'AzureAd__SignedOutCallbackPath'
+            value: '/signout-callback-oidc'
+          }
+          {
+            name: 'KeyVault__Url'
+            value: !empty(keyVaultUrl) ? keyVaultUrl : ''
+          }
+          {
+            name: 'KeyVault__CertificateName'
+            value: !empty(certificateName) ? certificateName : ''
           }
         ]
         probes: [

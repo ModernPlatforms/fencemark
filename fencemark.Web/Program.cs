@@ -3,6 +3,8 @@ using fencemark.Web.Components;
 using fencemark.Web.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
+using Microsoft.Identity.Web;
+using Microsoft.Identity.Web.UI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,8 +20,55 @@ builder.Services.AddOutputCache();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
-builder.Services.AddAuthentication()
-    .AddCookie();
+// Configure Azure Entra External ID (CIAM) authentication
+var azureAdSection = builder.Configuration.GetSection("AzureAd");
+
+// Check if KeyVault configuration is present for certificate-based authentication
+var keyVaultUrl = builder.Configuration["KeyVault:Url"];
+var certificateName = builder.Configuration["KeyVault:CertificateName"];
+
+if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certificateName))
+{
+    // Certificate-based authentication with Azure Key Vault
+    try
+    {
+        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
+            .AddMicrosoftIdentityWebApp(
+                options =>
+                {
+                    builder.Configuration.Bind("AzureAd", options);
+                    
+                    // Configure certificate from Key Vault
+                    options.ClientCertificates = 
+                    [
+                        CertificateDescription.FromKeyVault(keyVaultUrl, certificateName)
+                    ];
+                },
+                options =>
+                {
+                    builder.Configuration.Bind("AzureAd", options);
+                },
+                displayName: "AzureAd")
+            .EnableTokenAcquisitionToCallDownstreamApi()
+            .AddInMemoryTokenCaches();
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Failed to configure certificate from Key Vault. URL: {keyVaultUrl}, Certificate: {certificateName}. Error: {ex.Message}");
+        throw;
+    }
+}
+else
+{
+    // Client secret based authentication (for development)
+    builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
+        .AddMicrosoftIdentityWebApp(azureAdSection)
+        .EnableTokenAcquisitionToCallDownstreamApi()
+        .AddInMemoryTokenCaches();
+}
+
+builder.Services.AddControllersWithViews()
+    .AddMicrosoftIdentityUI();
 
 builder.Services.AddAuthorization();
 
@@ -50,6 +99,9 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 
