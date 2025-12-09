@@ -132,8 +132,44 @@ The test suite covers all acceptance criteria:
 - **OpenAPI** - API documentation available in development mode
 - **Output Caching** - Response caching in the web frontend
 - **Resilience** - HTTP client resilience patterns for service-to-service communication
-- **Authentication & Authorization** - ASP.NET Core Identity with role-based access control
+- **Authentication & Authorization** - Azure Entra External ID (CIAM) for customer authentication with ASP.NET Core Identity for API access and role-based authorization
+  - OpenID Connect authentication
+  - Certificate-based authentication from Azure Key Vault
+  - Multi-role support (Owner, Admin, Member, Billing, ReadOnly)
+  - Secure token management
 - **Database** - Entity Framework Core with SQLite (development) or SQL Server/PostgreSQL (production)
+
+## Deployment
+
+The application can be deployed to Azure Container Apps using the included infrastructure as code.
+
+### Prerequisites
+- Azure subscription
+- Azure CLI installed
+- CIAM tenant (see [infra/ENTRA-EXTERNAL-ID-SETUP.md](infra/ENTRA-EXTERNAL-ID-SETUP.md))
+
+### Quick Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment instructions.
+
+```bash
+# 1. Get tenant ID
+./infra/get-tenant-id.sh rg-fencemark-identity-dev
+
+# 2. Update dev.bicepparam with tenant ID
+
+# 3. Deploy infrastructure
+az deployment sub create \
+  --location australiaeast \
+  --template-file ./infra/main.bicep \
+  --parameters ./infra/dev.bicepparam \
+  --name main
+
+# 4. Grant Key Vault access
+./infra/grant-keyvault-access.sh rg-fencemark-dev main
+```
+
+See [infra/README.md](infra/README.md) for infrastructure details.
 
 ## Resources
 
