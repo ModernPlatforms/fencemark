@@ -44,10 +44,10 @@ param tags = {
 // ============================================================================
 
 param enableEntraExternalId = true
-param ciamTenantName = 'fencemarkdev'
-param ciamLocation = 'United States'
+param ciamTenantName = 'devfencemark'
+param ciamLocation = 'Australia'
 param ciamDisplayName = 'Fencemark Dev Identity'
-param ciamCountryCode = 'US'
+param ciamCountryCode = 'AU'
 param ciamSkuName = 'Base'
 param ciamSkuTier = 'A0'
 param customDomain = ''
