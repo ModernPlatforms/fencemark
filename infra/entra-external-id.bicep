@@ -95,14 +95,14 @@ resource ciamDirectory 'Microsoft.AzureActiveDirectory/ciamDirectories@2023-05-1
     tier: ciamSkuTier
   }
   
-  properties: {
+  properties: any({
     createTenantProperties: {
       countryCode: ciamCountryCode
       displayName: ciamDisplayName
       IsGoLocalTenant: true
     }
     
-  }
+  })
 }
 
 
