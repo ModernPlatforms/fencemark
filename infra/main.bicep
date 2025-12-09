@@ -417,13 +417,12 @@ output mapsAccountName string = mapsAccount.outputs.name
 // Assign Key Vault Certificate User role to the managed identity
 // ============================================================================
 
-resource keyVaultAccess 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(keyVault.id, webFrontend.name, 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7') // Key Vault Certificate User role
+module keyVaultAccessModule './keyvault-access.bicep' = {
+  name: 'keyVaultAccessModule'
   scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')
+  params: {
+    keyVaultId: keyVault.id
     principalId: webFrontend.outputs.systemAssignedMIPrincipalId
-    principalType: 'ServicePrincipal'
   }
 }
 
