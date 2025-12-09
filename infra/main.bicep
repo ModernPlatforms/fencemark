@@ -424,7 +424,7 @@ module keyVaultAccessModule './keyvault-access.bicep' = {
     keyVaultName: keyVault.name
     principalId: webFrontend.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
-    roleName: 'Key Vault Certificates User'
+    roleName: 'Key Vault Certificate User'
   }
 }
 
