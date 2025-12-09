@@ -77,7 +77,7 @@ var defaultTags = union(tags, {
 var keyVaultName = '${abbrs.keyVaultVaults}${take('ciam${resourceToken}', 17)}'
 // The CIAM directory name must include the .onmicrosoft.com suffix
 // The API validates the base name (before .onmicrosoft.com) is max 26 chars
-#disable-next-line BCP335
+
 var ciamDomainName = '${ciamTenantName}.onmicrosoft.com'
 
 // ============================================================================
@@ -86,7 +86,8 @@ var ciamDomainName = '${ciamTenantName}.onmicrosoft.com'
 // Deploys the CIAM directory using the native Azure resource type
 
 resource ciamDirectory 'Microsoft.AzureActiveDirectory/ciamDirectories@2023-05-17-preview' = {
-  name: ciamTenantName
+  #disable-next-line BCP335
+  name: ciamDomainName
   location: ciamLocation
   tags: defaultTags
   sku: {
