@@ -39,10 +39,10 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
                     builder.Configuration.Bind("AzureAd", options);
                     
                     // Configure certificate from Key Vault
-                    options.ClientCertificates = 
-                    [
+                    options.ClientCertificates = new[]
+                    {
                         CertificateDescription.FromKeyVault(keyVaultUrl, certificateName)
-                    ];
+                    };
                 },
                 options =>
                 {
@@ -54,7 +54,7 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Failed to configure certificate from Key Vault. URL: {keyVaultUrl}, Certificate: {certificateName}. Error: {ex.Message}");
+        Console.Error.WriteLine($"Failed to configure certificate from Key Vault. Error: {ex.Message}");
         throw;
     }
 }
