@@ -187,6 +187,57 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
         workloadProfileType: 'Consumption'
       }
     ]
+    // Enable .NET Aspire Dashboard
+    appInsightsConnectionString: '' // Optional: Add Application Insights connection string
+    openTelemetryConfiguration: {
+      tracesDestination: 'appInsights'
+      logsDestination: 'appInsights'
+    }
+  }
+}
+
+// ============================================================================
+// .NET Aspire Dashboard Container App
+// ============================================================================
+
+module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
+  name: 'aspireDashboard'
+  scope: rg
+  params: {
+    name: '${abbrs.appContainerApps}aspire-dashboard-${resourceToken}'
+    location: location
+    tags: union(defaultTags, {
+      'azd-service-name': 'aspire-dashboard'
+    })
+    environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    workloadProfileName: 'Consumption'
+    containers: [
+      {
+        name: 'aspire-dashboard'
+        image: 'mcr.microsoft.com/dotnet/aspire-dashboard:9.0'
+        resources: {
+          cpu: json('0.25')
+          memory: '0.5Gi'
+        }
+        env: [
+          {
+            name: 'DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS'
+            value: 'true'
+          }
+          {
+            name: 'DASHBOARD__OTLP__AUTHMODE'
+            value: 'Unsecured'
+          }
+        ]
+      }
+    ]
+    scaleSettings: {
+      minReplicas: 1
+      maxReplicas: 1
+    }
+    ingressExternal: true
+    ingressTargetPort: 18888
+    ingressTransport: 'http'
   }
 }
 
@@ -216,6 +267,16 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
           cpu: json(apiServiceCpu)
           memory: apiServiceMemory
         }
+        env: [
+          {
+            name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
+            value: 'http://${abbrs.appContainerApps}aspire-dashboard-${resourceToken}:18889'
+          }
+          {
+            name: 'OTEL_SERVICE_NAME'
+            value: 'apiservice'
+          }
+        ]
         probes: [
           {
             type: 'Liveness'
@@ -288,6 +349,14 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           memory: webFrontendMemory
         }
         env: [
+          {
+            name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
+            value: 'http://${abbrs.appContainerApps}aspire-dashboard-${resourceToken}:18889'
+          }
+          {
+            name: 'OTEL_SERVICE_NAME'
+            value: 'webfrontend'
+          }
           {
             name: 'services__apiservice__http__0'
             value: 'http://${abbrs.appContainerApps}apiservice-${resourceToken}'
@@ -418,6 +487,9 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 
 @description('The URL of the Web Frontend')
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
+
+@description('The URL of the Aspire Dashboard')
+output aspireDashboardUrl string = 'https://${aspireDashboard.outputs.fqdn}'
 
 @description('The principal ID of the Web Frontend managed identity')
 output webFrontendIdentityPrincipalId string = webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
