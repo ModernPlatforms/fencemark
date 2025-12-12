@@ -1,3 +1,16 @@
+# ============================================================================
+# Build and Test Workflow
+# ============================================================================
+# This workflow validates code quality on every push and pull request to main.
+# It builds the solution, runs tests, and reports results.
+#
+# Triggers:
+#   - Push to main branch
+#   - Pull request to main branch
+#
+# For more information, see: CI-CD.md
+# ============================================================================
+
 name: Build and Test
 
 on:
@@ -7,16 +20,19 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
-  checks: write
-  pull-requests: write
+  contents: read        # Read repository contents
+  checks: write         # Write check run results
+  pull-requests: write  # Comment test results on PRs
 
 jobs:
   build:
+    name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -42,6 +58,7 @@ jobs:
           name: test-results
           path: TestResults/*.trx
           if-no-files-found: warn
+          retention-days: 30
 
       - name: Annotate test failures
         if: always()
