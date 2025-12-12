@@ -142,6 +142,13 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
   }
 }
 
+// Reference to ACR for getting admin credentials
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: '${abbrs.containerRegistryRegistries}${resourceToken}'
+  scope: rg
+  dependsOn: [containerRegistry]
+}
+
 // ============================================================================
 // Azure Maps Account
 // ============================================================================
@@ -241,8 +248,14 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
     registries: [
       {
         server: containerRegistry.outputs.loginServer
-        // Use system-assigned managed identity for ACR auth
-        identity: 'system'
+        username: containerRegistry.outputs.name
+        passwordSecretRef: 'acr-password'
+      }
+    ]
+    secrets: [
+      {
+        name: 'acr-password'
+        value: acr.listCredentials().passwords[0].value
       }
     ]
   }
@@ -353,34 +366,16 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
     registries: [
       {
         server: containerRegistry.outputs.loginServer
-        // Use system-assigned managed identity for ACR auth
-        identity: 'system'
+        username: containerRegistry.outputs.name
+        passwordSecretRef: 'acr-password'
       }
     ]
-  }
-}
-
-// ============================================================================
-// ACR AcrPull role assignments for Container Apps managed identities
-// ============================================================================
-
-module apiServiceAcrPull './modules/acr-role-assignment.bicep' = {
-  name: 'apiServiceAcrPull'
-  scope: rg
-  params: {
-    acrName: containerRegistry.outputs.name
-    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
-    principalType: 'ServicePrincipal'
-  }
-}
-
-module webFrontendAcrPull './modules/acr-role-assignment.bicep' = {
-  name: 'webFrontendAcrPull'
-  scope: rg
-  params: {
-    acrName: containerRegistry.outputs.name
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
-    principalType: 'ServicePrincipal'
+    secrets: [
+      {
+        name: 'acr-password'
+        value: acr.listCredentials().passwords[0].value
+      }
+    ]
   }
 }
 
