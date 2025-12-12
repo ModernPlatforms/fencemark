@@ -413,13 +413,14 @@ The pipeline uses **OpenID Connect (OIDC)** for secure, credential-less authenti
 Images are tagged with the Git commit SHA for traceability:
 
 ```bash
-IMAGE_TAG="<acr-login-server>/apiservice:${{ github.sha }}"
+# In GitHub Actions workflows, the SHA is available as $GITHUB_SHA or ${{ github.sha }}
+IMAGE_TAG="<acr-login-server>/apiservice:${GITHUB_SHA}"
 docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
 docker push $IMAGE_TAG
 ```
 
 **Image Naming Convention**:
-- Format: `<registry>//<service>:<commit-sha>`
+- Format: `<registry>/<service>:<commit-sha>`
 - Example: `crfencemark123.azurecr.io/apiservice:a1b2c3d`
 
 **Benefits**:
