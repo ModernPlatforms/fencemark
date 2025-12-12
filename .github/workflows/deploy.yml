@@ -114,10 +114,10 @@ jobs:
           echo "short-sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Publish API Service
-        run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice
+        run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice --no-build
 
       - name: Publish Web Frontend
-        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend
+        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend --no-build
 
       - name: Upload API Service artifact
         uses: actions/upload-artifact@v4
