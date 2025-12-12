@@ -174,7 +174,6 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
       }
     }
     zoneRedundant: false
-    // Ensure public network access is enabled for external ingress
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -242,14 +241,8 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
     registries: [
       {
         server: containerRegistry.outputs.loginServer
-        username: containerRegistry.outputs.name
-        passwordSecretRef: 'registry-password'
-      }
-    ]
-    secrets: [
-      {
-        name: 'registry-password'
-        value: containerRegistry.outputs.name
+        // Use system-assigned managed identity for ACR auth
+        identity: 'system'
       }
     ]
   }
@@ -360,16 +353,34 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
     registries: [
       {
         server: containerRegistry.outputs.loginServer
-        username: containerRegistry.outputs.name
-        passwordSecretRef: 'registry-password'
+        // Use system-assigned managed identity for ACR auth
+        identity: 'system'
       }
     ]
-    secrets: [
-      {
-        name: 'registry-password'
-        value: containerRegistry.outputs.name
-      }
-    ]
+  }
+}
+
+// ============================================================================
+// ACR AcrPull role assignments for Container Apps managed identities
+// ============================================================================
+
+module apiServiceAcrPull './modules/acr-role-assignment.bicep' = {
+  name: 'apiServiceAcrPull'
+  scope: rg
+  params: {
+    acrName: containerRegistry.outputs.name
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module webFrontendAcrPull './modules/acr-role-assignment.bicep' = {
+  name: 'webFrontendAcrPull'
+  scope: rg
+  params: {
+    acrName: containerRegistry.outputs.name
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
   }
 }
 
@@ -414,7 +425,7 @@ output webFrontendFqdn string = webFrontend.outputs.fqdn
 output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
 
 @description('The principal ID of the Web Frontend managed identity')
-output webFrontendIdentityPrincipalId string = webFrontend.outputs.systemAssignedMIPrincipalId
+output webFrontendIdentityPrincipalId string = webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
 
 @description('The resource group name')
 output resourceGroupName string = rg.name
@@ -434,9 +445,8 @@ module keyVaultAccessModule './keyvault-access.bicep' = {
   scope: resourceGroup(externalidRg)
   params: {
     keyVaultName: keyVault.name
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Certificate User'
   }
 }
-
