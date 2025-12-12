@@ -179,18 +179,16 @@ jobs:
           location: ${{ env.AZURE_LOCATION }}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/dev.bicepparam
-          deployment-name: main
 
       - name: Get deployment outputs
         id: get-outputs
         run: |
-          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
-          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
-          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
-          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
-          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
+          echo "acr-name=${{ steps.deploy-infra.outputs.containerRegistryName }}"      >> $GITHUB_OUTPUT
+          echo "acr-login-server=${{ steps.deploy-infra.outputs.containerRegistryLoginServer }}" >> $GITHUB_OUTPUT
+          echo "api-service-name=${{ steps.deploy-infra.outputs.apiServiceName }}"     >> $GITHUB_OUTPUT
+          echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}"   >> $GITHUB_OUTPUT
+          echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}"    >> $GITHUB_OUTPUT
+          echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}"     >> $GITHUB_OUTPUT
 
       - name: Download API Service artifact
         uses: actions/download-artifact@v4
