@@ -108,7 +108,11 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Health check endpoints are required for Azure Container Apps probes
+        // Health check endpoints are required for Azure Container Apps probes.
+        // These endpoints are intentionally unauthenticated as they are used by the 
+        // Azure platform infrastructure to determine container health and should not
+        // expose sensitive application information.
+        
         // All health checks must pass for app to be considered ready to accept traffic after starting
         app.MapHealthChecks(HealthEndpointPath);
 
