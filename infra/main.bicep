@@ -174,6 +174,13 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
       }
     }
     zoneRedundant: false
+    // Ensure public network access is enabled for external ingress
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
   }
 }
 
@@ -191,6 +198,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
       'azd-service-name': 'apiservice'
     })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    workloadProfileName: 'Consumption'
     containers: [
       {
         name: 'apiservice'
@@ -258,6 +266,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
       'azd-service-name': 'webfrontend'
     })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    workloadProfileName: 'Consumption'
     managedIdentities: {
       systemAssigned: true
     }
