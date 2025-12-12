@@ -204,7 +204,7 @@ module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
   name: 'aspireDashboard'
   scope: rg
   params: {
-    name: '${abbrs.appContainerApps}aspire-dashboard-${resourceToken}'
+    name: '${abbrs.appContainerApps}aspiredash-${resourceToken}'
     location: location
     tags: union(defaultTags, {
       'azd-service-name': 'aspire-dashboard'
@@ -213,7 +213,7 @@ module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
     workloadProfileName: 'Consumption'
     containers: [
       {
-        name: 'aspire-dashboard'
+        name: 'aspiredashboard'
         image: 'mcr.microsoft.com/dotnet/aspire-dashboard:9.0'
         resources: {
           cpu: json('0.25')
@@ -228,6 +228,10 @@ module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
             name: 'DASHBOARD__OTLP__AUTHMODE'
             value: 'Unsecured'
           }
+          {
+            name: 'DASHBOARD__OTLP__ENDPOINT_URL'
+            value: 'http://+:18889'
+          }
         ]
       }
     ]
@@ -238,6 +242,12 @@ module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
     ingressExternal: true
     ingressTargetPort: 18888
     ingressTransport: 'http'
+    additionalPortMappings: [
+      {
+        external: false
+        targetPort: 18889
+      }
+    ]
   }
 }
 
@@ -270,7 +280,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
         env: [
           {
             name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
-            value: 'http://${abbrs.appContainerApps}aspire-dashboard-${resourceToken}:18889'
+            value: 'http://${abbrs.appContainerApps}aspiredash-${resourceToken}:18889'
           }
           {
             name: 'OTEL_SERVICE_NAME'
@@ -351,7 +361,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
         env: [
           {
             name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
-            value: 'http://${abbrs.appContainerApps}aspire-dashboard-${resourceToken}:18889'
+            value: 'http://${abbrs.appContainerApps}aspiredash-${resourceToken}:18889'
           }
           {
             name: 'OTEL_SERVICE_NAME'
