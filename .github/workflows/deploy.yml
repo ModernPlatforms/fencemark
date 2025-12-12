@@ -3,6 +3,22 @@
 # ============================================================================
 # This workflow deploys the Fencemark application to Azure Container Apps
 # using Bicep infrastructure as code.
+#
+# Deployment Flow:
+#   1. Build and test the solution
+#   2. Publish application artifacts
+#   3. Deploy Bicep infrastructure to Azure
+#   4. Build and push Docker images to Azure Container Registry
+#   5. Update Container Apps with new images
+#
+# Environments:
+#   - dev: Auto-deploys on push to main
+#   - staging: Manual deployment with approval
+#   - prod: Manual deployment with approval
+#
+# Authentication: Uses OpenID Connect (OIDC) for secure, credential-less auth
+#
+# For more information, see: CI-CD.md
 # ============================================================================
 
 name: Deploy to Azure
@@ -27,16 +43,17 @@ on:
           - staging
           - prod
 
+# Prevent concurrent deployments to same environment
 concurrency:
   group: deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'dev' }}
   cancel-in-progress: false
 
 permissions:
-  id-token: write
-  checks: write
-  pull-requests: write
-  contents: read
-  packages: write
+  id-token: write       # Required for OIDC authentication with Azure
+  checks: write         # Write check run results
+  pull-requests: write  # Comment deployment status on PRs
+  contents: read        # Read repository contents
+  packages: write       # Push container images to ACR
 
 env:
   AZURE_LOCATION: 'australiaeast'
@@ -44,11 +61,15 @@ env:
 
 jobs:
   # ============================================================================
-  # Build and Test
+  # Build and Test Job
+  # ============================================================================
+  # Builds the solution, runs tests, and publishes artifacts for deployment.
+  # Artifacts are retained for 1 day to support multiple environment deployments.
   # ============================================================================
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       image-tag: ${{ steps.meta.outputs.tags }}
     steps:
@@ -76,6 +97,7 @@ jobs:
           name: test-results
           path: TestResults/*.trx
           if-no-files-found: warn
+          retention-days: 30
 
       - name: Annotate test failures
         if: always()
@@ -92,10 +114,10 @@ jobs:
           echo "short-sha=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Publish API Service
-        run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice
+        run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice --no-build
 
       - name: Publish Web Frontend
-        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend
+        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend --no-build
 
       - name: Upload API Service artifact
         uses: actions/upload-artifact@v4
@@ -112,7 +134,17 @@ jobs:
           retention-days: 1
 
   # ============================================================================
-  # Deploy to Dev (on push to main)
+  # Deploy to Dev Environment
+  # ============================================================================
+  # Automatically deploys to dev on push to main (excluding doc changes).
+  # Can also be triggered manually via workflow_dispatch.
+  #
+  # Steps:
+  #   1. Authenticate with Azure using OIDC
+  #   2. Deploy infrastructure using Bicep templates
+  #   3. Download build artifacts
+  #   4. Build and push Docker images to ACR
+  #   5. Update Container Apps with new images
   # ============================================================================
   deploy-dev:
     name: Deploy to Dev
@@ -120,6 +152,7 @@ jobs:
     needs: build
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     environment: dev
+    timeout-minutes: 30
     env:
       RESOURCE_GROUP: rg-fencemark-dev
       API_SERVICE_NAME: ca-apiservice
@@ -135,7 +168,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy Bicep to Dev
+      - name: Deploy Bicep infrastructure to Dev
         uses: azure/bicep-deploy@v2
         id: deploy-infra
         with:
@@ -223,7 +256,11 @@ jobs:
           echo "- **Key Vault:** kv-ciambfwyw65gna5lu" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
-  # Deploy to Staging (manual trigger only)
+  # Deploy to Staging Environment
+  # ============================================================================
+  # Manual deployment only (via workflow_dispatch).
+  # Used for pre-production validation, QA, and UAT.
+  # Requires approval from designated approvers.
   # ============================================================================
   deploy-staging:
     name: Deploy to Staging
@@ -231,6 +268,7 @@ jobs:
     needs: build
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     environment: staging
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -242,7 +280,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy Bicep to Staging
+      - name: Deploy Bicep infrastructure to Staging
         uses: azure/bicep-deploy@v2
         id: deploy-infra
         with:
@@ -325,7 +363,12 @@ jobs:
           echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
-  # Deploy to Production (manual trigger only)
+  # Deploy to Production Environment
+  # ============================================================================
+  # Manual deployment only (via workflow_dispatch).
+  # Used for live user-facing application.
+  # Requires approval from designated approvers.
+  # High availability configuration with minimum 2 replicas.
   # ============================================================================
   deploy-prod:
     name: Deploy to Production
@@ -333,6 +376,7 @@ jobs:
     needs: build
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     environment: prod
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -344,7 +388,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy Bicep to Production
+      - name: Deploy Bicep infrastructure to Production
         uses: azure/bicep-deploy@v2
         id: deploy-infra
         with:
