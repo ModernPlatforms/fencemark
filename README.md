@@ -141,16 +141,31 @@ The test suite covers all acceptance criteria:
 
 ## Deployment
 
-The application can be deployed to Azure Container Apps using the included infrastructure as code.
+The application uses GitHub Actions for CI/CD with Azure Bicep for infrastructure as code.
 
-### Prerequisites
+### Automated Deployment (Recommended)
+
+The application automatically deploys to development on every push to `main`. For staging and production, trigger manual deployments via GitHub Actions.
+
+See **[CI-CD.md](CI-CD.md)** for complete CI/CD pipeline documentation, including:
+- Pipeline architecture and workflows
+- Automated builds and tests
+- Deployment process with Bicep
+- Environment management
+- Troubleshooting guide
+
+### Manual Deployment
+
+For manual deployments or initial setup:
+
+**Prerequisites**:
 - Azure subscription
 - Azure CLI installed
 - CIAM tenant (see [infra/ENTRA-EXTERNAL-ID-SETUP.md](infra/ENTRA-EXTERNAL-ID-SETUP.md))
 
-### Quick Deployment
+**Quick Deployment**:
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive deployment instructions.
+See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive manual deployment instructions.
 
 ```bash
 # 1. Get tenant ID
@@ -171,8 +186,23 @@ az deployment sub create \
 
 See [infra/README.md](infra/README.md) for infrastructure details.
 
+## CI/CD Pipeline
+
+Fencemark uses GitHub Actions with the following workflows:
+
+- **Build and Test** - Validates every push and PR
+- **Deploy to Azure** - Deploys using Bicep infrastructure as code
+- **Dependency Review** - Scans for vulnerable dependencies
+
+**Quick Links**:
+- 📖 [Complete CI/CD Documentation](CI-CD.md)
+- 🚀 [Manual Deployment Guide](DEPLOYMENT.md)
+- 🏗️ [Infrastructure Details](infra/README.md)
+
 ## Resources
 
 - [.NET Aspire Documentation](https://learn.microsoft.com/dotnet/aspire)
 - [Blazor Documentation](https://learn.microsoft.com/aspnet/core/blazor)
 - [ASP.NET Core Minimal APIs](https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Azure Bicep Documentation](https://learn.microsoft.com/azure/azure-resource-manager/bicep/)
