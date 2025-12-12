@@ -2,7 +2,7 @@
 # This expects the application to be published to the build context
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS final
 WORKDIR /app
-EXPOSE 8080
+EXPOSE 80
 
 # Copy published output
 COPY . .
