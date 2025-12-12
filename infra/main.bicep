@@ -198,6 +198,9 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
       'azd-service-name': 'apiservice'
     })
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
+    managedIdentities: {
+      systemAssigned: true
+    }
     workloadProfileName: 'Consumption'
     containers: [
       {
