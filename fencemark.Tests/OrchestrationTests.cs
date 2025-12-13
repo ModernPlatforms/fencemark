@@ -6,6 +6,29 @@ namespace fencemark.Tests;
 /// </summary>
 public class OrchestrationTests
 {
+    /// <summary>
+    /// Gets the repository root directory by traversing up from the current directory.
+    /// </summary>
+    private static string GetRepositoryRoot()
+    {
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var directory = new DirectoryInfo(currentDirectory);
+        
+        // Traverse up until we find the repository root (containing .git directory or solution file)
+        while (directory != null)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, ".git")) ||
+                File.Exists(Path.Combine(directory.FullName, "fencemark.slnx")))
+            {
+                return directory.FullName;
+            }
+            directory = directory.Parent;
+        }
+        
+        // Fallback to the typical test project structure
+        return Path.GetFullPath(Path.Combine(currentDirectory, "..", "..", "..", ".."));
+    }
+
     [Theory]
     [InlineData("Development")]
     [InlineData("Test")]
@@ -14,13 +37,8 @@ public class OrchestrationTests
     public void AppHost_ConfigurationFiles_ExistForAllEnvironments(string environment)
     {
         // Arrange
-        var appHostProjectPath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "fencemark.AppHost");
+        var repoRoot = GetRepositoryRoot();
+        var appHostProjectPath = Path.Combine(repoRoot, "fencemark.AppHost");
 
         var expectedConfigFile = environment == "Development"
             ? Path.Combine(appHostProjectPath, "appsettings.Development.json")
@@ -84,14 +102,8 @@ public class OrchestrationTests
     public void AppHost_File_ContainsEnvironmentConfiguration()
     {
         // Arrange
-        var appHostFilePath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "fencemark.AppHost",
-            "AppHost.cs");
+        var repoRoot = GetRepositoryRoot();
+        var appHostFilePath = Path.Combine(repoRoot, "fencemark.AppHost", "AppHost.cs");
 
         // Act
         var appHostContent = File.ReadAllText(appHostFilePath);
@@ -152,13 +164,8 @@ public class OrchestrationTests
     public void OrchestrationDocumentation_Exists()
     {
         // Arrange
-        var docPath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "ASPIRE_ORCHESTRATION.md");
+        var repoRoot = GetRepositoryRoot();
+        var docPath = Path.Combine(repoRoot, "ASPIRE_ORCHESTRATION.md");
 
         // Act & Assert
         Assert.True(
@@ -180,14 +187,8 @@ public class OrchestrationTests
     public void AppHost_ConfiguresRequiredServices(string serviceName)
     {
         // Arrange
-        var appHostFilePath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "fencemark.AppHost",
-            "AppHost.cs");
+        var repoRoot = GetRepositoryRoot();
+        var appHostFilePath = Path.Combine(repoRoot, "fencemark.AppHost", "AppHost.cs");
 
         // Act
         var appHostContent = File.ReadAllText(appHostFilePath);
@@ -200,14 +201,8 @@ public class OrchestrationTests
     public void AppHost_ConfiguresHealthChecks()
     {
         // Arrange
-        var appHostFilePath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "fencemark.AppHost",
-            "AppHost.cs");
+        var repoRoot = GetRepositoryRoot();
+        var appHostFilePath = Path.Combine(repoRoot, "fencemark.AppHost", "AppHost.cs");
 
         // Act
         var appHostContent = File.ReadAllText(appHostFilePath);
@@ -221,14 +216,8 @@ public class OrchestrationTests
     public void AppHost_ConfiguresServiceDependencies()
     {
         // Arrange
-        var appHostFilePath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..",
-            "..",
-            "..",
-            "..",
-            "fencemark.AppHost",
-            "AppHost.cs");
+        var repoRoot = GetRepositoryRoot();
+        var appHostFilePath = Path.Combine(repoRoot, "fencemark.AppHost", "AppHost.cs");
 
         // Act
         var appHostContent = File.ReadAllText(appHostFilePath);

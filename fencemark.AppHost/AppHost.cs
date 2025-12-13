@@ -16,7 +16,7 @@ var apiService = builder.AddProject<Projects.fencemark_ApiService>("apiservice")
     .WithReplicas(GetMinReplicas(environmentName, "ApiService"));
 
 // Apply environment-specific resource limits for non-local environments
-if (!isLocal && environmentName != "Development")
+if (!isLocal)
 {
     apiService = ApplyResourceLimits(apiService, environmentName, "ApiService");
 }
@@ -32,7 +32,7 @@ var webFrontend = builder.AddProject<Projects.fencemark_Web>("webfrontend")
     .WithReplicas(GetMinReplicas(environmentName, "WebFrontend"));
 
 // Apply environment-specific resource limits for non-local environments
-if (!isLocal && environmentName != "Development")
+if (!isLocal)
 {
     webFrontend = ApplyResourceLimits(webFrontend, environmentName, "WebFrontend");
 }
