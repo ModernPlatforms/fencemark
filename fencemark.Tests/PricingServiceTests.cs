@@ -68,29 +68,29 @@ public class PricingServiceTests
         };
         context.Components.AddRange(components);
 
-        // Create pricing config
+        // Create pricing config (using metric units)
         var pricingConfig = new PricingConfig
         {
             Id = Guid.NewGuid().ToString(),
             OrganizationId = org.Id,
             Name = "Standard Pricing",
             LaborRatePerHour = 50.00m,
-            HoursPerLinearFoot = 0.15m,
+            HoursPerLinearMeter = 0.492m, // Converted from 0.15 hours/foot
             ContingencyPercentage = 0.10m,
             ProfitMarginPercentage = 0.20m,
             IsDefault = true
         };
         context.PricingConfigs.Add(pricingConfig);
 
-        // Create height tiers
+        // Create height tiers (in meters)
         var heightTiers = new[]
         {
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInFeet = 0,
-                MaxHeightInFeet = 6,
+                MinHeightInMeters = 0,
+                MaxHeightInMeters = 1.83m, // 6 feet
                 Multiplier = 1.0m,
                 Description = "Standard height"
             },
@@ -98,8 +98,8 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInFeet = 6,
-                MaxHeightInFeet = 8,
+                MinHeightInMeters = 1.83m, // 6 feet
+                MaxHeightInMeters = 2.44m, // 8 feet
                 Multiplier = 1.25m,
                 Description = "Tall fence surcharge"
             }
@@ -279,8 +279,8 @@ public class PricingServiceTests
         var quote = await service.GenerateQuoteAsync(job.Id);
 
         // Assert
-        // Expected: 100 ft * 0.15 hours/ft * $50/hour = $750
-        Assert.Equal(750.00m, quote.LaborCost);
+        // Expected: 100 ft * 0.3048 m/ft * 0.492 hours/m * $50/hour = ~$749.81
+        Assert.Equal(749.8080m, quote.LaborCost);
     }
 
     [Fact]
@@ -424,29 +424,29 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInFeet = 0,
-                MaxHeightInFeet = 6,
+                MinHeightInMeters = 0,
+                MaxHeightInMeters = 1.83m, // 6 feet
                 Multiplier = 1.0m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInFeet = 6,
-                MaxHeightInFeet = 8,
+                MinHeightInMeters = 1.83m, // 6 feet
+                MaxHeightInMeters = 2.44m, // 8 feet
                 Multiplier = 1.25m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInFeet = 8,
-                MaxHeightInFeet = null,
+                MinHeightInMeters = 2.44m, // 8 feet
+                MaxHeightInMeters = null,
                 Multiplier = 1.50m
             }
         };
 
-        // Act & Assert
+        // Act & Assert (test with heights in feet, which get converted to meters internally)
         Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 4.0m));
         Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 6.0m));
         Assert.Equal(1.25m, service.GetHeightMultiplier(tiers, 7.0m));

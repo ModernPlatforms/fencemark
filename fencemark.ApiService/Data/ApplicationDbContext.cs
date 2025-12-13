@@ -258,7 +258,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.LaborRatePerHour).HasPrecision(18, 2);
-            entity.Property(e => e.HoursPerLinearFoot).HasPrecision(18, 4);
+            entity.Property(e => e.HoursPerLinearMeter).HasPrecision(18, 4);
             entity.Property(e => e.ContingencyPercentage).HasPrecision(5, 4);
             entity.Property(e => e.ProfitMarginPercentage).HasPrecision(5, 4);
             
@@ -275,8 +275,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<HeightTier>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.MinHeightInFeet).HasPrecision(18, 2);
-            entity.Property(e => e.MaxHeightInFeet).HasPrecision(18, 2);
+            entity.Property(e => e.MinHeightInMeters).HasPrecision(18, 2);
+            entity.Property(e => e.MaxHeightInMeters).HasPrecision(18, 2);
             entity.Property(e => e.Multiplier).HasPrecision(18, 4);
             
             entity.HasOne(e => e.PricingConfig)

@@ -31,9 +31,9 @@ public class PricingConfig
     public decimal LaborRatePerHour { get; set; }
 
     /// <summary>
-    /// Estimated hours per linear foot of fence
+    /// Estimated hours per linear meter of fence
     /// </summary>
-    public decimal HoursPerLinearFoot { get; set; }
+    public decimal HoursPerLinearMeter { get; set; }
 
     /// <summary>
     /// Contingency percentage (e.g., 0.10 for 10%)
@@ -87,14 +87,14 @@ public class HeightTier
     public required string PricingConfigId { get; set; }
 
     /// <summary>
-    /// Minimum height in feet for this tier
+    /// Minimum height in meters for this tier
     /// </summary>
-    public decimal MinHeightInFeet { get; set; }
+    public decimal MinHeightInMeters { get; set; }
 
     /// <summary>
-    /// Maximum height in feet for this tier (null for unlimited)
+    /// Maximum height in meters for this tier (null for unlimited)
     /// </summary>
-    public decimal? MaxHeightInFeet { get; set; }
+    public decimal? MaxHeightInMeters { get; set; }
 
     /// <summary>
     /// Multiplier to apply to base price (e.g., 1.0 for standard, 1.25 for 25% increase)

@@ -12,7 +12,7 @@ The quoting engine provides comprehensive pricing calculation, bill of materials
 
 Organizations can define custom pricing configurations with:
 
-- **Labor Rates**: Hourly rate and hours per linear foot
+- **Labor Rates**: Hourly rate and hours per linear meter
 - **Contingency**: Percentage buffer for unexpected costs
 - **Profit Margin**: Target profit percentage
 - **Height Tiers**: Price multipliers based on fence height (e.g., taller fences cost more)
@@ -23,9 +23,9 @@ Each organization can have multiple pricing configurations, with one set as the 
 
 | Min Height | Max Height | Multiplier | Description |
 |------------|------------|------------|-------------|
-| 0 ft | 6 ft | 1.0x | Standard height |
-| 6 ft | 8 ft | 1.25x | Tall fence surcharge (25% increase) |
-| 8 ft+ | - | 1.5x | Extra tall fence (50% increase) |
+| 0 m | 1.83 m | 1.0x | Standard height |
+| 1.83 m | 2.44 m | 1.25x | Tall fence surcharge (25% increase) |
+| 2.44 m+ | - | 1.5x | Extra tall fence (50% increase) |
 
 ### 2. Quote Generation
 
@@ -33,13 +33,13 @@ The system automatically generates quotes from jobs by:
 
 1. **Calculating Materials**: 
    - Analyzes fence types and gate types in the job
-   - Determines required components based on linear footage
+   - Determines required components based on linear meterage
    - Aggregates components by category (Posts, Rails, Panels, Gates, etc.)
 
 2. **Calculating Labor**:
    - Uses the formula: `Total Hours = Linear Feet × Hours per Linear Foot`
    - Applies hourly labor rate
-   - Example: 100 ft × 0.15 hours/ft × $50/hour = $750
+   - Example: 30.48 m × 0.492 hours/m × $50/hour = ~$750
 
 3. **Applying Pricing Rules**:
    - Subtotal = Materials + Labor
@@ -61,7 +61,7 @@ Each quote includes a detailed BOM that lists:
 - **Category**: Posts, Rails, Panels, Hardware, Gates, Labor, etc.
 
 Components are automatically calculated based on:
-- **Fence Components**: Quantity per linear foot (e.g., 1 post per 8 feet = 0.125 per foot)
+- **Fence Components**: Quantity per linear meter (e.g., 1 post per 2.44 meters)
 - **Gate Components**: Quantity per gate (e.g., 2 hinges per gate)
 
 ### 4. Quote Versioning
@@ -143,7 +143,7 @@ POST /api/pricing-configs
   "name": "Standard Pricing 2024",
   "description": "Default pricing for residential projects",
   "laborRatePerHour": 50.00,
-  "hoursPerLinearFoot": 0.15,
+  "hoursPerLinearMeter": 0.492,
   "contingencyPercentage": 0.10,
   "profitMarginPercentage": 0.20,
   "isDefault": true
@@ -168,12 +168,12 @@ Response includes:
 
 ### Recalculating a Quote
 
-When a job changes (e.g., customer wants more linear feet):
+When a job changes (e.g., customer wants more linear meters):
 
 ```json
 POST /api/quotes/{id}/recalculate
 {
-  "changeSummary": "Increased fence length from 100ft to 150ft"
+  "changeSummary": "Increased fence length from 30.48m to 45.72m"
 }
 ```
 
@@ -200,7 +200,7 @@ Returns a complete HTML document that can be:
   "organizationId": "string",
   "name": "string",
   "laborRatePerHour": "decimal",
-  "hoursPerLinearFoot": "decimal",
+  "hoursPerLinearMeter": "decimal",
   "contingencyPercentage": "decimal",
   "profitMarginPercentage": "decimal",
   "isDefault": "boolean",
@@ -282,23 +282,23 @@ dotnet test --filter-class "*QuoteExportServiceTests"
 ### Example 1: Simple Fence Project
 
 **Job Details:**
-- 100 linear feet of 6ft privacy fence
+- 30.48 linear meters of 1.83m privacy fence
 - 1 single walk gate
 
 **Pricing Config:**
-- Labor: $50/hour, 0.15 hours per linear foot
+- Labor: $50/hour, 0.492 hours per linear meter
 - Contingency: 10%
 - Profit: 20%
 
 **Materials:**
 - Posts: 13 @ $45 = $585
-- Rails: 300 LF @ $2.50 = $750
+- Rails: 91.44 m @ $8.20/m = $750
 - Panels: 13 @ $12.69 = $165
 - Gate Hinges: 2 @ $12.50 = $25
 - **Materials Total: $1,525**
 
 **Labor:**
-- Hours: 100 ft × 0.15 = 15 hours
+- Hours: 30.48 m × 0.492 hours/m = ~15 hours
 - Cost: 15 × $50 = $750
 
 **Pricing:**
@@ -310,9 +310,9 @@ dotnet test --filter-class "*QuoteExportServiceTests"
 
 ### Example 2: With Height Tier
 
-Same project but with 8ft tall fence:
+Same project but with 2.44m tall fence:
 
-**Height Tier:** 8ft falls into "Tall Fence" tier with 1.25x multiplier
+**Height Tier:** 2.44m falls into "Tall Fence" tier with 1.25x multiplier
 
 **Adjusted Materials:** $1,525 × 1.25 = $1,906.25
 **Labor:** $750 (same)

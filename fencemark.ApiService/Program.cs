@@ -687,7 +687,7 @@ app.MapPut("/api/pricing-configs/{id}", async (string id, PricingConfig request,
     config.Name = request.Name;
     config.Description = request.Description;
     config.LaborRatePerHour = request.LaborRatePerHour;
-    config.HoursPerLinearFoot = request.HoursPerLinearFoot;
+    config.HoursPerLinearMeter = request.HoursPerLinearMeter;
     config.ContingencyPercentage = request.ContingencyPercentage;
     config.ProfitMarginPercentage = request.ProfitMarginPercentage;
     config.IsDefault = request.IsDefault;

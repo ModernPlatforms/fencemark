@@ -11,8 +11,8 @@ using fencemark.ApiService.Data;
 namespace fencemark.ApiService.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251213011613_AddPricingAndQuotingModels")]
-    partial class AddPricingAndQuotingModels
+    [Migration("20251213021938_AddPricingAndQuotingModelsMetric")]
+    partial class AddPricingAndQuotingModelsMetric
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -489,11 +489,11 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("MaxHeightInFeet")
+                    b.Property<decimal?>("MaxHeightInMeters")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("MinHeightInFeet")
+                    b.Property<decimal>("MinHeightInMeters")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
@@ -704,7 +704,7 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("HoursPerLinearFoot")
+                    b.Property<decimal>("HoursPerLinearMeter")
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 

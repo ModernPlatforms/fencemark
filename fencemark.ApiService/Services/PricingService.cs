@@ -353,7 +353,9 @@ public class PricingService : IPricingService
 
     private decimal CalculateLaborCost(decimal totalLinearFeet, PricingConfig pricingConfig)
     {
-        var totalHours = totalLinearFeet * pricingConfig.HoursPerLinearFoot;
+        // Convert feet to meters for calculation (1 foot = 0.3048 meters)
+        var totalLinearMeters = totalLinearFeet * 0.3048m;
+        var totalHours = totalLinearMeters * pricingConfig.HoursPerLinearMeter;
         return totalHours * pricingConfig.LaborRatePerHour;
     }
 
@@ -364,10 +366,13 @@ public class PricingService : IPricingService
             return 1.0m;
         }
 
+        // Convert feet to meters for comparison (1 foot = 0.3048 meters)
+        var heightInMeters = heightInFeet * 0.3048m;
+
         var applicableTier = tiers
-            .Where(t => heightInFeet >= t.MinHeightInFeet && 
-                       (t.MaxHeightInFeet == null || heightInFeet <= t.MaxHeightInFeet))
-            .OrderBy(t => t.MinHeightInFeet)
+            .Where(t => heightInMeters >= t.MinHeightInMeters && 
+                       (t.MaxHeightInMeters == null || heightInMeters <= t.MaxHeightInMeters))
+            .OrderBy(t => t.MinHeightInMeters)
             .FirstOrDefault();
 
         return applicableTier?.Multiplier ?? 1.0m;
@@ -406,13 +411,13 @@ public class PricingService : IPricingService
             {
                 pricingConfig.Name,
                 pricingConfig.LaborRatePerHour,
-                pricingConfig.HoursPerLinearFoot,
+                pricingConfig.HoursPerLinearMeter,
                 pricingConfig.ContingencyPercentage,
                 pricingConfig.ProfitMarginPercentage,
                 HeightTiers = pricingConfig.HeightTiers.Select(ht => new
                 {
-                    ht.MinHeightInFeet,
-                    ht.MaxHeightInFeet,
+                    ht.MinHeightInMeters,
+                    ht.MaxHeightInMeters,
                     ht.Multiplier,
                     ht.Description
                 })

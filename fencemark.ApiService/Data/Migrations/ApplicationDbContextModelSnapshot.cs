@@ -486,11 +486,11 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal?>("MaxHeightInFeet")
+                    b.Property<decimal?>("MaxHeightInMeters")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("MinHeightInFeet")
+                    b.Property<decimal>("MinHeightInMeters")
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
@@ -701,7 +701,7 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("HoursPerLinearFoot")
+                    b.Property<decimal>("HoursPerLinearMeter")
                         .HasPrecision(18, 4)
                         .HasColumnType("TEXT");
 
