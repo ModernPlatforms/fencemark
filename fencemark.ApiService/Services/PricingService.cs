@@ -375,6 +375,19 @@ public class PricingService : IPricingService
 
     private QuoteVersion CreateQuoteVersion(Quote quote, List<BillOfMaterialsItem> bomItems, PricingConfig pricingConfig, string changeSummary)
     {
+        // Create simple DTOs for serialization to avoid circular references
+        var bomSnapshot = bomItems.Select(b => new
+        {
+            b.Category,
+            b.Description,
+            b.Sku,
+            b.Quantity,
+            b.UnitOfMeasure,
+            b.UnitPrice,
+            b.TotalPrice,
+            b.SortOrder
+        });
+
         var version = new QuoteVersion
         {
             QuoteId = quote.Id,
@@ -388,7 +401,7 @@ public class PricingService : IPricingService
             TotalAmount = quote.TotalAmount,
             TaxAmount = quote.TaxAmount,
             GrandTotal = quote.GrandTotal,
-            BomSnapshot = JsonSerializer.Serialize(bomItems),
+            BomSnapshot = JsonSerializer.Serialize(bomSnapshot),
             PricingConfigSnapshot = JsonSerializer.Serialize(new
             {
                 pricingConfig.Name,
