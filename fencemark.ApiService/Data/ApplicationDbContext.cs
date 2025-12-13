@@ -55,6 +55,31 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     /// </summary>
     public DbSet<JobLineItem> JobLineItems => Set<JobLineItem>();
 
+    /// <summary>
+    /// Pricing configurations
+    /// </summary>
+    public DbSet<PricingConfig> PricingConfigs => Set<PricingConfig>();
+
+    /// <summary>
+    /// Height tiers for pricing
+    /// </summary>
+    public DbSet<HeightTier> HeightTiers => Set<HeightTier>();
+
+    /// <summary>
+    /// Quotes
+    /// </summary>
+    public DbSet<Quote> Quotes => Set<Quote>();
+
+    /// <summary>
+    /// Quote versions
+    /// </summary>
+    public DbSet<QuoteVersion> QuoteVersions => Set<QuoteVersion>();
+
+    /// <summary>
+    /// Bill of materials items
+    /// </summary>
+    public DbSet<BillOfMaterialsItem> BillOfMaterialsItems => Set<BillOfMaterialsItem>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -225,6 +250,121 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(e => e.JobId);
+        });
+
+        // Configure PricingConfig
+        builder.Entity<PricingConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.LaborRatePerHour).HasPrecision(18, 2);
+            entity.Property(e => e.HoursPerLinearMeter).HasPrecision(18, 4);
+            entity.Property(e => e.ContingencyPercentage).HasPrecision(5, 4);
+            entity.Property(e => e.ProfitMarginPercentage).HasPrecision(5, 4);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => new { e.OrganizationId, e.IsDefault });
+        });
+
+        // Configure HeightTier
+        builder.Entity<HeightTier>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MinHeightInMeters).HasPrecision(18, 2);
+            entity.Property(e => e.MaxHeightInMeters).HasPrecision(18, 2);
+            entity.Property(e => e.Multiplier).HasPrecision(18, 4);
+            
+            entity.HasOne(e => e.PricingConfig)
+                .WithMany(p => p.HeightTiers)
+                .HasForeignKey(e => e.PricingConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.PricingConfigId);
+        });
+
+        // Configure Quote
+        builder.Entity<Quote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.QuoteNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.MaterialsCost).HasPrecision(18, 2);
+            entity.Property(e => e.LaborCost).HasPrecision(18, 2);
+            entity.Property(e => e.Subtotal).HasPrecision(18, 2);
+            entity.Property(e => e.ContingencyAmount).HasPrecision(18, 2);
+            entity.Property(e => e.ProfitAmount).HasPrecision(18, 2);
+            entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
+            entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+            entity.Property(e => e.GrandTotal).HasPrecision(18, 2);
+            
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.PricingConfig)
+                .WithMany()
+                .HasForeignKey(e => e.PricingConfigId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.JobId);
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.QuoteNumber).IsUnique();
+            entity.HasIndex(e => e.Status);
+        });
+
+        // Configure QuoteVersion
+        builder.Entity<QuoteVersion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MaterialsCost).HasPrecision(18, 2);
+            entity.Property(e => e.LaborCost).HasPrecision(18, 2);
+            entity.Property(e => e.Subtotal).HasPrecision(18, 2);
+            entity.Property(e => e.ContingencyAmount).HasPrecision(18, 2);
+            entity.Property(e => e.ProfitAmount).HasPrecision(18, 2);
+            entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
+            entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
+            entity.Property(e => e.GrandTotal).HasPrecision(18, 2);
+            
+            entity.HasOne(e => e.Quote)
+                .WithMany(q => q.Versions)
+                .HasForeignKey(e => e.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.QuoteId, e.VersionNumber }).IsUnique();
+        });
+
+        // Configure BillOfMaterialsItem
+        builder.Entity<BillOfMaterialsItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Quantity).HasPrecision(18, 4);
+            entity.Property(e => e.UnitPrice).HasPrecision(18, 2);
+            entity.Property(e => e.TotalPrice).HasPrecision(18, 2);
+            
+            entity.HasOne(e => e.Quote)
+                .WithMany(q => q.BillOfMaterials)
+                .HasForeignKey(e => e.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Component)
+                .WithMany()
+                .HasForeignKey(e => e.ComponentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.QuoteId);
+            entity.HasIndex(e => e.Category);
         });
     }
 }
