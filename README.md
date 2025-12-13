@@ -199,8 +199,21 @@ Fencemark uses GitHub Actions with the following workflows:
 - 🚀 [Manual Deployment Guide](DEPLOYMENT.md)
 - 🏗️ [Infrastructure Details](infra/README.md)
 
+## Aspire Orchestration
+
+Fencemark uses .NET Aspire for comprehensive orchestration across all environments. See **[ASPIRE_ORCHESTRATION.md](ASPIRE_ORCHESTRATION.md)** for complete documentation on:
+
+- **Environment-Specific Configuration**: Local, test, staging, and production orchestration
+- **Service Discovery**: Automatic service-to-service communication
+- **Health Checks**: Built-in health monitoring and probes
+- **Auto-Scaling**: Environment-specific replica management
+- **OpenTelemetry**: Distributed tracing, metrics, and logging
+- **Best Practices**: Guidelines for reliable orchestration
+- **Troubleshooting**: Common issues and solutions
+
 ## Resources
 
+- [Aspire Orchestration Guide](ASPIRE_ORCHESTRATION.md) - Comprehensive orchestration documentation
 - [.NET Aspire Documentation](https://learn.microsoft.com/dotnet/aspire)
 - [Blazor Documentation](https://learn.microsoft.com/aspnet/core/blazor)
 - [ASP.NET Core Minimal APIs](https://learn.microsoft.com/aspnet/core/fundamentals/minimal-apis)
