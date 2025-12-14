@@ -1,8 +1,7 @@
 @page "/fences"
-@using fencemark.ApiService.Data.Models
+@using fencemark.Web.Features.Fences
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
-@inject IHttpClientFactory HttpClientFactory
+@inject FenceApiClient FenceClient
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 @attribute [Authorize]
@@ -180,8 +179,8 @@
 </style>
 
 @code {
-    private List<FenceType>? fences;
-    private FenceType editingFence = new() { Name = "", OrganizationId = "" };
+    private List<FenceTypeDto>? fences;
+    private FenceTypeDto editingFence = new() { Name = "", OrganizationId = "" };
     private bool isLoading = true;
     private bool isSaving = false;
     private bool showModal = false;
@@ -197,8 +196,8 @@
         isLoading = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            fences = await client.GetFromJsonAsync<List<FenceType>>("/api/fences");
+            var result = await FenceClient.GetAllAsync();
+            fences = result?.ToList();
         }
         catch (Exception ex)
         {
@@ -212,14 +211,14 @@
 
     private void ShowCreateModal()
     {
-        editingFence = new FenceType { Name = "", OrganizationId = "" };
+        editingFence = new FenceTypeDto { Name = "", OrganizationId = "" };
         errorMessage = null;
         showModal = true;
     }
 
-    private void EditFence(FenceType fence)
+    private void EditFence(FenceTypeDto fence)
     {
-        editingFence = new FenceType
+        editingFence = new FenceTypeDto
         {
             Id = fence.Id,
             Name = fence.Name,
@@ -247,17 +246,13 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            
             if (string.IsNullOrEmpty(editingFence.Id))
             {
-                var response = await client.PostAsJsonAsync("/api/fences", editingFence);
-                response.EnsureSuccessStatusCode();
+                await FenceClient.CreateAsync(editingFence);
             }
             else
             {
-                var response = await client.PutAsJsonAsync($"/api/fences/{editingFence.Id}", editingFence);
-                response.EnsureSuccessStatusCode();
+                await FenceClient.UpdateAsync(editingFence.Id, editingFence);
             }
 
             await LoadFences();
@@ -273,16 +268,14 @@
         }
     }
 
-    private async Task DeleteFence(FenceType fence)
+    private async Task DeleteFence(FenceTypeDto fence)
     {
         if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{fence.Name}'?"))
             return;
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            var response = await client.DeleteAsync($"/api/fences/{fence.Id}");
-            response.EnsureSuccessStatusCode();
+            await FenceClient.DeleteAsync(fence.Id);
             await LoadFences();
         }
         catch (Exception ex)

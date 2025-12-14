@@ -1,6 +1,11 @@
 using fencemark.Web;
 using fencemark.Web.Components;
-using fencemark.Web.Services;
+using fencemark.Web.Features.Auth;
+using fencemark.Web.Features.Organization;
+using fencemark.Web.Features.Fences;
+using fencemark.Web.Features.Gates;
+using fencemark.Web.Features.Components;
+using fencemark.Web.Features.Jobs;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.Identity.Web;
@@ -98,6 +103,10 @@ builder.Services.AddHttpClient("API", client =>
 // Register API clients
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<OrganizationApiClient>();
+builder.Services.AddScoped<FenceApiClient>();
+builder.Services.AddScoped<GateApiClient>();
+builder.Services.AddScoped<ComponentApiClient>();
+builder.Services.AddScoped<JobApiClient>();
 
 var app = builder.Build();
 

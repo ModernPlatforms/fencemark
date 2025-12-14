@@ -8,10 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\fencemark.ServiceDefaults\fencemark.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\fencemark.ApiService\fencemark.ApiService.csproj">
-      <Private>false</Private>
-      <ExcludeAssets>contentFiles</ExcludeAssets>
-    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
