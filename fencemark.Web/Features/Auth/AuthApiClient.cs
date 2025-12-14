@@ -12,6 +12,7 @@ public record InviteUserRequest(string Email, string Role);
 public record InviteUserResponse(bool Success, string? Message, string? InvitationToken);
 public record AcceptInvitationRequest(string Token, string Password);
 public record UpdateRoleRequest(string UserId, string Role);
+public record CurrentUserResponse(string? UserId, string? Email, string? OrganizationId);
 
 /// <summary>
 /// Client service for authentication operations
@@ -46,12 +47,12 @@ public class AuthApiClient(IHttpClientFactory httpClientFactory)
         return response.IsSuccessStatusCode;
     }
 
-    public async Task<object?> GetCurrentUserAsync(CancellationToken cancellationToken = default)
+    public async Task<CurrentUserResponse?> GetCurrentUserAsync(CancellationToken cancellationToken = default)
     {
         var response = await _httpClient.GetAsync("/api/auth/me", cancellationToken);
         if (response.IsSuccessStatusCode)
         {
-            return await response.Content.ReadFromJsonAsync<object>(cancellationToken);
+            return await response.Content.ReadFromJsonAsync<CurrentUserResponse>(cancellationToken);
         }
         return null;
     }
