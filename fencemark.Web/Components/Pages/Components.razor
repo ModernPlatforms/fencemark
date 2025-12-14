@@ -1,8 +1,8 @@
 @page "/components"
-@using fencemark.ApiService.Data.Models
+@using ComponentDto = fencemark.Web.Features.Components.ComponentDto
+@using ComponentApiClient = fencemark.Web.Features.Components.ComponentApiClient
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
-@inject IHttpClientFactory HttpClientFactory
+@inject ComponentApiClient ComponentClient
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 @attribute [Authorize]
@@ -185,8 +185,8 @@
 </style>
 
 @code {
-    private List<Component>? components;
-    private Component editingComponent = new() { Name = "", OrganizationId = "", Category = "" };
+    private List<ComponentDto>? components;
+    private ComponentDto editingComponent = new() { Name = "", OrganizationId = "", Category = "" };
     private bool isLoading = true;
     private bool isSaving = false;
     private bool showModal = false;
@@ -202,8 +202,8 @@
         isLoading = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            components = await client.GetFromJsonAsync<List<Component>>("/api/components");
+            var result = await ComponentClient.GetAllAsync();
+            components = result?.ToList();
         }
         catch (Exception ex)
         {
@@ -217,14 +217,14 @@
 
     private void ShowCreateModal()
     {
-        editingComponent = new Component { Name = "", OrganizationId = "", Category = "" };
+        editingComponent = new ComponentDto { Name = "", OrganizationId = "", Category = "" };
         errorMessage = null;
         showModal = true;
     }
 
-    private void EditComponent(Component component)
+    private void EditComponent(ComponentDto component)
     {
-        editingComponent = new Component
+        editingComponent = new ComponentDto
         {
             Id = component.Id,
             Name = component.Name,
@@ -254,17 +254,13 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            
             if (string.IsNullOrEmpty(editingComponent.Id))
             {
-                var response = await client.PostAsJsonAsync("/api/components", editingComponent);
-                response.EnsureSuccessStatusCode();
+                await ComponentClient.CreateAsync(editingComponent);
             }
             else
             {
-                var response = await client.PutAsJsonAsync($"/api/components/{editingComponent.Id}", editingComponent);
-                response.EnsureSuccessStatusCode();
+                await ComponentClient.UpdateAsync(editingComponent.Id, editingComponent);
             }
 
             await LoadComponents();
@@ -280,16 +276,14 @@
         }
     }
 
-    private async Task DeleteComponent(Component component)
+    private async Task DeleteComponent(ComponentDto component)
     {
         if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{component.Name}'?"))
             return;
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            var response = await client.DeleteAsync($"/api/components/{component.Id}");
-            response.EnsureSuccessStatusCode();
+            await ComponentClient.DeleteAsync(component.Id);
             await LoadComponents();
         }
         catch (Exception ex)

@@ -1,5 +1,11 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Features.Auth;
+using fencemark.ApiService.Features.Components;
+using fencemark.ApiService.Features.Fences;
+using fencemark.ApiService.Features.Gates;
+using fencemark.ApiService.Features.Jobs;
+using fencemark.ApiService.Features.Organization;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.AspNetCore.Identity;
@@ -92,119 +98,9 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Authentication endpoints
-app.MapPost("/api/auth/register", async (RegisterRequest request, IAuthService authService, CancellationToken ct) =>
-{
-    var result = await authService.RegisterAsync(request, ct);
-    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-})
-.WithName("Register")
-.WithTags("Authentication");
-
-app.MapPost("/api/auth/login", async (LoginRequest request, IAuthService authService, CancellationToken ct) =>
-{
-    var result = await authService.LoginAsync(request, ct);
-    return result.Success ? Results.Ok(result) : Results.Unauthorized();
-})
-.WithName("Login")
-.WithTags("Authentication");
-
-app.MapPost("/api/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
-{
-    await signInManager.SignOutAsync();
-    return Results.Ok(new { success = true, message = "Logged out successfully" });
-})
-.RequireAuthorization()
-.WithName("Logout")
-.WithTags("Authentication");
-
-app.MapGet("/api/auth/me", async (ICurrentUserService currentUser) =>
-{
-    if (!currentUser.IsAuthenticated)
-    {
-        return Results.Unauthorized();
-    }
-
-    return Results.Ok(new
-    {
-        userId = currentUser.UserId,
-        email = currentUser.Email,
-        organizationId = currentUser.OrganizationId
-    });
-})
-.RequireAuthorization()
-.WithName("GetCurrentUser")
-.WithTags("Authentication");
-
-// Organization endpoints
-app.MapGet("/api/organizations/{organizationId}/members",
-    async (string organizationId, IOrganizationService orgService, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (currentUser.OrganizationId != organizationId)
-    {
-        return Results.Forbid();
-    }
-
-    var members = await orgService.GetMembersAsync(organizationId, ct);
-    return Results.Ok(members);
-})
-.RequireAuthorization()
-.WithName("GetOrganizationMembers")
-.WithTags("Organization");
-
-app.MapPost("/api/organizations/{organizationId}/invite",
-    async (string organizationId, InviteUserRequest request, IOrganizationService orgService, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (currentUser.OrganizationId != organizationId)
-    {
-        return Results.Forbid();
-    }
-
-    var result = await orgService.InviteUserAsync(organizationId, request, ct);
-    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-})
-.RequireAuthorization()
-.WithName("InviteUser")
-.WithTags("Organization");
-
-app.MapPost("/api/organizations/accept-invitation",
-    async (AcceptInvitationRequest request, IOrganizationService orgService, CancellationToken ct) =>
-{
-    var result = await orgService.AcceptInvitationAsync(request, ct);
-    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-})
-.WithName("AcceptInvitation")
-.WithTags("Organization");
-
-app.MapPut("/api/organizations/{organizationId}/members/role",
-    async (string organizationId, UpdateRoleRequest request, IOrganizationService orgService, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (currentUser.OrganizationId != organizationId)
-    {
-        return Results.Forbid();
-    }
-
-    var success = await orgService.UpdateRoleAsync(organizationId, request, ct);
-    return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, message = "Failed to update role" });
-})
-.RequireAuthorization()
-.WithName("UpdateMemberRole")
-.WithTags("Organization");
-
-app.MapDelete("/api/organizations/{organizationId}/members/{userId}",
-    async (string organizationId, string userId, IOrganizationService orgService, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (currentUser.OrganizationId != organizationId)
-    {
-        return Results.Forbid();
-    }
-
-    var success = await orgService.RemoveMemberAsync(organizationId, userId, ct);
-    return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, message = "Failed to remove member" });
-})
-.RequireAuthorization()
-.WithName("RemoveMember")
-.WithTags("Organization");
+// Map feature endpoints
+app.MapAuthEndpoints();
+app.MapOrganizationEndpoints();
 
 // Keep the original weather forecast endpoint for backward compatibility
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
@@ -226,20 +122,7 @@ app.MapGet("/weatherforecast", () =>
 app.MapDefaultEndpoints();
 
 // Fence Type endpoints
-app.MapGet("/api/fences", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var fences = await db.FenceTypes
-        .Where(f => f.OrganizationId == currentUser.OrganizationId)
-        .OrderBy(f => f.Name)
-        .ToListAsync(ct);
-    return Results.Ok(fences);
-})
-.RequireAuthorization()
-.WithName("GetFenceTypes")
-.WithTags("Fences");
+app.MapFenceEndpoints();
 
 app.MapGet("/api/fences/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
 {
@@ -317,20 +200,7 @@ app.MapDelete("/api/fences/{id}", async (string id, ApplicationDbContext db, ICu
 .WithTags("Fences");
 
 // Gate Type endpoints
-app.MapGet("/api/gates", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var gates = await db.GateTypes
-        .Where(g => g.OrganizationId == currentUser.OrganizationId)
-        .OrderBy(g => g.Name)
-        .ToListAsync(ct);
-    return Results.Ok(gates);
-})
-.RequireAuthorization()
-.WithName("GetGateTypes")
-.WithTags("Gates");
+app.MapGateEndpoints();
 
 app.MapGet("/api/gates/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
 {
@@ -409,21 +279,7 @@ app.MapDelete("/api/gates/{id}", async (string id, ApplicationDbContext db, ICur
 .WithTags("Gates");
 
 // Component endpoints
-app.MapGet("/api/components", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var components = await db.Components
-        .Where(c => c.OrganizationId == currentUser.OrganizationId)
-        .OrderBy(c => c.Category)
-        .ThenBy(c => c.Name)
-        .ToListAsync(ct);
-    return Results.Ok(components);
-})
-.RequireAuthorization()
-.WithName("GetComponents")
-.WithTags("Components");
+app.MapComponentEndpoints();
 
 app.MapGet("/api/components/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
 {
@@ -501,20 +357,7 @@ app.MapDelete("/api/components/{id}", async (string id, ApplicationDbContext db,
 .WithTags("Components");
 
 // Job endpoints
-app.MapGet("/api/jobs", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var jobs = await db.Jobs
-        .Where(j => j.OrganizationId == currentUser.OrganizationId)
-        .OrderByDescending(j => j.CreatedAt)
-        .ToListAsync(ct);
-    return Results.Ok(jobs);
-})
-.RequireAuthorization()
-.WithName("GetJobs")
-.WithTags("Jobs");
+app.MapJobEndpoints();
 
 app.MapGet("/api/jobs/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
 {

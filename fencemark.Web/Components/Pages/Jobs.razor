@@ -1,8 +1,7 @@
 @page "/jobs"
-@using fencemark.ApiService.Data.Models
+@using fencemark.Web.Features.Jobs
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
-@inject IHttpClientFactory HttpClientFactory
+@inject JobApiClient JobClient
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 @attribute [Authorize]
@@ -132,7 +131,7 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Status</label>
                             <select class="form-select" @bind="editingJob.Status">
-                                @foreach (JobStatus status in Enum.GetValues(typeof(JobStatus)))
+                                @foreach (JobStatusDto status in Enum.GetValues(typeof(JobStatusDto)))
                                 {
                                     <option value="@status">@status</option>
                                 }
@@ -239,8 +238,8 @@
 </style>
 
 @code {
-    private List<Job>? jobs;
-    private Job editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
+    private List<JobDto>? jobs;
+    private JobDto editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
     private bool isLoading = true;
     private bool isSaving = false;
     private bool showModal = false;
@@ -256,8 +255,8 @@
         isLoading = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            jobs = await client.GetFromJsonAsync<List<Job>>("/api/jobs");
+            var result = await JobClient.GetAllAsync();
+            jobs = result?.ToList();
         }
         catch (Exception ex)
         {
@@ -271,14 +270,14 @@
 
     private void ShowCreateModal()
     {
-        editingJob = new Job { Name = "", CustomerName = "", OrganizationId = "" };
+        editingJob = new JobDto { Name = "", CustomerName = "", OrganizationId = "" };
         errorMessage = null;
         showModal = true;
     }
 
-    private void EditJob(Job job)
+    private void EditJob(JobDto job)
     {
-        editingJob = new Job
+        editingJob = new JobDto
         {
             Id = job.Id,
             Name = job.Name,
@@ -313,17 +312,13 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            
             if (string.IsNullOrEmpty(editingJob.Id))
             {
-                var response = await client.PostAsJsonAsync("/api/jobs", editingJob);
-                response.EnsureSuccessStatusCode();
+                await JobClient.CreateAsync(editingJob);
             }
             else
             {
-                var response = await client.PutAsJsonAsync($"/api/jobs/{editingJob.Id}", editingJob);
-                response.EnsureSuccessStatusCode();
+                await JobClient.UpdateAsync(editingJob.Id, editingJob);
             }
 
             await LoadJobs();
@@ -339,16 +334,14 @@
         }
     }
 
-    private async Task DeleteJob(Job job)
+    private async Task DeleteJob(JobDto job)
     {
         if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{job.Name}'?"))
             return;
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            var response = await client.DeleteAsync($"/api/jobs/{job.Id}");
-            response.EnsureSuccessStatusCode();
+            await JobClient.DeleteAsync(job.Id);
             await LoadJobs();
         }
         catch (Exception ex)
@@ -364,14 +357,14 @@
         errorMessage = null;
     }
 
-    private string GetStatusColor(JobStatus status) => status switch
+    private string GetStatusColor(JobStatusDto status) => status switch
     {
-        JobStatus.Draft => "secondary",
-        JobStatus.Quoted => "info",
-        JobStatus.Approved => "primary",
-        JobStatus.InProgress => "warning",
-        JobStatus.Completed => "success",
-        JobStatus.Cancelled => "danger",
+        JobStatusDto.Draft => "secondary",
+        JobStatusDto.Quoted => "info",
+        JobStatusDto.Approved => "primary",
+        JobStatusDto.InProgress => "warning",
+        JobStatusDto.Completed => "success",
+        JobStatusDto.Cancelled => "danger",
         _ => "secondary"
     };
 }
