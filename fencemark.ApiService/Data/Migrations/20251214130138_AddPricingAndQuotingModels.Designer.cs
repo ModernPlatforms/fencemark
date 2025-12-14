@@ -11,8 +11,8 @@ using fencemark.ApiService.Data;
 namespace fencemark.ApiService.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251213021938_AddPricingAndQuotingModelsMetric")]
-    partial class AddPricingAndQuotingModelsMetric
+    [Migration("20251214130138_AddPricingAndQuotingModels")]
+    partial class AddPricingAndQuotingModels
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
