@@ -1,8 +1,7 @@
 @page "/gates"
-@using fencemark.ApiService.Data.Models
+@using fencemark.Web.Features.Gates
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
-@inject IHttpClientFactory HttpClientFactory
+@inject GateApiClient GateClient
 @inject NavigationManager Navigation
 @inject Microsoft.JSInterop.IJSRuntime JSRuntime
 @attribute [Authorize]
@@ -187,8 +186,8 @@
 </style>
 
 @code {
-    private List<GateType>? gates;
-    private GateType editingGate = new() { Name = "", OrganizationId = "" };
+    private List<GateTypeDto>? gates;
+    private GateTypeDto editingGate = new() { Name = "", OrganizationId = "" };
     private bool isLoading = true;
     private bool isSaving = false;
     private bool showModal = false;
@@ -204,8 +203,8 @@
         isLoading = true;
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            gates = await client.GetFromJsonAsync<List<GateType>>("/api/gates");
+            var result = await GateClient.GetAllAsync();
+            gates = result?.ToList();
         }
         catch (Exception ex)
         {
@@ -219,14 +218,14 @@
 
     private void ShowCreateModal()
     {
-        editingGate = new GateType { Name = "", OrganizationId = "" };
+        editingGate = new GateTypeDto { Name = "", OrganizationId = "" };
         errorMessage = null;
         showModal = true;
     }
 
-    private void EditGate(GateType gate)
+    private void EditGate(GateTypeDto gate)
     {
-        editingGate = new GateType
+        editingGate = new GateTypeDto
         {
             Id = gate.Id,
             Name = gate.Name,
@@ -255,17 +254,13 @@
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            
             if (string.IsNullOrEmpty(editingGate.Id))
             {
-                var response = await client.PostAsJsonAsync("/api/gates", editingGate);
-                response.EnsureSuccessStatusCode();
+                await GateClient.CreateAsync(editingGate);
             }
             else
             {
-                var response = await client.PutAsJsonAsync($"/api/gates/{editingGate.Id}", editingGate);
-                response.EnsureSuccessStatusCode();
+                await GateClient.UpdateAsync(editingGate.Id, editingGate);
             }
 
             await LoadGates();
@@ -281,16 +276,14 @@
         }
     }
 
-    private async Task DeleteGate(GateType gate)
+    private async Task DeleteGate(GateTypeDto gate)
     {
         if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{gate.Name}'?"))
             return;
 
         try
         {
-            var client = HttpClientFactory.CreateClient("API");
-            var response = await client.DeleteAsync($"/api/gates/{gate.Id}");
-            response.EnsureSuccessStatusCode();
+            await GateClient.DeleteAsync(gate.Id);
             await LoadGates();
         }
         catch (Exception ex)
