@@ -127,6 +127,22 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 }
 
 // ============================================================================
+// Application Insights
+// ============================================================================
+
+module applicationInsights 'br/public:avm/res/insights/component:0.6.0' = {
+  name: 'applicationInsights'
+  scope: rg
+  params: {
+    name: '${abbrs.insightsComponents}${resourceToken}'
+    location: location
+    tags: defaultTags
+    workspaceResourceId: logAnalytics.outputs.resourceId
+    applicationType: 'web'
+  }
+}
+
+// ============================================================================
 // Container Registry
 // ============================================================================
 
@@ -187,8 +203,8 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
         workloadProfileType: 'Consumption'
       }
     ]
-    // Enable .NET Aspire Dashboard
-    appInsightsConnectionString: '' // Optional: Add Application Insights connection string
+    publicNetworkAccess: 'Enabled'
+    appInsightsConnectionString: applicationInsights.outputs.connectionString
     openTelemetryConfiguration: {
       tracesDestination: 'appInsights'
       logsDestination: 'appInsights'
@@ -279,6 +295,10 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
         }
         env: [
           {
+            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+            value: applicationInsights.outputs.connectionString
+          }
+          {
             name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
             value: 'http://${abbrs.appContainerApps}aspiredash-${resourceToken}:18889'
           }
@@ -359,6 +379,10 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
           memory: webFrontendMemory
         }
         env: [
+          {
+            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+            value: applicationInsights.outputs.connectionString
+          }
           {
             name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
             value: 'http://${abbrs.appContainerApps}aspiredash-${resourceToken}:18889'
@@ -482,6 +506,9 @@ output containerRegistryLoginServer string = containerRegistry.outputs.loginServ
 
 @description('The name of the Log Analytics Workspace')
 output logAnalyticsWorkspaceName string = logAnalytics.outputs.name
+
+@description('The name of the Application Insights instance')
+output applicationInsightsName string = applicationInsights.outputs.name
 
 @description('The name of the API Service Container App')
 output apiServiceName string = apiService.outputs.name
