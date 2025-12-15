@@ -26,7 +26,7 @@ resource managedCertificate 'Microsoft.App/managedEnvironments/managedCertificat
   parent: containerAppsEnvironment
   properties: {
     subjectName: subjectName
-    domainControlValidation: 'CNAME'
+    domainControlValidation: 'HTTP'
   }
 }
 
