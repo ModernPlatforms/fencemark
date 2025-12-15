@@ -215,6 +215,22 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 }
 
 // ============================================================================
+// Managed Certificate for Custom Domain
+// ============================================================================
+
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(customDomain)) {
+  name: 'managedCertificate'
+  scope: rg
+  params: {
+    name: 'cert-${replace(customDomain, '.', '-')}'
+    location: location
+    environmentId: containerAppsEnvironment.outputs.resourceId
+    subjectName: customDomain
+    tags: defaultTags
+  }
+}
+
+// ============================================================================
 // .NET Aspire Dashboard Container App
 // ============================================================================
 
@@ -381,12 +397,6 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     managedIdentities: {
       systemAssigned: true
     }
-    customDomains: [
-      {
-        name: customDomain
-        bindingType: 'SniEnabled'
-      }
-    ]
     containers: [
       {
         name: 'webfrontend'
@@ -483,6 +493,13 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
+    customDomains: !empty(customDomain) ? [
+      {
+        name: customDomain
+        bindingType: 'SniEnabled'
+        certificateId: managedCertificate.?outputs.resourceId ?? ''
+      }
+    ] : null
     registries: [
       {
         server: containerRegistry.outputs.loginServer
@@ -561,6 +578,15 @@ output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
+
+@description('The custom domain (if configured)')
+output customDomainName string = customDomain
+
+@description('The Container Apps Environment default domain for CNAME setup')
+output environmentDefaultDomain string = containerAppsEnvironment.outputs.defaultDomain
+
+@description('The verification ID for custom domain TXT record')
+output customDomainVerificationId string = containerAppsEnvironment.outputs.domainVerificationId
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
