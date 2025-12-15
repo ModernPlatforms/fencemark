@@ -414,9 +414,35 @@ Consider implementing audit logging for:
 - `RlsPerformanceBenchmarks.cs` - 7 performance benchmark tests
 - All tests pass and are part of CI/CD pipeline
 
+## Production Security Recommendations
+
+### Azure AD Authentication (Recommended)
+
+For production deployments, consider upgrading from SQL authentication to Azure AD authentication with managed identities:
+
+**Benefits:**
+- No password management required
+- Automatic credential rotation
+- Better audit logging
+- Supports MFA and conditional access
+
+**Implementation:**
+1. Enable Azure AD authentication on SQL Server
+2. Configure Container App managed identity
+3. Grant SQL permissions to managed identity
+4. Update connection string to use managed identity
+
+**Example connection string with managed identity:**
+```
+Server=tcp:your-server.database.windows.net,1433;Initial Catalog=fencemark;Authentication=Active Directory Managed Identity;Encrypt=True;
+```
+
+See: [Tutorial: Connect to SQL Database from App Service without secrets](https://docs.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database)
+
 ## References
 
 - [SQL Server Row-Level Security](https://docs.microsoft.com/en-us/sql/relational-databases/security/row-level-security)
 - [EF Core Global Query Filters](https://docs.microsoft.com/en-us/ef/core/querying/filters)
 - [Azure SQL Database Pricing](https://azure.microsoft.com/en-us/pricing/details/sql-database/single/)
 - [Multi-Tenant SaaS Patterns](https://docs.microsoft.com/en-us/azure/architecture/guide/multitenant/overview)
+- [Azure AD Authentication for SQL](https://docs.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database)

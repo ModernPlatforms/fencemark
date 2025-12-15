@@ -27,8 +27,10 @@ public class TenantConnectionInterceptor : DbConnectionInterceptor
         // Set the SESSION_CONTEXT for SQL Server RLS
         var organizationId = _currentUserService.OrganizationId;
         
-        if (connection.Database.Contains("Microsoft.EntityFrameworkCore.SqlServer", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrEmpty(organizationId))
+        // Check if this is a SQL Server connection by examining the connection type
+        var isSqlServer = connection.GetType().FullName?.Contains("SqlConnection", StringComparison.OrdinalIgnoreCase) ?? false;
+        
+        if (isSqlServer && !string.IsNullOrEmpty(organizationId))
         {
             using var command = connection.CreateCommand();
             command.CommandText = "EXEC sp_set_session_context @key = N'OrganizationId', @value = @organizationId;";
@@ -52,8 +54,10 @@ public class TenantConnectionInterceptor : DbConnectionInterceptor
         // Set the SESSION_CONTEXT for SQL Server RLS (sync version)
         var organizationId = _currentUserService.OrganizationId;
         
-        if (connection.Database.Contains("Microsoft.EntityFrameworkCore.SqlServer", StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrEmpty(organizationId))
+        // Check if this is a SQL Server connection by examining the connection type
+        var isSqlServer = connection.GetType().FullName?.Contains("SqlConnection", StringComparison.OrdinalIgnoreCase) ?? false;
+        
+        if (isSqlServer && !string.IsNullOrEmpty(organizationId))
         {
             using var command = connection.CreateCommand();
             command.CommandText = "EXEC sp_set_session_context @key = N'OrganizationId', @value = @organizationId;";

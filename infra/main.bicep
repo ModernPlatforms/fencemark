@@ -414,6 +414,9 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
       }
       {
         name: 'sql-connection-string'
+        // NOTE: For production, consider using Azure AD authentication with managed identity
+        // instead of SQL authentication. This connection string is only for initial setup.
+        // See: https://docs.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database
         value: provisionSqlDatabase ? 'Server=tcp:${sqlDatabase.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabase.outputs.sqlDatabaseName};User ID=${sqlAdminLogin};Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;' : 'Data Source=fencemark.db'
       }
     ]
