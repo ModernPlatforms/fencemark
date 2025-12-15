@@ -1,0 +1,14 @@
+@* Loading state with spinner and optional text *@
+
+<div class="d-flex flex-column align-items-center justify-content-center py-5">
+    <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    @if (!string.IsNullOrEmpty(Message))
+    {
+        <MudText Typo="Typo.body1" Class="mt-3">@Message</MudText>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Message { get; set; } = "Loading...";
+}

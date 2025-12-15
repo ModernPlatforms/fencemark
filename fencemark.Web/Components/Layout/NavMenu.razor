@@ -1,63 +1,16 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">
-            <i class="bi bi-bricks"></i> Fencemark
-        </a>
-    </div>
-</div>
-
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <AuthorizeView>
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="fences">
-                        <span class="bi bi-bricks" aria-hidden="true"></span> Fences
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="gates">
-                        <span class="bi bi-door-closed" aria-hidden="true"></span> Gates
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="components">
-                        <span class="bi bi-boxes" aria-hidden="true"></span> Components
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="jobs">
-                        <span class="bi bi-briefcase" aria-hidden="true"></span> Jobs
-                    </NavLink>
-                </div>
-
-                <div class="nav-item px-3">
-                    <a class="nav-link" href="MicrosoftIdentity/Account/SignOut">
-                        <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Sign Out
-                    </a>
-                </div>
-            </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <a class="nav-link" href="MicrosoftIdentity/Account/SignIn">
-                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Sign In
-                    </a>
-                </div>
-            </NotAuthorized>
-        </AuthorizeView>
-    </nav>
-</div>
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+    
+    <AuthorizeView>
+        <Authorized>
+            <MudDivider Class="my-2" />
+            <MudNavLink Href="fences" Icon="@Icons.Material.Filled.Fence">Fences</MudNavLink>
+            <MudNavLink Href="gates" Icon="@Icons.Material.Filled.DoorFront">Gates</MudNavLink>
+            <MudNavLink Href="components" Icon="@Icons.Material.Filled.ViewInAr">Components</MudNavLink>
+            <MudNavLink Href="jobs" Icon="@Icons.Material.Filled.Work">Jobs</MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>
