@@ -23,6 +23,9 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
 // Configure database
+// Connection string can use either:
+// - SQL Authentication: User ID=xxx;Password=xxx
+// - Managed Identity: Authentication=Active Directory Default (uses DefaultAzureCredential automatically)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Data Source=fencemark.db";
 
