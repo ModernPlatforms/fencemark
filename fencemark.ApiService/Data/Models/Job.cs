@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents a fence installation job/project
 /// </summary>
-public class Job
+public class Job : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the job
