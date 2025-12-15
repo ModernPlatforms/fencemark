@@ -45,6 +45,7 @@ param entraExternalIdDomain = 'devfencemark.onmicrosoft.com'
 // Key Vault and Certificate
 param keyVaultUrl = 'https://kv-ciambfwyw65gna5lu.vault.azure.net/'
 param certificateName = 'dev-external-id-cert'
+param customDomain = 'devfencemark.modernplatforms.dev'
 
 // ============================================================================
 // Tags

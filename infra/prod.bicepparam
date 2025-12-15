@@ -28,7 +28,7 @@ param webFrontendCpu = '1'
 param webFrontendMemory = '2Gi'
 param webFrontendMinReplicas = 2
 param webFrontendMaxReplicas = 10
-
+param customDomain = 'fencemark.com.au'
 // ============================================================================
 // Tags
 // ============================================================================
