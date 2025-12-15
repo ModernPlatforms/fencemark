@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents tenant-specific pricing configuration
 /// </summary>
-public class PricingConfig
+public class PricingConfig : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the pricing configuration

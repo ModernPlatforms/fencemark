@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents a type of fence that can be installed
 /// </summary>
-public class FenceType
+public class FenceType : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the fence type

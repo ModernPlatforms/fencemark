@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents a type of gate that can be installed
 /// </summary>
-public class GateType
+public class GateType : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the gate type

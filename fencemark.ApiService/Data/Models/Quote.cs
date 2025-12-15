@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents a quote for a job
 /// </summary>
-public class Quote
+public class Quote : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the quote
