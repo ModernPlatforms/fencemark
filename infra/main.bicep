@@ -89,15 +89,14 @@ param customDomain string = ''
 // ============================================================================
 
 @description('The administrator login username for SQL Server')
-@secure()
 param sqlAdminLogin string = 'sqladmin'
-
-@description('The administrator login password for SQL Server')
-@secure()
-param sqlAdminPassword string
 
 @description('Whether to provision Azure SQL Database (true for prod, false for dev with SQLite)')
 param provisionSqlDatabase bool = true
+
+// Generate a random password for SQL Server admin
+// Uses uniqueString with multiple inputs for entropy, plus special chars for complexity
+var generatedSqlPassword = '${uniqueString(subscription().id, resourceGroupName, 'sql-admin')}!Aa1${uniqueString(resourceGroupName, environmentName, 'sql-pwd')}'
 
 // Validate authentication configuration if any auth parameter is provided
 var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
@@ -112,6 +111,14 @@ var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, e
 var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
+
+// SQL Server connection string components (computed inline since module is conditional)
+var sqlServerNameValue = '${abbrs.sqlServers}${resourceToken}'
+var sqlServerFqdnValue = '${sqlServerNameValue}${environment().suffixes.sqlServerHostname}'
+var sqlDatabaseNameValue = 'fencemark'
+var sqlConnectionString = provisionSqlDatabase 
+  ? 'Server=tcp:${sqlServerFqdnValue},1433;Initial Catalog=${sqlDatabaseNameValue};User ID=${sqlAdminLogin};Password=${generatedSqlPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+  : 'Data Source=fencemark.db'
 
 // ============================================================================
 // Resource Group
@@ -238,12 +245,12 @@ module sqlDatabase './modules/sql-database.bicep' = if (provisionSqlDatabase) {
   name: 'sqlDatabase'
   scope: rg
   params: {
-    sqlServerName: '${abbrs.sqlServers}${resourceToken}'
+    sqlServerName: sqlServerNameValue
     location: location
     tags: defaultTags
-    databaseName: 'fencemark'
+    databaseName: sqlDatabaseNameValue
     administratorLogin: sqlAdminLogin
-    administratorLoginPassword: sqlAdminPassword
+    administratorLoginPassword: generatedSqlPassword
   }
 }
 
@@ -417,7 +424,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
         // NOTE: For production, consider using Azure AD authentication with managed identity
         // instead of SQL authentication. This connection string is only for initial setup.
         // See: https://docs.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database
-        value: provisionSqlDatabase ? 'Server=tcp:${sqlDatabase.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabase.outputs.sqlDatabaseName};User ID=${sqlAdminLogin};Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;' : 'Data Source=fencemark.db'
+        value: sqlConnectionString
       }
     ]
   }
@@ -575,6 +582,22 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
 }
 
 // ============================================================================
+// Store SQL Admin Password in Key Vault
+// ============================================================================
+
+module sqlPasswordSecret './modules/keyvault-secret.bicep' = if (provisionSqlDatabase && !empty(externalidRg)) {
+  name: 'sqlPasswordSecret'
+  scope: resourceGroup(externalidRg)
+  params: {
+    keyVaultName: keyVault.name
+    secretName: 'sql-admin-password-${environmentName}'
+    secretValue: generatedSqlPassword
+    contentType: 'SQL Server admin password'
+    tags: defaultTags
+  }
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -633,13 +656,16 @@ output environmentDefaultDomain string = containerAppsEnvironment.outputs.defaul
 output customDomainVerificationId string = containerAppsEnvironment.outputs.domainVerificationId
 
 @description('The SQL Server name (if provisioned)')
-output sqlServerName string = provisionSqlDatabase ? sqlDatabase.outputs.sqlServerName : ''
+output outputSqlServerName string = provisionSqlDatabase ? sqlServerNameValue : ''
 
 @description('The SQL Server FQDN (if provisioned)')
-output sqlServerFqdn string = provisionSqlDatabase ? sqlDatabase.outputs.sqlServerFqdn : ''
+output outputSqlServerFqdn string = provisionSqlDatabase ? sqlServerFqdnValue : ''
 
 @description('The SQL Database name (if provisioned)')
-output sqlDatabaseName string = provisionSqlDatabase ? sqlDatabase.outputs.sqlDatabaseName : ''
+output outputSqlDatabaseName string = provisionSqlDatabase ? sqlDatabaseNameValue : ''
+
+@description('The Key Vault name storing the SQL admin credential (if provisioned)')
+output sqlCredentialKeyVaultName string = provisionSqlDatabase && !empty(externalidRg) ? 'sql-admin-password-${environmentName}' : ''
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity

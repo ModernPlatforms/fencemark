@@ -29,6 +29,7 @@ param webFrontendMemory = '1Gi'
 param webFrontendMinReplicas = 1
 param webFrontendMaxReplicas = 3
 param customDomain = 'stgfencemark.modernplatforms.dev'
+
 // ============================================================================
 // Tags
 // ============================================================================
