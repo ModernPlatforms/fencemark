@@ -1,4 +1,5 @@
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Middleware;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,9 +8,20 @@ namespace fencemark.ApiService.Data;
 /// <summary>
 /// Application database context integrating Identity and custom entities
 /// </summary>
-public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) 
-    : IdentityDbContext<ApplicationUser>(options)
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
+    private readonly ICurrentUserService? _currentUserService;
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) 
+        : base(options)
+    {
+    }
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUserService currentUserService) 
+        : base(options)
+    {
+        _currentUserService = currentUserService;
+    }
     /// <summary>
     /// Organizations in the system
     /// </summary>
@@ -366,5 +378,36 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(e => e.QuoteId);
             entity.HasIndex(e => e.Category);
         });
+
+        // ============================================================================
+        // Global Query Filters for Multi-Tenant Data Isolation
+        // ============================================================================
+        // Apply query filters to all IOrganizationScoped entities
+        // This provides defense-in-depth alongside SQL Server RLS
+
+        var currentOrganizationId = _currentUserService?.OrganizationId;
+
+        // Only apply filters if we have a current organization context
+        // This allows migrations and system operations to work without a user context
+        if (!string.IsNullOrEmpty(currentOrganizationId))
+        {
+            builder.Entity<Component>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+
+            builder.Entity<FenceType>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+
+            builder.Entity<GateType>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+
+            builder.Entity<Job>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+
+            builder.Entity<PricingConfig>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+
+            builder.Entity<Quote>()
+                .HasQueryFilter(e => e.OrganizationId == currentOrganizationId);
+        }
     }
 }

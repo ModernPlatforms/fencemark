@@ -3,7 +3,7 @@ namespace fencemark.ApiService.Data.Models;
 /// <summary>
 /// Represents a component that can be used in fences or gates
 /// </summary>
-public class Component
+public class Component : IOrganizationScoped
 {
     /// <summary>
     /// Unique identifier for the component

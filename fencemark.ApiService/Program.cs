@@ -25,8 +25,24 @@ builder.Services.AddOpenApi();
 // Configure database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Data Source=fencemark.db";
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+
+// Use SQL Server if connection string contains "Server=" (Azure SQL), otherwise use SQLite (local dev)
+var useSqlServer = connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase);
+
+builder.Services.AddScoped<TenantConnectionInterceptor>();
+
+builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
+{
+    if (useSqlServer)
+    {
+        options.UseSqlServer(connectionString)
+            .AddInterceptors(serviceProvider.GetRequiredService<TenantConnectionInterceptor>());
+    }
+    else
+    {
+        options.UseSqlite(connectionString);
+    }
+});
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

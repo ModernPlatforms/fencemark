@@ -83,6 +83,22 @@ param externalidRg string = ''
 
 @description('Custom domain to bind to the Web frontend')
 param customDomain string = ''
+
+// ============================================================================
+// Database Parameters
+// ============================================================================
+
+@description('The administrator login username for SQL Server')
+@secure()
+param sqlAdminLogin string = 'sqladmin'
+
+@description('The administrator login password for SQL Server')
+@secure()
+param sqlAdminPassword string
+
+@description('Whether to provision Azure SQL Database (true for prod, false for dev with SQLite)')
+param provisionSqlDatabase bool = true
+
 // Validate authentication configuration if any auth parameter is provided
 var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
 var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
@@ -215,6 +231,23 @@ module containerAppsEnvironment 'br/public:avm/res/app/managed-environment:0.11.
 }
 
 // ============================================================================
+// Azure SQL Database (Production)
+// ============================================================================
+
+module sqlDatabase './modules/sql-database.bicep' = if (provisionSqlDatabase) {
+  name: 'sqlDatabase'
+  scope: rg
+  params: {
+    sqlServerName: '${abbrs.sqlServers}${resourceToken}'
+    location: location
+    tags: defaultTags
+    databaseName: 'fencemark'
+    administratorLogin: sqlAdminLogin
+    administratorLoginPassword: sqlAdminPassword
+  }
+}
+
+// ============================================================================
 // Managed Certificate for Custom Domain
 // ============================================================================
 
@@ -326,6 +359,10 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'OTEL_SERVICE_NAME'
             value: 'apiservice'
           }
+          {
+            name: 'ConnectionStrings__DefaultConnection'
+            secretRef: 'sql-connection-string'
+          }
         ]
         probes: [
           {
@@ -374,6 +411,13 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
       {
         name: 'acr-password'
         value: acr.listCredentials().passwords[0].value
+      }
+      {
+        name: 'sql-connection-string'
+        // NOTE: For production, consider using Azure AD authentication with managed identity
+        // instead of SQL authentication. This connection string is only for initial setup.
+        // See: https://docs.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database
+        value: provisionSqlDatabase ? 'Server=tcp:${sqlDatabase.outputs.sqlServerFqdn},1433;Initial Catalog=${sqlDatabase.outputs.sqlDatabaseName};User ID=${sqlAdminLogin};Password=${sqlAdminPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;' : 'Data Source=fencemark.db'
       }
     ]
   }
@@ -587,6 +631,15 @@ output environmentDefaultDomain string = containerAppsEnvironment.outputs.defaul
 
 @description('The verification ID for custom domain TXT record')
 output customDomainVerificationId string = containerAppsEnvironment.outputs.domainVerificationId
+
+@description('The SQL Server name (if provisioned)')
+output sqlServerName string = provisionSqlDatabase ? sqlDatabase.outputs.sqlServerName : ''
+
+@description('The SQL Server FQDN (if provisioned)')
+output sqlServerFqdn string = provisionSqlDatabase ? sqlDatabase.outputs.sqlServerFqdn : ''
+
+@description('The SQL Database name (if provisioned)')
+output sqlDatabaseName string = provisionSqlDatabase ? sqlDatabase.outputs.sqlDatabaseName : ''
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
