@@ -94,6 +94,15 @@ param sqlAdminLogin string = 'sqladmin'
 @description('Whether to provision Azure SQL Database (true for prod, false for dev with SQLite)')
 param provisionSqlDatabase bool = true
 
+@description('Use managed identity for SQL authentication (recommended for staging/prod)')
+param useManagedIdentityForSql bool = false
+
+@description('Azure AD admin object ID for SQL Server (required when useManagedIdentityForSql is true)')
+param sqlAzureAdAdminObjectId string = ''
+
+@description('Azure AD admin login name for SQL Server (e.g., user@domain.com or group name)')
+param sqlAzureAdAdminLogin string = ''
+
 // Generate a random password for SQL Server admin
 // Uses uniqueString with multiple inputs for entropy, plus special chars for complexity
 var generatedSqlPassword = '${uniqueString(subscription().id, resourceGroupName, 'sql-admin')}!Aa1${uniqueString(resourceGroupName, environmentName, 'sql-pwd')}'
@@ -116,8 +125,12 @@ var defaultTags = union(tags, {
 var sqlServerNameValue = '${abbrs.sqlServers}${resourceToken}'
 var sqlServerFqdnValue = '${sqlServerNameValue}${environment().suffixes.sqlServerHostname}'
 var sqlDatabaseNameValue = 'fencemark'
+
+// Connection string: Use managed identity auth if enabled, otherwise SQL auth
+var sqlConnectionStringManagedIdentity = 'Server=tcp:${sqlServerFqdnValue},1433;Initial Catalog=${sqlDatabaseNameValue};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+var sqlConnectionStringSqlAuth = 'Server=tcp:${sqlServerFqdnValue},1433;Initial Catalog=${sqlDatabaseNameValue};User ID=${sqlAdminLogin};Password=${generatedSqlPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 var sqlConnectionString = provisionSqlDatabase 
-  ? 'Server=tcp:${sqlServerFqdnValue},1433;Initial Catalog=${sqlDatabaseNameValue};User ID=${sqlAdminLogin};Password=${generatedSqlPassword};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+  ? (useManagedIdentityForSql ? sqlConnectionStringManagedIdentity : sqlConnectionStringSqlAuth)
   : 'Data Source=fencemark.db'
 
 // ============================================================================
@@ -252,6 +265,22 @@ module sqlDatabase './modules/sql-database.bicep' = if (provisionSqlDatabase) {
     administratorLogin: sqlAdminLogin
     administratorLoginPassword: generatedSqlPassword
   }
+}
+
+// ============================================================================
+// SQL Server Azure AD Admin (for Managed Identity auth)
+// ============================================================================
+
+module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase && useManagedIdentityForSql && !empty(sqlAzureAdAdminObjectId)) {
+  name: 'sqlAadAdmin'
+  scope: rg
+  params: {
+    sqlServerName: sqlServerNameValue
+    azureAdAdminObjectId: sqlAzureAdAdminObjectId
+    azureAdAdminLogin: sqlAzureAdAdminLogin
+    azureAdOnlyAuthentication: false // Keep SQL auth available as fallback
+  }
+  dependsOn: [sqlDatabase]
 }
 
 // ============================================================================
@@ -621,6 +650,9 @@ output apiServiceName string = apiService.outputs.name
 
 @description('The FQDN of the API Service Container App')
 output apiServiceFqdn string = apiService.outputs.fqdn
+
+@description('The principal ID of the API Service managed identity (use this for SQL user creation)')
+output apiServiceIdentityPrincipalId string = apiService.outputs.?systemAssignedMIPrincipalId ?? ''
 
 @description('The name of the Web Frontend Container App')
 output webFrontendName string = webFrontend.outputs.name
