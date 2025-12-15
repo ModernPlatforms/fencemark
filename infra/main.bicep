@@ -271,7 +271,7 @@ module aspireDashboard 'br/public:avm/res/app/container-app:0.16.0' = {
 // API Service Container App
 // ============================================================================
 
-module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
+module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
   name: 'apiService'
   scope: rg
   params: {
@@ -280,6 +280,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
     tags: union(defaultTags, {
       'azd-service-name': 'apiservice'
     })
+    
     environmentResourceId: containerAppsEnvironment.outputs.resourceId
     managedIdentities: {
       systemAssigned: true
@@ -289,6 +290,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
       {
         name: 'apiservice'
         image: !empty(apiServiceImage) ? apiServiceImage : 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
+        
         resources: {
           cpu: json(apiServiceCpu)
           memory: apiServiceMemory
@@ -327,7 +329,9 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
             periodSeconds: 10
           }
         ]
+       
       }
+       
     ]
     scaleSettings: {
       minReplicas: apiServiceMinReplicas
@@ -343,6 +347,11 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
         passwordSecretRef: 'acr-password'
       }
     ]
+    runtime: {
+          dotnet: {
+            autoConfigureDataProtection: false
+          }
+        }
     secrets: [
       {
         name: 'acr-password'
@@ -356,7 +365,7 @@ module apiService 'br/public:avm/res/app/container-app:0.16.0' = {
 // Web Frontend Container App
 // ============================================================================
 
-module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
+module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
   name: 'webFrontend'
   scope: rg
   params: {
@@ -473,6 +482,11 @@ module webFrontend 'br/public:avm/res/app/container-app:0.16.0' = {
         passwordSecretRef: 'acr-password'
       }
     ]
+    runtime: {
+          dotnet: {
+            autoConfigureDataProtection: false
+          }
+        }
     secrets: [
       {
         name: 'acr-password'
