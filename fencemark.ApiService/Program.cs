@@ -98,6 +98,9 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health endpoint for container liveness/readiness probes
+app.MapGet("/health", () => Results.Ok("OK"));
+
 // Map feature endpoints
 app.MapAuthEndpoints();
 app.MapOrganizationEndpoints();
