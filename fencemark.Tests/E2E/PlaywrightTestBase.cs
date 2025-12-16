@@ -60,7 +60,14 @@ public abstract class PlaywrightTestBase : IDisposable
 
     public void Dispose()
     {
-        TeardownAsync().GetAwaiter().GetResult();
+        try
+        {
+            TeardownAsync().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Suppress errors during cleanup
+        }
         GC.SuppressFinalize(this);
     }
 

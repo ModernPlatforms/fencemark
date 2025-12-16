@@ -122,9 +122,10 @@ public class QuoteFlowTests
         await using var context = CreateDbContext();
         var (org, config, job, fenceType) = await SetupTestDataAsync(context);
         var service = new PricingService(context);
+        var cancellationToken = TestContext.Current.CancellationToken;
 
         // Act
-        var quote = await service.GenerateQuoteAsync(job.Id);
+        var quote = await service.GenerateQuoteAsync(job.Id, null, cancellationToken);
 
         // Assert
         Assert.NotNull(quote);
