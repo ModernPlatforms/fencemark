@@ -21,6 +21,7 @@ var sql = builder.AddSqlServer("sql").AddDatabase("fencemark");
 // ============================================================================
 var apiService = builder.AddProject<Projects.fencemark_ApiService>("apiservice")
     .WithReference(sql)
+    .WaitFor(sql)
     .WithHttpHealthCheck("/health")
     .WithReplicas(GetMinReplicas(environmentName, "ApiService"));
 
