@@ -226,4 +226,24 @@ public class OrchestrationTests
         Assert.Contains("WithReference", appHostContent);
         Assert.Contains("WaitFor", appHostContent);
     }
+
+    [Fact]
+    public void AppHost_ApiServiceWaitsForSqlServer()
+    {
+        // Arrange
+        var repoRoot = GetRepositoryRoot();
+        var appHostFilePath = Path.Combine(repoRoot, "fencemark.AppHost", "AppHost.cs");
+
+        // Act
+        var appHostContent = File.ReadAllText(appHostFilePath);
+
+        // Assert - Verify that the API service configuration includes both WithReference and WaitFor for SQL
+        var apiServiceSection = appHostContent.Substring(
+            appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>"),
+            appHostContent.IndexOf(";", appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>")) - 
+            appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>"));
+
+        Assert.Contains(".WithReference(sql)", apiServiceSection, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".WaitFor(sql)", apiServiceSection, StringComparison.OrdinalIgnoreCase);
+    }
 }
