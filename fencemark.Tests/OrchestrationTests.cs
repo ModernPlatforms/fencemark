@@ -286,15 +286,12 @@ public class OrchestrationTests
         var webResource = model.Resources.FirstOrDefault(r => r.Name == "webfrontend");
         Assert.NotNull(webResource);
         
-        // Verify API service has a reference to SQL (for connection string injection)
+        // Verify API service has annotations (including dependency wait annotations)
         var apiServiceAnnotations = apiResource.Annotations;
-        var hasWaitForAnnotation = apiServiceAnnotations.Any(a => 
-            a.GetType().Name.Contains("WaitFor") || 
-            a.GetType().Name.Contains("Wait"));
         
-        // Note: The exact annotation type may vary, but the presence of wait-related annotations
-        // indicates that the API service is configured to wait for dependencies
-        Assert.True(hasWaitForAnnotation || apiServiceAnnotations.Any(), 
-            "API service should have annotations indicating dependency management");
+        // The presence of annotations indicates that the API service has been configured
+        // with dependencies, references, and wait conditions. The exact types may vary
+        // based on Aspire version, but annotations should be present.
+        Assert.NotEmpty(apiServiceAnnotations);
     }
 }

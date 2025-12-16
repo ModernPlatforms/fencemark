@@ -15,6 +15,8 @@ public class SqlServerIntegrationTests
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(90);
 
+    private static readonly TimeSpan DockerCheckTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// Determines if the test environment supports running Aspire integration tests.
     /// Checks for Docker availability and DCP support.
@@ -37,7 +39,7 @@ public class SqlServerIntegrationTests
             if (dockerProcess == null)
                 return false;
                 
-            dockerProcess.WaitForExit(5000);
+            dockerProcess.WaitForExit((int)DockerCheckTimeout.TotalMilliseconds);
             return dockerProcess.ExitCode == 0;
         }
         catch
@@ -205,10 +207,12 @@ public class SqlServerIntegrationTests
             .WaitAsync(DefaultTimeout, cancellationToken);
         var apiHealthyTime = DateTime.UtcNow;
 
-        // Assert - API service should become healthy after SQL Server
+        // Assert - API service should become healthy after or at the same time as SQL Server
         // This validates that the .WaitFor(sql) configuration is working
+        // Note: Times may be identical due to DateTime precision, which is acceptable as it means
+        // the API service waited for SQL before becoming healthy
         Assert.True(apiHealthyTime >= sqlHealthyTime, 
-            $"API service became healthy at {apiHealthyTime}, but SQL Server became healthy at {sqlHealthyTime}. " +
+            $"API service became healthy at {apiHealthyTime:O}, but SQL Server became healthy at {sqlHealthyTime:O}. " +
             "API service should not be healthy before SQL Server is ready.");
 
         // Additional validation - verify health endpoint works
