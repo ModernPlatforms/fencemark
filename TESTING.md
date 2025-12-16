@@ -239,19 +239,119 @@ public async Task MyIntegrationTest()
 }
 ```
 
+## End-to-End (E2E) Testing with Playwright
+
+### Overview
+
+Fencemark includes Playwright-based E2E tests for comprehensive workflow testing across the entire application stack.
+
+**Location:** `fencemark.Tests/E2E/`
+
+**Test Suites:**
+- `JobFlowE2ETests` - Tests for drawing/fence management workflows
+- `QuoteFlowE2ETests` - Tests for quote generation and management
+- `BillingFlowE2ETests` - Tests for pricing and billing workflows
+
+### Running E2E Tests Locally
+
+E2E tests require the application to be running. They are skipped by default in CI/CD.
+
+```bash
+# 1. Install Playwright browsers (first time only)
+pwsh bin/Debug/net10.0/playwright.ps1 install
+
+# 2. Start the application
+dotnet run --project fencemark.AppHost
+
+# 3. In another terminal, run E2E tests
+export TEST_BASE_URL=http://localhost:5000
+dotnet test --filter "JobFlowE2ETests|QuoteFlowE2ETests|BillingFlowE2ETests"
+```
+
+### E2E Test Configuration
+
+Tests can be configured via environment variables:
+
+- `TEST_BASE_URL` - Base URL of the application (default: `http://localhost:5000`)
+- Set in `PlaywrightTestBase.cs`
+
+### E2E Test Artifacts
+
+When tests run, they generate:
+- **Screenshots** - Saved to `screenshots/` directory
+- **Videos** - Saved to `videos/` directory (on failure)
+
+These are excluded from git via `.gitignore`.
+
+### Adding New E2E Tests
+
+1. Create a new test class inheriting from `PlaywrightTestBase`
+2. Use Playwright's API to interact with the UI
+3. Add `[Fact(Skip = "E2E tests require running application")]` attribute
+4. Use `data-testid` attributes in UI for reliable selectors
+
+Example:
+```csharp
+public class MyE2ETests : PlaywrightTestBase
+{
+    [Fact(Skip = "E2E tests require running application")]
+    public async Task CanPerformAction()
+    {
+        await SetupAsync();
+        try
+        {
+            await NavigateToAsync("/my-page");
+            await Page!.ClickAsync("[data-testid='my-button']");
+            // Assert...
+        }
+        finally
+        {
+            await TeardownAsync();
+        }
+    }
+}
+```
+
+## Nightly Tests
+
+Comprehensive regression tests run automatically every night at 2 AM UTC.
+
+**Workflow:** `.github/workflows/nightly-tests.yml`
+
+**What it tests:**
+- All unit tests
+- Integration tests (where environment supports)
+- Smoke tests against deployed environments (dev/staging/prod)
+- Health checks on all services
+
+**Failure handling:**
+- Automatic GitHub issue creation on failure
+- Tagged with `test-failure` and `automated` labels
+- Notifications sent to configured channels
+
+**Manual trigger:**
+```bash
+# Via GitHub Actions UI: Actions → Nightly Tests → Run workflow
+# Select environment to test: dev, staging, or prod
+```
+
 ## Related Documentation
 
 - [Aspire Orchestration Guide](ASPIRE_ORCHESTRATION.md)
 - [Row-Level Security Implementation](RLS_IMPLEMENTATION.md)
 - [CI/CD Pipeline Documentation](CI-CD.md)
+- [Rollback Procedures](ROLLBACK.md)
 
 ## Summary
 
 The Fencemark test suite provides comprehensive coverage with:
-- ✅ **84 total tests** (79 unit tests, 5 integration tests)
+- ✅ **105 total tests** (100 passing unit tests, 5 skipped integration tests)
 - ✅ **Fast unit tests** that run in CI on every commit
 - ✅ **Integration tests** for SQL Server dependencies (run manually)
+- ✅ **E2E tests** for critical user workflows (12 skeleton tests)
 - ✅ **Configuration validation** to catch issues early
 - ✅ **Performance benchmarks** to prevent regressions
+- ✅ **Nightly regression testing** with automatic issue creation
+- ✅ **Smoke tests** against deployed environments
 
 For questions or issues with tests, please file an issue in the repository.

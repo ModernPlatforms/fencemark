@@ -233,6 +233,125 @@ jobs:
             --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
             --image ${{ env.WEB_IMAGE }}
 
+      - name: Wait for deployment to stabilize
+        run: sleep 30
+
+      - name: Health Check - API Service
+        id: health-check-api
+        continue-on-error: true
+        run: |
+          API_FQDN=$(az containerapp show \
+            --name ${{ steps.get-outputs.outputs.api-service-name }} \
+            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)
+          
+          echo "API FQDN: $API_FQDN"
+          
+          # Try health check endpoint with retries
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://$API_FQDN/health || echo "000")
+            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ API Service health check passed"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep 10
+            fi
+          done
+          
+          echo "❌ API Service health check failed after $MAX_RETRIES attempts"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Health Check - Web Frontend
+        id: health-check-web
+        continue-on-error: true
+        run: |
+          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
+          echo "Web URL: $WEB_URL"
+          
+          # Try health check endpoint with retries
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL/health || echo "000")
+            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Web Frontend health check passed"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep 10
+            fi
+          done
+          
+          echo "❌ Web Frontend health check failed after $MAX_RETRIES attempts"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Smoke Test - Home Page Accessibility
+        id: smoke-test-home
+        if: steps.health-check-web.outputs.status == 'success'
+        continue-on-error: true
+        run: |
+          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL || echo "000")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Home page is accessible"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Home page returned HTTP $HTTP_CODE"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Report Health Check Status
+        if: always()
+        run: |
+          echo "## 🏥 Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.health-check-api.outputs.status }}" = "success" ]; then
+            echo "✅ **API Service:** Healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **API Service:** Unhealthy" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.health-check-web.outputs.status }}" = "success" ]; then
+            echo "✅ **Web Frontend:** Healthy" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Web Frontend:** Unhealthy" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.smoke-test-home.outputs.status }}" = "success" ]; then
+            echo "✅ **Smoke Test:** Passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.smoke-test-home.outputs.status }}" = "failed" ]; then
+            echo "❌ **Smoke Test:** Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Smoke Test:** Skipped (health check failed)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail deployment if health checks failed
+        if: steps.health-check-api.outputs.status != 'success' || steps.health-check-web.outputs.status != 'success'
+        run: |
+          echo "::error::Deployment health checks failed. Please investigate and consider rolling back."
+          exit 1
+
       - name: Deployment summary
         run: |
           echo "## 🚀 Dev Deployment Complete" >> $GITHUB_STEP_SUMMARY

@@ -188,15 +188,29 @@ See [infra/README.md](infra/README.md) for infrastructure details.
 
 ## CI/CD Pipeline
 
-Fencemark uses GitHub Actions with the following workflows:
+Fencemark uses GitHub Actions with comprehensive testing and deployment automation:
 
-- **Build and Test** - Validates every push and PR
-- **Deploy to Azure** - Deploys using Bicep infrastructure as code
+### Workflows
+
+- **Build and Test** - Validates every push and PR with unit tests
+- **Deploy to Azure** - Deploys using Bicep IaC with health checks and smoke tests
+- **Nightly Tests** - Comprehensive regression testing (2 AM UTC daily)
 - **Dependency Review** - Scans for vulnerable dependencies
+
+### Key Features
+
+- ✅ **Automated Health Checks** - Post-deployment validation with retries
+- ✅ **Smoke Tests** - Verify critical functionality after deployment
+- ✅ **Nightly Regression Tests** - Catch issues early
+- ✅ **Auto Issue Creation** - Create GitHub issues on test failures
+- ✅ **Environment Protection** - Manual approvals for staging/prod
+- ✅ **Rollback Support** - Quick rollback scripts and procedures
 
 **Quick Links**:
 - 📖 [Complete CI/CD Documentation](CI-CD.md)
 - 🚀 [Manual Deployment Guide](DEPLOYMENT.md)
+- 🔄 [Rollback Procedures](ROLLBACK.md)
+- 🧪 [Testing Guide](TESTING.md)
 - 🏗️ [Infrastructure Details](infra/README.md)
 
 ## Aspire Orchestration
