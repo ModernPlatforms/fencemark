@@ -23,28 +23,23 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
 // Configure database
-// Connection string can use either:
-// - SQL Authentication: User ID=xxx;Password=xxx
-// - Managed Identity: Authentication=Active Directory Default (uses DefaultAzureCredential automatically)
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? "Data Source=fencemark.db";
+// Connection string now always targets SQL Server. When running under Aspire
+// AppHost, DefaultConnection is provided by the referenced SQL resource.
+// When running the ApiService project directly (without AppHost), fall back
+// to a local SQL Server/SQL Express instance for convenience.
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Server=localhost;Database=fencemark;Trusted_Connection=True;TrustServerCertificate=True;";
 
-// Use SQL Server if connection string contains "Server=" (Azure SQL), otherwise use SQLite (local dev)
-var useSqlServer = connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase);
-
+// Always use SQL Server with TenantConnectionInterceptor (RLS via SESSION_CONTEXT)
 builder.Services.AddScoped<TenantConnectionInterceptor>();
 
 builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =>
 {
-    if (useSqlServer)
-    {
-        options.UseSqlServer(connectionString)
-            .AddInterceptors(serviceProvider.GetRequiredService<TenantConnectionInterceptor>());
-    }
-    else
-    {
-        options.UseSqlite(connectionString);
-    }
+    // In Azure, DefaultConnection should use Authentication=Active Directory Default
+    // so the system-assigned managed identity is used. In local Aspire, the
+    // AppHost provides DefaultConnection pointing at the Aspire SQL container.
+    options.UseSqlServer(connectionString)
+        .AddInterceptors(serviceProvider.GetRequiredService<TenantConnectionInterceptor>());
 });
 
 // Configure Identity
@@ -139,7 +134,7 @@ app.MapGet("/weatherforecast", () =>
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
             Random.Shared.Next(-20, 55),
             summaries[Random.Shared.Next(summaries.Length)]
-        ))
+        )) 
         .ToArray();
     return forecast;
 })

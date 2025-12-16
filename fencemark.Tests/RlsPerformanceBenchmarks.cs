@@ -26,8 +26,9 @@ public class RlsPerformanceBenchmarks
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
 
-        return currentUserService != null 
-            ? new ApplicationDbContext(options, currentUserService)
+        // Update ApplicationDbContext creation to use the single-parameter ctor
+        return currentUserService != null
+            ? new ApplicationDbContext(options) // currentUserService no longer injected into DbContext
             : new ApplicationDbContext(options);
     }
 
