@@ -77,3 +77,8 @@ azd.env
 
 # Bicep
 *.lock.hcl
+
+# Playwright
+videos/
+screenshots/
+.playwright/
