@@ -1,0 +1,229 @@
+# ============================================================================
+# Nightly Test Workflow
+# ============================================================================
+# This workflow runs comprehensive tests on a schedule to catch regressions
+# and verify system health. Runs every night at 2 AM UTC.
+#
+# Includes:
+#   - All unit tests
+#   - Integration tests (if environment supports)
+#   - Smoke tests against deployed environments
+#
+# For more information, see: CI-CD.md
+# ============================================================================
+
+name: Nightly Tests
+
+on:
+  schedule:
+    # Run at 2 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to test'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  contents: read
+  checks: write
+  issues: write
+
+jobs:
+  # ============================================================================
+  # Unit and Integration Tests
+  # ============================================================================
+  test:
+    name: Run All Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Install Aspire workload
+        run: dotnet workload install aspire
+
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run all tests (including integration tests if available)
+        continue-on-error: true
+        id: test-run
+        run: |
+          dotnet test --no-build --configuration Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory TestResults \
+            --verbosity normal
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-test-results
+          path: TestResults/*.trx
+          retention-days: 30
+
+      - name: Publish test summary
+        if: always()
+        run: |
+          echo "## 🧪 Nightly Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.test-run.outcome }}" = "success" ]; then
+            echo "✅ **Status:** All tests passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status:** Some tests failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create issue on test failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Nightly test failure - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Nightly Test Failure\n\n` +
+                    `Nightly test run failed on ${new Date().toISOString()}.\n\n` +
+                    `**Workflow:** ${context.workflow}\n` +
+                    `**Run:** ${context.runNumber}\n` +
+                    `**Commit:** ${context.sha}\n\n` +
+                    `[View workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})\n\n` +
+                    `Please investigate and fix the failing tests.`,
+              labels: ['test-failure', 'automated']
+            });
+            console.log(`Created issue #${issue.data.number}`);
+
+  # ============================================================================
+  # Smoke Tests Against Deployed Environment
+  # ============================================================================
+  smoke-test:
+    name: Smoke Test Deployed Environment
+    runs-on: ubuntu-latest
+    needs: test
+    if: always()
+    timeout-minutes: 15
+
+    steps:
+      - name: Determine environment URL
+        id: get-url
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            echo "url=https://staging.fencemark.app" >> $GITHUB_OUTPUT
+            echo "env=staging" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.inputs.environment }}" = "prod" ]; then
+            echo "url=https://fencemark.app" >> $GITHUB_OUTPUT
+            echo "env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "url=https://dev.fencemark.app" >> $GITHUB_OUTPUT
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Health Check - Web Frontend
+        id: health-check
+        continue-on-error: true
+        run: |
+          URL="${{ steps.get-url.outputs.url }}"
+          echo "Testing: $URL/health"
+          
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $URL/health || echo "000")
+            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+              sleep 10
+            fi
+          done
+          
+          echo "❌ Health check failed"
+          echo "status=failed" >> $GITHUB_OUTPUT
+          exit 1
+
+      - name: Smoke Test - Home Page
+        if: steps.health-check.outputs.status == 'success'
+        id: smoke-test-home
+        continue-on-error: true
+        run: |
+          URL="${{ steps.get-url.outputs.url }}"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $URL || echo "000")
+          
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ]; then
+            echo "✅ Home page accessible"
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Home page returned HTTP $HTTP_CODE"
+            echo "status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Publish smoke test summary
+        if: always()
+        run: |
+          echo "## 💨 Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.get-url.outputs.env }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.health-check.outputs.status }}" = "success" ]; then
+            echo "✅ **Health Check:** Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Health Check:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.smoke-test-home.outputs.status }}" = "success" ]; then
+            echo "✅ **Home Page:** Accessible" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.smoke-test-home.outputs.status }}" = "failed" ]; then
+            echo "❌ **Home Page:** Failed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Home Page:** Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create issue on smoke test failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Smoke test failure - ${new Date().toISOString().split('T')[0]}`,
+              body: `## Smoke Test Failure\n\n` +
+                    `Smoke tests failed on ${new Date().toISOString()}.\n\n` +
+                    `**Environment:** ${{ steps.get-url.outputs.env }}\n` +
+                    `**URL:** ${{ steps.get-url.outputs.url }}\n` +
+                    `**Workflow:** ${context.workflow}\n` +
+                    `**Run:** ${context.runNumber}\n\n` +
+                    `[View workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})\n\n` +
+                    `The deployed application may be unhealthy. Please investigate immediately.`,
+              labels: ['production-issue', 'automated', 'urgent']
+            });
+            console.log(`Created issue #${issue.data.number}`);
