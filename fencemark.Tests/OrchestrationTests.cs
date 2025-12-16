@@ -238,12 +238,20 @@ public class OrchestrationTests
         var appHostContent = File.ReadAllText(appHostFilePath);
 
         // Assert - Verify that the API service configuration includes both WithReference and WaitFor for SQL
-        var apiServiceSection = appHostContent.Substring(
-            appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>"),
-            appHostContent.IndexOf(";", appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>")) - 
-            appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>"));
+        // This ensures the API service waits for SQL Server to be ready before starting,
+        // preventing database migration failures on startup
+        Assert.Contains("AddProject<Projects.fencemark_ApiService>(\"apiservice\")", appHostContent);
+        
+        // Find the section between "var apiService =" and the next "var" or end of configuration
+        var apiServiceStart = appHostContent.IndexOf("var apiService = builder.AddProject<Projects.fencemark_ApiService>");
+        Assert.True(apiServiceStart >= 0, "API service configuration not found");
+        
+        var nextSection = appHostContent.IndexOf("var ", apiServiceStart + 1);
+        var apiServiceSection = nextSection > 0 
+            ? appHostContent.Substring(apiServiceStart, nextSection - apiServiceStart)
+            : appHostContent.Substring(apiServiceStart, Math.Min(500, appHostContent.Length - apiServiceStart));
 
-        Assert.Contains(".WithReference(sql)", apiServiceSection, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(".WaitFor(sql)", apiServiceSection, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(".WithReference(sql)", apiServiceSection);
+        Assert.Contains(".WaitFor(sql)", apiServiceSection);
     }
 }
