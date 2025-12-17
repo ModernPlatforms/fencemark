@@ -3,7 +3,9 @@ using fencemark.Web.Components;
 using fencemark.Web.Features.Auth;
 using fencemark.Web.Features.Organization;
 using fencemark.Web.Features.Fences;
+using fencemark.Web.Features.FenceSegments;
 using fencemark.Web.Features.Gates;
+using fencemark.Web.Features.GatePositions;
 using fencemark.Web.Features.Components;
 using fencemark.Web.Features.Jobs;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -112,6 +114,8 @@ builder.Services.AddScoped<FenceApiClient>();
 builder.Services.AddScoped<GateApiClient>();
 builder.Services.AddScoped<ComponentApiClient>();
 builder.Services.AddScoped<JobApiClient>();
+builder.Services.AddScoped<FenceSegmentApiClient>();
+builder.Services.AddScoped<GatePositionApiClient>();
 
 var app = builder.Build();
 
