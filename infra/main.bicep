@@ -85,6 +85,16 @@ param externalidRg string = ''
 param customDomain string = ''
 
 // ============================================================================
+// Central App Configuration Parameters
+// ============================================================================
+
+@description('The name of the central App Configuration store (deployed separately)')
+param centralAppConfigName string = 'appcs-fencemark'
+
+@description('The resource group containing the central App Configuration')
+param centralAppConfigResourceGroup string = 'rg-fencemark-central-config'
+
+// ============================================================================
 // Database Parameters
 // ============================================================================
 
@@ -214,6 +224,43 @@ module mapsAccount './maps-account.bicep' = {
     name: '${abbrs.mapsAccounts}${resourceToken}'
     tags: defaultTags
   }
+}
+
+// Reference to get Maps subscription key
+resource mapsAccountResource 'Microsoft.Maps/accounts@2024-01-01-preview' existing = {
+  name: '${abbrs.mapsAccounts}${resourceToken}'
+  scope: rg
+  dependsOn: [mapsAccount]
+}
+
+// ============================================================================
+// Key Vault (per-environment in fencemark resource group)
+// ============================================================================
+
+module keyVault './modules/keyvault.bicep' = {
+  name: 'keyVault'
+  scope: rg
+  params: {
+    name: '${abbrs.keyVaultVaults}${resourceToken}'
+    location: location
+    tags: defaultTags
+    sku: 'standard'
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 7
+    enablePurgeProtection: false
+  }
+}
+
+// ============================================================================
+// Reference to Central App Configuration
+// ============================================================================
+// The central App Config is deployed separately via central-appconfig.bicep
+// It serves all environments using labels (dev, staging, prod)
+
+resource centralAppConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' existing = {
+  name: centralAppConfigName
+  scope: resourceGroup(centralAppConfigResourceGroup)
 }
 
 // ============================================================================
@@ -399,6 +446,14 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'ConnectionStrings__DefaultConnection'
             secretRef: 'sql-connection-string'
           }
+          {
+            name: 'AppConfig__Endpoint'
+            value: 'https://${centralAppConfigName}.azconfig.io'
+          }
+          {
+            name: 'AppConfig__Label'
+            value: environmentName
+          }
         ]
         probes: [
           {
@@ -507,25 +562,17 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
             value: 'https://${abbrs.appContainerApps}apiservice-${resourceToken}'
           }
           {
+            name: 'AppConfig__Endpoint'
+            value: 'https://${centralAppConfigName}.azconfig.io'
+          }
+          {
+            name: 'AppConfig__Label'
+            value: environmentName
+          }
+          // Keep essential environment variables for backwards compatibility
+          {
             name: 'AzureMaps__ClientId'
             value: mapsAccount.outputs.resourceId
-          }
-          // Azure AD / Entra External ID settings
-          {
-            name: 'AzureAd__Instance'
-            value: entraExternalIdInstance
-          }
-          {
-            name: 'AzureAd__TenantId'
-            value: entraExternalIdTenantId
-          }
-          {
-            name: 'AzureAd__ClientId'
-            value: entraExternalIdClientId
-          }
-          {
-            name: 'AzureAd__Domain'
-            value: entraExternalIdDomain
           }
           {
             name: 'AzureAd__CallbackPath'
@@ -534,14 +581,6 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'AzureAd__SignedOutCallbackPath'
             value: '/signout-callback-oidc'
-          }
-          {
-            name: 'KeyVault__Url'
-            value: keyVaultUrl
-          }
-          {
-            name: 'KeyVault__CertificateName'
-            value: certificateName
           }
         ]
         probes: [
@@ -602,28 +641,261 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
 }
 
 // ============================================================================
-// Reference to your Key Vault resource
+// Reference to External ID Key Vault resource
 // ============================================================================
 
-resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = {
+resource externalIdKeyVault 'Microsoft.KeyVault/vaults@2022-07-01' existing = if (!empty(externalidRg)) {
   name: 'kv-ciambfwyw65gna5lu'
   scope: resourceGroup(externalidRg)
 }
 
 // ============================================================================
-// Store SQL Admin Password in Key Vault
+// Store SQL Admin Password in External ID Key Vault
 // ============================================================================
 
 module sqlPasswordSecret './modules/keyvault-secret.bicep' = if (provisionSqlDatabase && !empty(externalidRg)) {
   name: 'sqlPasswordSecret'
   scope: resourceGroup(externalidRg)
   params: {
-    keyVaultName: keyVault.name
+    keyVaultName: externalIdKeyVault.name
     secretName: 'sql-admin-password-${environmentName}'
     secretValue: generatedSqlPassword
     contentType: 'SQL Server admin password'
     tags: defaultTags
   }
+}
+
+// ============================================================================
+// Store Secrets in Fencemark Key Vault
+// ============================================================================
+
+// Store SQL admin password
+module sqlPasswordInKeyVault './modules/keyvault-secret.bicep' = if (provisionSqlDatabase) {
+  name: 'sqlPasswordInKeyVault'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    secretName: 'sql-admin-password'
+    secretValue: generatedSqlPassword
+    contentType: 'SQL Server admin password'
+    tags: defaultTags
+  }
+  dependsOn: [keyVault]
+}
+
+// Store Maps primary key
+module mapsPrimaryKeyInKeyVault './modules/keyvault-secret.bicep' = {
+  name: 'mapsPrimaryKeyInKeyVault'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    secretName: 'azure-maps-primary-key'
+    secretValue: mapsAccountResource.listKeys().primaryKey
+    contentType: 'Azure Maps Primary Key'
+    tags: defaultTags
+  }
+  dependsOn: [keyVault, mapsAccount]
+}
+
+// ============================================================================
+// RBAC Role Assignments for Central App Configuration
+// ============================================================================
+// Grant managed identities from this environment access to the central App Config
+// Note: The ?? '' pattern is intentional - if principal ID is not available,
+// the empty string will cause the role assignment to fail with a clear error
+
+// Role definition IDs
+var appConfigDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071' // App Configuration Data Reader
+
+// Grant API Service access to Central App Configuration (cross-resource group)
+module apiServiceAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
+  name: 'apiServiceAppConfigRoleAssignment'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    roleDefinitionId: appConfigDataReaderRoleId
+    principalType: 'ServicePrincipal'
+  }
+  dependsOn: [centralAppConfig, apiService]
+}
+
+// Grant Web Frontend access to Central App Configuration (cross-resource group)
+module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
+  name: 'webFrontendAppConfigRoleAssignment'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    roleDefinitionId: appConfigDataReaderRoleId
+    principalType: 'ServicePrincipal'
+  }
+  dependsOn: [centralAppConfig, webFrontend]
+}
+
+// ============================================================================
+// RBAC Role Assignments for Key Vault
+// ============================================================================
+// Note: The ?? '' pattern is intentional - if principal ID is not available,
+// the empty string will cause the role assignment to fail with a clear error
+
+// Role definition IDs for Key Vault
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6' // Key Vault Secrets User
+
+// Grant API Service access to Key Vault secrets
+resource apiServiceKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.outputs.resourceId, apiService.outputs.?systemAssignedMIPrincipalId ?? '', keyVaultSecretsUserRoleId)
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+  }
+  dependsOn: [keyVault, apiService]
+}
+
+// Grant Web Frontend access to Key Vault secrets
+resource webFrontendKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.outputs.resourceId, webFrontend.outputs.?systemAssignedMIPrincipalId ?? '', keyVaultSecretsUserRoleId)
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+  }
+  dependsOn: [keyVault, webFrontend]
+}
+
+// ============================================================================
+// Populate Central App Configuration with Environment-Specific Values
+// ============================================================================
+// All configuration values are stored in the central App Config with
+// environment labels (dev, staging, prod)
+
+// SQL Connection String
+module appConfigSqlConnection './modules/app-config-key-value.bicep' = if (provisionSqlDatabase) {
+  name: 'appConfigSqlConnection-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'ConnectionStrings:DefaultConnection'
+    value: sqlConnectionString
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Azure Maps Primary Key as Key Vault Reference
+module appConfigMapsKey './modules/app-config-key-value.bicep' = {
+  name: 'appConfigMapsKey-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureMaps:SubscriptionKey'
+    value: '{"uri":"${keyVault.outputs.vaultUri}secrets/azure-maps-primary-key"}'
+    label: environmentName
+    contentType: 'application/vnd.microsoft.appconfig.keyvaultref+json;charset=utf-8'
+  }
+  dependsOn: [centralAppConfig, mapsPrimaryKeyInKeyVault]
+}
+
+// Azure Maps Client ID
+module appConfigMapsClientId './modules/app-config-key-value.bicep' = {
+  name: 'appConfigMapsClientId-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureMaps:ClientId'
+    value: mapsAccount.outputs.resourceId
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Entra External ID - Instance
+module appConfigEntraInstance './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdInstance)) {
+  name: 'appConfigEntraInstance-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureAd:Instance'
+    value: entraExternalIdInstance
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Entra External ID - Tenant ID
+module appConfigEntraTenantId './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdTenantId)) {
+  name: 'appConfigEntraTenantId-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureAd:TenantId'
+    value: entraExternalIdTenantId
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Entra External ID - Client ID
+module appConfigEntraClientId './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdClientId)) {
+  name: 'appConfigEntraClientId-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureAd:ClientId'
+    value: entraExternalIdClientId
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Entra External ID - Domain
+module appConfigEntraDomain './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdDomain)) {
+  name: 'appConfigEntraDomain-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'AzureAd:Domain'
+    value: entraExternalIdDomain
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Key Vault URL (External ID Key Vault for certificates)
+module appConfigKeyVaultUrl './modules/app-config-key-value.bicep' = if (!empty(keyVaultUrl)) {
+  name: 'appConfigKeyVaultUrl-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'KeyVault:Url'
+    value: keyVaultUrl
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
+}
+
+// Certificate Name
+module appConfigCertificateName './modules/app-config-key-value.bicep' = if (!empty(certificateName)) {
+  name: 'appConfigCertificateName-${environmentName}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'KeyVault:CertificateName'
+    value: certificateName
+    label: environmentName
+    contentType: 'text/plain'
+  }
+  dependsOn: [centralAppConfig]
 }
 
 // ============================================================================
@@ -698,6 +970,21 @@ output outputSqlDatabaseName string = provisionSqlDatabase ? sqlDatabaseNameValu
 
 @description('The Key Vault name storing the SQL admin credential (if provisioned)')
 output sqlCredentialKeyVaultName string = provisionSqlDatabase && !empty(externalidRg) ? 'sql-admin-password-${environmentName}' : ''
+
+@description('The central App Configuration endpoint')
+output appConfigEndpoint string = 'https://${centralAppConfigName}.azconfig.io'
+
+@description('The central App Configuration name')
+output appConfigName string = centralAppConfigName
+
+@description('The central App Configuration resource group')
+output appConfigResourceGroup string = centralAppConfigResourceGroup
+
+@description('The Key Vault URI')
+output keyVaultUri string = keyVault.outputs.vaultUri
+
+@description('The Key Vault name')
+output keyVaultName string = keyVault.outputs.name
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity

@@ -31,6 +31,27 @@ param webFrontendMaxReplicas = 10
 param customDomain = 'fencemark.com.au'
 
 // ============================================================================
+// Central App Configuration
+// ============================================================================
+// The central App Config is deployed separately and shared across all environments
+param centralAppConfigName = 'appcs-fencemark'
+param centralAppConfigResourceGroup = 'rg-fencemark-central-config'
+
+// ============================================================================
+// Azure Entra External ID Authentication
+// ============================================================================
+// NOTE: These values are stored in Azure App Configuration during deployment.
+// Applications use managed identity to read from App Config at runtime.
+// Configure these parameters with your Entra External ID (CIAM) tenant details
+param entraExternalIdTenantId = ''       // Run ./infra/get-tenant-id.sh to retrieve
+param entraExternalIdClientId = ''       // Application (client) ID
+param entraExternalIdInstance = ''       // e.g., 'https://yourtenant.ciamlogin.com/'
+param entraExternalIdDomain = ''         // e.g., 'yourtenant.onmicrosoft.com'
+param keyVaultUrl = ''                   // External ID Key Vault URL for certificates
+param certificateName = ''               // Certificate name in Key Vault
+param externalidRg = ''                  // External ID resource group name
+
+// ============================================================================
 // SQL Database - Managed Identity Authentication
 // ============================================================================
 // To enable managed identity for SQL:

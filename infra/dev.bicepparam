@@ -29,12 +29,20 @@ param webFrontendCpu = '0.25'
 param webFrontendMemory = '0.5Gi'
 param webFrontendMinReplicas = 0
 param webFrontendMaxReplicas = 2
-param externalidRg = 'rg-fencemark-identity-dev' 
+param externalidRg = 'rg-fencemark-identity-dev'
+
+// ============================================================================
+// Central App Configuration
+// ============================================================================
+// The central App Config is deployed separately and shared across all environments
+param centralAppConfigName = 'appcs-fencemark'
+param centralAppConfigResourceGroup = 'rg-fencemark-central-config' 
 
 // ============================================================================
 // Azure Entra External ID Authentication
 // ============================================================================
-
+// NOTE: These values are stored in Azure App Configuration during deployment.
+// Applications use managed identity to read from App Config at runtime.
 // CIAM tenant configuration
 // NOTE: Run ./infra/get-tenant-id.sh rg-fencemark-identity-dev to retrieve the tenant ID
 param entraExternalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071' 
