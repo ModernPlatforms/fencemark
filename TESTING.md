@@ -43,6 +43,59 @@ Located in `fencemark.Tests/SqlServerIntegrationTests.cs`, these tests verify:
 - ✅ Health checks pass after dependencies are ready
 - ✅ Connection strings are properly configured
 
+### 4. End-to-End (E2E) Playwright Tests
+
+Located in `fencemark.Tests/E2E/`, these tests verify the complete user workflow using browser automation:
+
+**Test Suites:**
+- **AuthenticationFlowE2ETests** - Registration, login, logout, account deletion
+- **ComponentFlowE2ETests** - Component CRUD operations via UI and API
+- **ComprehensiveJobFlowE2ETests** - Job management including create, update, delete, and view
+- **JobFlowE2ETests** - Legacy job workflow tests
+- **QuoteFlowE2ETests** - Quote generation and management
+- **BillingFlowE2ETests** - Billing and pricing configuration
+
+**Key Features:**
+- ✅ Automatic test user creation and cleanup
+- ✅ Cookie-based authentication with session management
+- ✅ Screenshot capture for debugging
+- ✅ Video recording of test runs
+- ✅ Environment variable configuration
+- ✅ Headless and headed mode support
+
+**Running E2E Tests:**
+
+```bash
+# Set environment variables (optional)
+export TEST_BASE_URL="https://localhost:7074"
+export TEST_USER_EMAIL="test@example.com"
+export TEST_USER_PASSWORD="TestPassword123!"
+export TEST_HEADLESS="false"  # Set to false to see browser
+export TEST_CLEANUP="true"    # Set to false to keep test data
+
+# Run all E2E tests (requires running application)
+dotnet test --filter "FullyQualifiedName~E2ETests"
+
+# Run specific test suite
+dotnet test --filter "AuthenticationFlowE2ETests"
+dotnet test --filter "ComponentFlowE2ETests"
+dotnet test --filter "ComprehensiveJobFlowE2ETests"
+
+# Run single test
+dotnet test --filter "CanRegisterNewUser"
+```
+
+**Prerequisites:**
+- Application must be running (via `dotnet run --project fencemark.AppHost`)
+- Playwright browsers installed (`playwright install chromium`)
+- Test user credentials configured (via environment variables or Key Vault)
+
+**Test User Management:**
+- Tests automatically create unique test users for isolation
+- Tests clean up test users after completion (configurable)
+- Supports reading credentials from Azure Key Vault for dev/staging/prod
+- Account deletion endpoint available at `DELETE /api/auth/account`
+
 **What These Tests Validate:**
 
 1. **SQL Server Startup**: Verifies the SQL Server container starts and becomes healthy
