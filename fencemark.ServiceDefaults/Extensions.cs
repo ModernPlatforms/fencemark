@@ -61,16 +61,21 @@ public static class Extensions
         {
             builder.Configuration.AddAzureAppConfiguration(options =>
             {
+                // DefaultAzureCredential is created here (called once during startup)
+                // ExcludeVisualStudioCredential is set to true because in Azure Container Apps,
+                // we use the system-assigned managed identity (ManagedIdentityCredential)
                 var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
                 {
                     ExcludeVisualStudioCredential = true
                 });
 
                 options.Connect(new Uri(appConfigEndpoint), credential)
+                    // Select all keys for the specific environment label
                     .Select("*", string.IsNullOrEmpty(appConfigLabel) ? LabelFilter.Null : appConfigLabel)
                     .ConfigureKeyVault(kv =>
                     {
-                        // Use managed identity to access Key Vault references
+                        // Use the same managed identity credential to access Key Vault references
+                        // in App Config (e.g., Azure Maps keys, SQL passwords)
                         kv.SetCredential(credential);
                     });
             });

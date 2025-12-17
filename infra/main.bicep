@@ -701,6 +701,8 @@ module mapsPrimaryKeyInKeyVault './modules/keyvault-secret.bicep' = {
 // RBAC Role Assignments for Central App Configuration
 // ============================================================================
 // Grant managed identities from this environment access to the central App Config
+// Note: The ?? '' pattern is intentional - if principal ID is not available,
+// the empty string will cause the role assignment to fail with a clear error
 
 // Role definition IDs
 var appConfigDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071' // App Configuration Data Reader
@@ -734,6 +736,8 @@ module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
 // ============================================================================
 // RBAC Role Assignments for Key Vault
 // ============================================================================
+// Note: The ?? '' pattern is intentional - if principal ID is not available,
+// the empty string will cause the role assignment to fail with a clear error
 
 // Role definition IDs for Key Vault
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6' // Key Vault Secrets User
