@@ -92,13 +92,18 @@
                             </div>
                         </div>
                         <div class="card-footer bg-transparent">
-                            <div class="btn-group w-100">
-                                <button class="btn btn-outline-primary" @onclick="() => EditJob(job)">
-                                    <i class="bi bi-pencil"></i> Edit
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" @onclick="() => OpenDrawing(job.Id)">
+                                    <i class="bi bi-map"></i> Open Drawing
                                 </button>
-                                <button class="btn btn-outline-danger" @onclick="() => DeleteJob(job)">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline-primary" @onclick="() => EditJob(job)">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    <button class="btn btn-outline-danger" @onclick="() => DeleteJob(job)">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -355,6 +360,11 @@
         showModal = false;
         editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
         errorMessage = null;
+    }
+
+    private void OpenDrawing(string jobId)
+    {
+        Navigation.NavigateTo($"/jobs/{jobId}/drawing");
     }
 
     private string GetStatusColor(JobStatusDto status) => status switch
