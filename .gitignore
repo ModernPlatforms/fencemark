@@ -11,7 +11,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-
+node_modules
+TestResults
 # Visual Studio
 .vs/
 *.suo
@@ -19,7 +20,8 @@ bld/
 *.userosscache
 *.sln.docstates
 *.rsuser
-
+package.json
+package-lock.json
 # Rider
 .idea/
 *.sln.iml
@@ -82,3 +84,11 @@ azd.env
 videos/
 screenshots/
 .playwright/
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
