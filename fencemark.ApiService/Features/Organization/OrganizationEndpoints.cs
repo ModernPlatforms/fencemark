@@ -29,6 +29,10 @@ public static class OrganizationEndpoints
             .RequireAuthorization()
             .WithName("RemoveMember");
 
+        group.MapPost("/seed-sample-data", SeedSampleData)
+            .RequireAuthorization()
+            .WithName("SeedSampleData");
+
         return app;
     }
 
@@ -102,5 +106,25 @@ public static class OrganizationEndpoints
 
         var success = await orgService.RemoveMemberAsync(organizationId, userId, ct);
         return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, message = "Failed to remove member" });
+    }
+
+    private static async Task<IResult> SeedSampleData(
+        ISeedDataService seedService,
+        ICurrentUserService currentUser,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.OrganizationId))
+        {
+            return Results.Unauthorized();
+        }
+
+        // Check if sample data already exists
+        if (await seedService.HasSampleDataAsync(currentUser.OrganizationId))
+        {
+            return Results.BadRequest(new { success = false, message = "Sample data already exists for this organization" });
+        }
+
+        await seedService.SeedSampleDataAsync(currentUser.OrganizationId);
+        return Results.Ok(new { success = true, message = "Sample data seeded successfully" });
     }
 }
