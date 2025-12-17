@@ -25,15 +25,15 @@ public class Organization
 {
     public string Id { get; set; }
     public string Name { get; set; }
-    public UnitSystem UnitSystem { get; set; } = UnitSystem.Imperial;
+    public UnitSystem UnitSystem { get; set; } = UnitSystem.Metric;  // Defaults to Metric
     public string? DefaultTaxRegionId { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
 public enum UnitSystem
 {
-    Imperial,  // Feet, inches
-    Metric     // Meters, centimeters
+    Imperial,  // Feet, inches (US/UK)
+    Metric     // Meters, millimeters (Australia, most of world)
 }
 ```
 
@@ -206,40 +206,42 @@ POST   /api/organizations/seed-sample-data  # Seed sample catalog data
 
 ## Sample Data
 
-The seed data service provides a complete starter catalog including:
+The seed data service provides a complete starter catalog with Australian/metric measurements:
 
 ### Components
-- **Posts**: 6x6 Treated Post ($45.00 each)
-- **Rails**: 2x4 Treated Rail ($8.20/linear foot)
-- **Panels**: 6' Privacy Panel ($12.69 each)
-- **Gate Hardware**: Heavy Duty Hinges ($12.50/pair), Gate Latch ($8.95 each)
+- **Posts**: 150x150mm Treated Post ($65.00 each)
+- **Rails**: 90x45mm Treated Rail ($12.50/linear metre)
+- **Panels**: 1800mm Privacy Panel ($85.00 each)
+- **Gate Hardware**: Heavy Duty Hinges ($35.00/pair), Gate Latch ($25.00 each)
 
 ### Fence Types
-- **6ft Privacy Fence**: Cedar, $35.00/linear foot
-- **4ft Picket Fence**: Vinyl, $28.00/linear foot
+- **1800mm Privacy Fence**: Treated Pine, $115.00/linear metre
+- **1200mm Picket Fence**: Timber, $95.00/linear metre
+- **2100mm Privacy Fence**: Treated Pine, $145.00/linear metre
 
 ### Gate Types
-- **Single Walk Gate**: 3' x 6', $250.00
-- **Double Drive Gate**: 10' x 6', $850.00
+- **Single Walk Gate**: 900mm x 1800mm, $385.00
+- **Double Driveway Gate**: 3000mm x 1800mm, $1,250.00
 
 ### Pricing Configuration
 - **Standard Pricing 2024**
-  - Labor Rate: $50.00/hour
-  - Hours per Linear Meter: 0.492 (~1.5 hours per 10 feet)
+  - Labor Rate: $85.00/hour
+  - Hours per Linear Metre: 0.5
   - Contingency: 10%
   - Profit Margin: 20%
   - Height Tiers:
-    - 0-6 feet: 1.0x multiplier (standard)
-    - 6-8 feet: 1.25x multiplier (25% increase)
-    - 8+ feet: 1.5x multiplier (50% increase)
+    - Up to 1800mm: 1.0x multiplier (standard)
+    - 1800mm-2100mm: 1.25x multiplier (25% increase)
+    - Over 2100mm: 1.5x multiplier (50% increase)
 
 ### Tax Regions
-- **California**: 8.75% tax rate
-- **Texas**: 6.25% tax rate
+- **New South Wales**: 10% GST (default)
+- **Victoria**: 10% GST
+- **Queensland**: 10% GST
 
 ### Discount Rules
-- **Volume Discount**: 10% off for orders over 500 linear feet
-- **Early Bird Special**: $500 off for bookings 60+ days in advance (promo code: EARLY2024)
+- **Volume Discount**: 10% off for orders over 150 linear metres
+- **Early Bird Special**: $750 off for bookings 60+ days in advance (promo code: EARLY2024)
 
 ## Usage Examples
 
@@ -248,10 +250,10 @@ The seed data service provides a complete starter catalog including:
 ```json
 POST /api/tax-regions
 {
-  "name": "Florida",
-  "code": "FL",
-  "taxRate": 0.06,
-  "description": "Florida state sales tax",
+  "name": "Western Australia",
+  "code": "WA",
+  "taxRate": 0.10,
+  "description": "Australian GST",
   "isDefault": false
 }
 ```

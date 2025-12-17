@@ -23,7 +23,7 @@ public class Organization
     /// <summary>
     /// Preferred unit system for the organization (Imperial or Metric)
     /// </summary>
-    public UnitSystem UnitSystem { get; set; } = UnitSystem.Imperial;
+    public UnitSystem UnitSystem { get; set; } = UnitSystem.Metric;
 
     /// <summary>
     /// Default tax region ID for the organization (optional)

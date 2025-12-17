@@ -47,14 +47,14 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "6x6 Treated Post",
-                Description = "Pressure treated 6\"x6\" fence post",
+                Name = "150x150mm Treated Post",
+                Description = "Pressure treated 150mm x 150mm fence post",
                 Category = "Post",
-                Sku = "POST-6X6-PT",
+                Sku = "POST-150X150-PT",
                 UnitOfMeasure = "Each",
-                UnitPrice = 45.00m,
+                UnitPrice = 65.00m,
                 Material = "Pressure Treated Pine",
-                Dimensions = "6\" x 6\" x 8'",
+                Dimensions = "150mm x 150mm x 2400mm",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -62,14 +62,14 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "2x4 Treated Rail",
-                Description = "Pressure treated 2\"x4\" horizontal rail",
+                Name = "90x45mm Treated Rail",
+                Description = "Pressure treated 90mm x 45mm horizontal rail",
                 Category = "Rail",
-                Sku = "RAIL-2X4-PT",
-                UnitOfMeasure = "Linear Foot",
-                UnitPrice = 8.20m,
+                Sku = "RAIL-90X45-PT",
+                UnitOfMeasure = "Linear Metre",
+                UnitPrice = 12.50m,
                 Material = "Pressure Treated Pine",
-                Dimensions = "2\" x 4\" x 8'",
+                Dimensions = "90mm x 45mm x 2400mm",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -77,14 +77,14 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "6' Privacy Panel",
-                Description = "Cedar privacy fence panel",
+                Name = "1800mm Privacy Panel",
+                Description = "Treated pine privacy fence panel",
                 Category = "Panel",
-                Sku = "PANEL-6FT-CEDAR",
+                Sku = "PANEL-1800-PT",
                 UnitOfMeasure = "Each",
-                UnitPrice = 12.69m,
-                Material = "Western Red Cedar",
-                Dimensions = "6' x 8'",
+                UnitPrice = 85.00m,
+                Material = "Treated Pine",
+                Dimensions = "1800mm x 2400mm",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -97,9 +97,9 @@ public class SeedDataService : ISeedDataService
                 Category = "Gate Hardware",
                 Sku = "HINGE-HD-PAIR",
                 UnitOfMeasure = "Pair",
-                UnitPrice = 12.50m,
-                Material = "Galvanized Steel",
-                Dimensions = "12\"",
+                UnitPrice = 35.00m,
+                Material = "Galvanised Steel",
+                Dimensions = "300mm",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -112,7 +112,7 @@ public class SeedDataService : ISeedDataService
                 Category = "Gate Hardware",
                 Sku = "LATCH-SC",
                 UnitOfMeasure = "Each",
-                UnitPrice = 8.95m,
+                UnitPrice = 25.00m,
                 Material = "Stainless Steel",
                 Dimensions = "Standard",
                 CreatedAt = DateTime.UtcNow,
@@ -129,12 +129,12 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "6ft Privacy Fence",
-                Description = "Standard 6-foot cedar privacy fence",
-                HeightInFeet = 6.0m,
-                Material = "Cedar",
+                Name = "1800mm Privacy Fence",
+                Description = "Standard 1800mm treated pine privacy fence",
+                HeightInFeet = 5.91m, // 1800mm in feet
+                Material = "Treated Pine",
                 Style = "Privacy",
-                PricePerLinearFoot = 35.00m,
+                PricePerLinearFoot = 115.00m, // per metre
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -142,12 +142,25 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "4ft Picket Fence",
-                Description = "Classic 4-foot white picket fence",
-                HeightInFeet = 4.0m,
-                Material = "Vinyl",
+                Name = "1200mm Picket Fence",
+                Description = "Classic 1200mm timber picket fence",
+                HeightInFeet = 3.94m, // 1200mm in feet
+                Material = "Timber",
                 Style = "Picket",
-                PricePerLinearFoot = 28.00m,
+                PricePerLinearFoot = 95.00m, // per metre
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new FenceType
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "2100mm Privacy Fence",
+                Description = "Extra tall 2100mm treated pine privacy fence",
+                HeightInFeet = 6.89m, // 2100mm in feet
+                Material = "Treated Pine",
+                Style = "Privacy",
+                PricePerLinearFoot = 145.00m, // per metre
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
@@ -163,11 +176,11 @@ public class SeedDataService : ISeedDataService
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
                 Name = "Single Walk Gate",
-                Description = "Standard 3-foot walk gate",
-                WidthInFeet = 3.0m,
-                HeightInFeet = 6.0m,
-                Material = "Cedar",
-                BasePrice = 250.00m,
+                Description = "Standard 900mm walk gate",
+                WidthInFeet = 2.95m, // 900mm in feet
+                HeightInFeet = 5.91m, // 1800mm in feet
+                Material = "Treated Pine",
+                BasePrice = 385.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -175,12 +188,12 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "Double Drive Gate",
-                Description = "10-foot double drive gate",
-                WidthInFeet = 10.0m,
-                HeightInFeet = 6.0m,
-                Material = "Cedar",
-                BasePrice = 850.00m,
+                Name = "Double Driveway Gate",
+                Description = "3000mm double driveway gate",
+                WidthInFeet = 9.84m, // 3000mm in feet
+                HeightInFeet = 5.91m, // 1800mm in feet
+                Material = "Treated Pine",
+                BasePrice = 1250.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
@@ -195,8 +208,8 @@ public class SeedDataService : ISeedDataService
             OrganizationId = organizationId,
             Name = "Standard Pricing 2024",
             Description = "Default pricing for residential projects",
-            LaborRatePerHour = 50.00m,
-            HoursPerLinearMeter = 0.492m, // ~1.5 hours per 10 feet
+            LaborRatePerHour = 85.00m,
+            HoursPerLinearMeter = 0.5m, // ~0.5 hours per linear metre
             ContingencyPercentage = 0.10m, // 10%
             ProfitMarginPercentage = 0.20m, // 20%
             IsDefault = true,
@@ -214,27 +227,27 @@ public class SeedDataService : ISeedDataService
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
                 MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.83m, // 6 feet
+                MaxHeightInMeters = 1.8m, // 1800mm
                 Multiplier = 1.0m,
-                Description = "Standard height"
+                Description = "Standard height (up to 1800mm)"
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 1.83m,
-                MaxHeightInMeters = 2.44m, // 8 feet
+                MinHeightInMeters = 1.8m,
+                MaxHeightInMeters = 2.1m, // 2100mm
                 Multiplier = 1.25m,
-                Description = "Tall fence surcharge (25% increase)"
+                Description = "Tall fence surcharge (1800mm-2100mm, 25% increase)"
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 2.44m,
+                MinHeightInMeters = 2.1m,
                 MaxHeightInMeters = null,
                 Multiplier = 1.5m,
-                Description = "Extra tall fence (50% increase)"
+                Description = "Extra tall fence (over 2100mm, 50% increase)"
             }
         };
 
@@ -247,10 +260,10 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "California",
-                Code = "CA",
-                TaxRate = 0.0875m, // 8.75%
-                Description = "California state sales tax",
+                Name = "New South Wales",
+                Code = "NSW",
+                TaxRate = 0.10m, // 10% GST
+                Description = "Australian GST",
                 IsDefault = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -259,10 +272,22 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "Texas",
-                Code = "TX",
-                TaxRate = 0.0625m, // 6.25%
-                Description = "Texas state sales tax",
+                Name = "Victoria",
+                Code = "VIC",
+                TaxRate = 0.10m, // 10% GST
+                Description = "Australian GST",
+                IsDefault = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new TaxRegion
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "Queensland",
+                Code = "QLD",
+                TaxRate = 0.10m, // 10% GST
+                Description = "Australian GST",
                 IsDefault = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -279,10 +304,10 @@ public class SeedDataService : ISeedDataService
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
                 Name = "Volume Discount",
-                Description = "10% off for orders over 500 linear feet",
+                Description = "10% off for orders over 150 linear metres",
                 DiscountType = DiscountType.Percentage,
                 DiscountValue = 0.10m,
-                MinimumLinearFeet = 500,
+                MinimumLinearFeet = 492.13m, // ~150 metres in feet
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -292,10 +317,10 @@ public class SeedDataService : ISeedDataService
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
                 Name = "Early Bird Special",
-                Description = "$500 off for bookings 60 days in advance",
+                Description = "$750 off for bookings 60 days in advance",
                 DiscountType = DiscountType.FixedAmount,
-                DiscountValue = 500.00m,
-                MinimumOrderValue = 3000,
+                DiscountValue = 750.00m,
+                MinimumOrderValue = 5000,
                 PromoCode = "EARLY2024",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
