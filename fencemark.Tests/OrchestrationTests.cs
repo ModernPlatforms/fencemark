@@ -75,8 +75,8 @@ public class OrchestrationTests
     }
 
     [Theory]
-    [InlineData("Development", "SQL Server\"")]
-    [InlineData("Test", "SQL Server\"")]
+    [InlineData("Development", "SQL Server")]
+    [InlineData("Test", "SQL Server")]
     [InlineData("Staging", "SQL Server")]
     [InlineData("Production", "SQL Server")]
     public void Environment_UsesCorrectDatabaseProvider(string environment, string expectedProvider)
