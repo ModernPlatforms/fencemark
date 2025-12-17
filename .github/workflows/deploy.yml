@@ -236,40 +236,9 @@ jobs:
       - name: Wait for deployment to stabilize
         run: sleep 30
 
-      - name: Health Check - API Service
-        id: health-check-api
-        continue-on-error: true
-        run: |
-          API_FQDN=$(az containerapp show \
-            --name ${{ steps.get-outputs.outputs.api-service-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --query properties.configuration.ingress.fqdn \
-            --output tsv)
-          
-          echo "API FQDN: $API_FQDN"
-          
-          # Try health check endpoint with retries
-          MAX_RETRIES=5
-          RETRY_COUNT=0
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://$API_FQDN/health || echo "000")
-            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
-            
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ API Service health check passed"
-              echo "status=success" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              sleep 10
-            fi
-          done
-          
-          echo "❌ API Service health check failed after $MAX_RETRIES attempts"
-          echo "status=failed" >> $GITHUB_OUTPUT
-          exit 1
+      # Note: API Service health check skipped - it's an internal service (ingressExternal: false)
+      # and not accessible from external networks. The Web Frontend health check validates
+      # the deployment since it depends on the API service.
 
       - name: Health Check - Web Frontend
         id: health-check-web
