@@ -1,5 +1,3 @@
-using fencemark.ApiService.Data;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace fencemark.ApiService.Middleware;
@@ -21,15 +19,10 @@ public interface ICurrentUserService
 public class CurrentUserService : ICurrentUserService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IServiceScopeFactory _scopeFactory;
 
-    private string? _organizationId;
-    private bool _organizationIdLoaded;
-
-    public CurrentUserService(IHttpContextAccessor httpContextAccessor, IServiceScopeFactory scopeFactory)
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
-        _scopeFactory = scopeFactory;
     }
 
     public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -42,17 +35,9 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            if (!_organizationIdLoaded && UserId is not null)
-            {
-                using var scope = _scopeFactory.CreateScope();
-                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                _organizationId = context.OrganizationMembers
-                    .Where(m => m.UserId == UserId)
-                    .Select(m => m.OrganizationId)
-                    .FirstOrDefault();
-                _organizationIdLoaded = true;
-            }
-            return _organizationId;
+            // Get OrganizationId from claims (no DB query, prevents deadlocks)
+            // The OrganizationId claim is added during login/registration
+            return _httpContextAccessor.HttpContext?.User?.FindFirstValue("OrganizationId");
         }
     }
 }

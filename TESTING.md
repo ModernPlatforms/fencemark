@@ -43,6 +43,72 @@ Located in `fencemark.Tests/SqlServerIntegrationTests.cs`, these tests verify:
 - ✅ Health checks pass after dependencies are ready
 - ✅ Connection strings are properly configured
 
+### 4. End-to-End (E2E) Playwright Tests
+
+Located in `fencemark.Tests/E2E/`, these tests verify the complete user workflow using browser automation:
+
+**Test Suites:**
+- **AuthenticationFlowE2ETests** - Login, logout, and session management with persistent test user
+- **ComponentFlowE2ETests** - Component CRUD operations via UI and API
+- **ComprehensiveJobFlowE2ETests** - Job management including create, update, delete, and view
+- **AllEndpointsE2ETests** - Comprehensive tests for all major endpoints with automatic cleanup
+- **JobFlowE2ETests** - Legacy job workflow tests
+- **QuoteFlowE2ETests** - Quote generation and management
+- **BillingFlowE2ETests** - Billing and pricing configuration
+
+**Key Features:**
+- ✅ Uses persistent test user (no registration/deletion during tests)
+- ✅ Cookie-based authentication with session management
+- ✅ Automatic cleanup of test data (components, jobs, fences, gates)
+- ✅ Screenshot capture for debugging
+- ✅ Video recording of test runs
+- ✅ Environment variable configuration
+- ✅ Headless and headed mode support
+
+**Running E2E Tests:**
+
+```bash
+# Set REQUIRED environment variables
+export TEST_BASE_URL="https://your-dev-environment.azurewebsites.net"
+export TEST_USER_EMAIL="testuser@yourdomain.com"  # REQUIRED: Persistent test user
+export TEST_USER_PASSWORD="YourSecurePassword"     # REQUIRED: From Azure Key Vault
+export TEST_HEADLESS="false"  # Optional: Set to false to see browser
+
+# Run all E2E tests (requires running application)
+dotnet test --filter "FullyQualifiedName~E2ETests"
+
+# Run specific test suite
+dotnet test --filter "AuthenticationFlowE2ETests"
+dotnet test --filter "ComponentFlowE2ETests"
+dotnet test --filter "ComprehensiveJobFlowE2ETests"
+dotnet test --filter "AllEndpointsE2ETests"
+
+# Run single test
+dotnet test --filter "CanCreateAndDeleteComponent"
+```
+
+**Prerequisites:**
+- Application must be running (via `dotnet run --project fencemark.AppHost` or deployed to Azure)
+- Playwright browsers installed (`playwright install chromium`)
+- **Persistent test user created in the environment** with email and password
+- Test user credentials stored in Azure Key Vault and loaded via environment variables
+
+**Test User Management:**
+- Tests use a single persistent test user (set via `TEST_USER_EMAIL` environment variable)
+- Tests login at the start and reuse the same session
+- Tests clean up test data (components, jobs, fences, gates) after completion
+- Test user account is NOT deleted - it's reused across test runs
+- Test user credentials should be stored in Azure Key Vault
+
+**Setting Up Test User in Dev:**
+1. Create a test user account in your dev environment (register via UI or API)
+2. Store credentials in Azure Key Vault:
+   ```bash
+   az keyvault secret set --vault-name your-dev-keyvault --name test-user-email --value "testuser@yourdomain.com"
+   az keyvault secret set --vault-name your-dev-keyvault --name test-user-password --value "YourSecurePassword"
+   ```
+3. Configure environment variables to read from Key Vault or set them directly for local testing
+
 **What These Tests Validate:**
 
 1. **SQL Server Startup**: Verifies the SQL Server container starts and becomes healthy
