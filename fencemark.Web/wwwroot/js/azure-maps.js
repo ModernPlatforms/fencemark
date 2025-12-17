@@ -14,8 +14,10 @@ let currentDrawing = [];
 window.initializeAzureMap = function (jobId) {
     currentJobId = jobId;
     
-    // Note: In production, subscription key should be securely loaded from configuration
-    // This is a placeholder that would be replaced with actual Azure Maps key
+    // IMPORTANT: Replace this placeholder with your actual Azure Maps subscription key
+    // Get your key from: https://portal.azure.com -> Azure Maps -> Authentication
+    // For production, load this from server-side configuration via an API endpoint
+    // to prevent exposing the key in client-side code
     const subscriptionKey = 'YOUR_AZURE_MAPS_SUBSCRIPTION_KEY';
 
     try {
@@ -186,7 +188,7 @@ function calculateDistance(coord1, coord2) {
 }
 
 function generateId() {
-    return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 11);
 }
 
 // Public API functions
@@ -202,13 +204,19 @@ window.toggleMapLayer = function (layerType, visible) {
 };
 
 window.removeSegmentFromMap = function (segmentId) {
+    const segmentToRemove = drawnSegments.find(s => s.properties.id === segmentId);
+    if (segmentToRemove && datasource) {
+        datasource.remove(segmentToRemove);
+    }
     drawnSegments = drawnSegments.filter(s => s.properties.id !== segmentId);
-    // Remove from datasource
 };
 
 window.removeGateFromMap = function (gateId) {
+    const gateToRemove = placedGates.find(g => g.properties.id === gateId);
+    if (gateToRemove && datasource) {
+        datasource.remove(gateToRemove);
+    }
     placedGates = placedGates.filter(g => g.properties.id !== gateId);
-    // Remove from datasource
 };
 
 window.getMapData = function () {
