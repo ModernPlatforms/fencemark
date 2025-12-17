@@ -158,15 +158,7 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Check if central config resource group exists
-        id: check-rg
-        continue-on-error: true
-        run: |
-          az group show --name rg-fencemark-central-config
-          echo "exists=$?" >> $GITHUB_OUTPUT
-
       - name: Deploy Central App Configuration
-        if: steps.check-rg.outputs.exists != '0'
         uses: azure/bicep-deploy@v2
         with:
           type: deployment
