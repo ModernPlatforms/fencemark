@@ -104,6 +104,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<DiscountRule> DiscountRules => Set<DiscountRule>();
 
+    /// <summary>
+    /// Fence segments (drawn fence lines on map)
+    /// </summary>
+    public DbSet<FenceSegment> FenceSegments => Set<FenceSegment>();
+
+    /// <summary>
+    /// Gate positions (gates placed on fence segments)
+    /// </summary>
+    public DbSet<GatePosition> GatePositions => Set<GatePosition>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -493,6 +503,68 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasIndex(e => e.OrganizationId);
             entity.HasIndex(e => e.PromoCode);
             entity.HasIndex(e => e.IsActive);
+        });
+
+        // Configure FenceSegment
+        builder.Entity<FenceSegment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.GeoJsonGeometry).IsRequired();
+            entity.Property(e => e.LengthInFeet).HasPrecision(18, 2);
+            entity.Property(e => e.LengthInMeters).HasPrecision(18, 2);
+            entity.Property(e => e.OnsiteVerifiedLengthInFeet).HasPrecision(18, 2);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Parcel)
+                .WithMany()
+                .HasForeignKey(e => e.ParcelId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.FenceType)
+                .WithMany()
+                .HasForeignKey(e => e.FenceTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.JobId);
+            entity.HasIndex(e => e.ParcelId);
+        });
+
+        // Configure GatePosition
+        builder.Entity<GatePosition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.GeoJsonLocation).IsRequired();
+            entity.Property(e => e.PositionAlongSegment).HasPrecision(5, 4);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.FenceSegment)
+                .WithMany(f => f.GatePositions)
+                .HasForeignKey(e => e.FenceSegmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.GateType)
+                .WithMany()
+                .HasForeignKey(e => e.GateTypeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.FenceSegmentId);
         });
 
         // ============================================================================
