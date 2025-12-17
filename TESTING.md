@@ -67,25 +67,46 @@ Located in `fencemark.Tests/E2E/`, these tests verify the complete user workflow
 
 **Running E2E Tests:**
 
+**IMPORTANT:** All E2E tests have `Skip` attributes by default because they require:
+1. A running application (local or deployed)
+2. Environment variables configured
+3. Playwright browsers installed
+
+To run these tests, you must either:
+- **Option A:** Temporarily remove the `Skip` attribute from the test
+- **Option B:** Use the `--filter` with traits (if configured)
+
+**Steps to run E2E tests:**
+
 ```bash
-# Set REQUIRED environment variables
+# 1. Set REQUIRED environment variables
 export TEST_BASE_URL="https://your-dev-environment.azurewebsites.net"
 export TEST_USER_EMAIL="testuser@yourdomain.com"  # REQUIRED: Persistent test user
 export TEST_USER_PASSWORD="YourSecurePassword"     # REQUIRED: From Azure Key Vault
 export TEST_HEADLESS="false"  # Optional: Set to false to see browser
 
-# Run all E2E tests (requires running application)
-dotnet test --filter "FullyQualifiedName~E2ETests"
+# 2. Start the application (if testing locally)
+dotnet run --project fencemark.AppHost
+# OR deploy to Azure and use the deployed URL
 
-# Run specific test suite
-dotnet test --filter "AuthenticationFlowE2ETests"
-dotnet test --filter "ComponentFlowE2ETests"
-dotnet test --filter "ComprehensiveJobFlowE2ETests"
-dotnet test --filter "AllEndpointsE2ETests"
+# 3. Temporarily remove Skip attribute from test files, OR run individual tests by commenting out Skip
+# Edit fencemark.Tests/E2E/AuthenticationFlowE2ETests.cs and remove:
+# Skip = "E2E tests require running application..."
 
-# Run single test
-dotnet test --filter "CanCreateAndDeleteComponent"
+# 4. Run the tests
+dotnet test --filter-namespace "fencemark.Tests.E2E"
+
+# Run specific test suite by class name
+dotnet test --filter-class "*AuthenticationFlowE2ETests"
+dotnet test --filter-class "*ComponentFlowE2ETests"
+dotnet test --filter-class "*ComprehensiveJobFlowE2ETests"
+dotnet test --filter-class "*AllEndpointsE2ETests"
+
+# Run single test by method name
+dotnet test --filter-method "*CanCreateAndDeleteComponent"
 ```
+
+**Note:** The Skip attribute prevents accidental execution in CI/CD or when running `dotnet test` without proper setup. You must explicitly prepare the environment and modify the test attributes to run E2E tests.
 
 **Prerequisites:**
 - Application must be running (via `dotnet run --project fencemark.AppHost` or deployed to Azure)
