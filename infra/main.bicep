@@ -440,7 +440,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
     ]
     runtime: {
           dotnet: {
-            autoConfigureDataProtection: true
+            autoConfigureDataProtection: false
           }
         }
     secrets: [
@@ -589,7 +589,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ]
     runtime: {
           dotnet: {
-            autoConfigureDataProtection: true
+            autoConfigureDataProtection: false
           }
         }
     secrets: [
