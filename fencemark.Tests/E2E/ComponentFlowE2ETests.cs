@@ -4,7 +4,7 @@ namespace fencemark.Tests.E2E;
 
 /// <summary>
 /// E2E tests for Component management workflow using Playwright
-/// These tests create a test user, perform operations, and clean up
+/// Uses persistent test user, performs operations, and cleans up test data
 /// </summary>
 public class ComponentFlowE2ETests : PlaywrightTestBase, IAsyncLifetime
 {
