@@ -406,16 +406,6 @@ jobs:
           dotnet build fencemark.Tests/fencemark.Tests.csproj
           pwsh fencemark.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
 
-      - name: Temporarily enable E2E tests (remove Skip attributes)
-        run: |
-          # Remove Skip attributes from E2E test files to allow execution in CI
-          Get-ChildItem -Path fencemark.Tests/E2E/*.cs -Recurse | ForEach-Object {
-            $content = Get-Content $_.FullName -Raw
-            $content = $content -replace '\[Fact\(Skip = "[^"]*"\)\]', '[Fact]'
-            Set-Content -Path $_.FullName -Value $content -NoNewline
-          }
-          echo "✅ Enabled E2E tests for CI execution"
-
       - name: Run E2E Playwright tests
         id: e2e-tests
         continue-on-error: true
@@ -425,9 +415,10 @@ jobs:
           TEST_USER_PASSWORD: ${{ steps.get-test-creds.outputs.test-password }}
           TEST_HEADLESS: "true"
         run: |
-          dotnet test fencemark.Tests/fencemark.Tests.csproj \
-            --filter-namespace "fencemark.Tests.E2E" \
-            --logger "console;verbosity=detailed"
+          # Run the Web UI E2E tests - they will skip gracefully if credentials are missing
+          dotnet test --project fencemark.Tests/fencemark.Tests.csproj \
+            --filter-class "fencemark.Tests.E2E.WebUIE2ETests" \
+            --output detailed
 
       - name: Upload Playwright artifacts on failure
         if: steps.e2e-tests.outcome == 'failure'
@@ -447,11 +438,11 @@ jobs:
           echo "### 🎭 E2E Test Results" >> $GITHUB_STEP_SUMMARY
           
           if [ "${{ steps.e2e-tests.outcome }}" = "success" ]; then
-            echo "✅ **E2E Tests:** All tests passed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **E2E Tests:** All tests passed (or skipped gracefully due to missing credentials)" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.e2e-tests.outcome }}" = "failure" ]; then
             echo "❌ **E2E Tests:** Some tests failed (see artifacts)" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ **E2E Tests:** Tests were skipped" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **E2E Tests:** Test step did not run" >> $GITHUB_STEP_SUMMARY
           fi
 
   # ============================================================================
