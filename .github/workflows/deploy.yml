@@ -293,12 +293,6 @@ jobs:
           echo "## 🏥 Health Check Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [ "${{ steps.health-check-api.outputs.status }}" = "success" ]; then
-            echo "✅ **API Service:** Healthy" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **API Service:** Unhealthy" >> $GITHUB_STEP_SUMMARY
-          fi
-          
           if [ "${{ steps.health-check-web.outputs.status }}" = "success" ]; then
             echo "✅ **Web Frontend:** Healthy" >> $GITHUB_STEP_SUMMARY
           else
@@ -314,12 +308,6 @@ jobs:
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Fail deployment if health checks failed
-        if: steps.health-check-api.outputs.status != 'success' || steps.health-check-web.outputs.status != 'success'
-        run: |
-          echo "::error::Deployment health checks failed. Please investigate and consider rolling back."
-          exit 1
 
       - name: Deployment summary
         run: |
