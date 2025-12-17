@@ -6,38 +6,45 @@ This document describes how Fencemark uses Azure App Configuration and Azure Key
 
 Fencemark uses a centralized configuration approach:
 
-- **Azure App Configuration**: Stores all application configuration settings with environment-specific labels (dev, staging, prod)
-- **Azure Key Vault**: Stores sensitive secrets (passwords, API keys) referenced by App Configuration
+- **Central Azure App Configuration**: A single App Config store in its own resource group (`rg-fencemark-central-config`) that serves all environments (dev, staging, prod) using labels
+- **Per-Environment Azure Key Vault**: Each environment has its own Key Vault (in `rg-fencemark-dev`, `rg-fencemark-staging`, `rg-fencemark-prod`) for environment-specific secrets
 - **Managed Identity**: Both API and Web services use system-assigned managed identities to access App Config and Key Vault without credentials
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Azure Deployment                         │
-│                                                             │
-│  ┌──────────────┐     ┌──────────────┐                    │
-│  │  API Service │     │ Web Frontend │                    │
-│  │  (Container) │     │  (Container) │                    │
-│  └──────┬───────┘     └──────┬───────┘                    │
-│         │                    │                             │
-│         │  Managed Identity  │                             │
-│         └─────────┬──────────┘                             │
-│                   │                                        │
-│                   ▼                                        │
-│         ┌──────────────────┐                              │
-│         │  App             │                              │
-│         │  Configuration   │                              │
-│         │  (with labels)   │                              │
-│         └────────┬─────────┘                              │
-│                  │                                         │
-│                  │ Key Vault References                   │
-│                  ▼                                         │
-│         ┌──────────────────┐                              │
-│         │   Key Vault      │                              │
-│         │   (Secrets)      │                              │
-│         └──────────────────┘                              │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Central Configuration                         │
+│                  (rg-fencemark-central-config)                       │
+│                                                                      │
+│                    ┌────────────────────────┐                       │
+│                    │  Central App Config    │                       │
+│                    │  - dev label           │                       │
+│                    │  - staging label       │                       │
+│                    │  - prod label          │                       │
+│                    └───────────┬────────────┘                       │
+│                                │                                     │
+└────────────────────────────────┼─────────────────────────────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+        ▼                        ▼                        ▼
+┌───────────────┐       ┌───────────────┐       ┌───────────────┐
+│  Dev Env      │       │ Staging Env   │       │  Prod Env     │
+│               │       │               │       │               │
+│  ┌─────────┐  │       │  ┌─────────┐  │       │  ┌─────────┐  │
+│  │API/Web  │  │       │  │API/Web  │  │       │  │API/Web  │  │
+│  │Services │  │       │  │Services │  │       │  │Services │  │
+│  └────┬────┘  │       │  └────┬────┘  │       │  └────┬────┘  │
+│       │       │       │       │       │       │       │       │
+│       │       │       │       │       │       │       │       │
+│       ▼       │       │       ▼       │       │       ▼       │
+│  ┌─────────┐  │       │  ┌─────────┐  │       │  ┌─────────┐  │
+│  │Key Vault│  │       │  │Key Vault│  │       │  │Key Vault│  │
+│  │  (Dev)  │  │       │  │(Staging)│  │       │  │ (Prod)  │  │
+│  └─────────┘  │       │  └─────────┘  │       │  └─────────┘  │
+│               │       │               │       │               │
+└───────────────┘       └───────────────┘       └───────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
 │                  Local Development                          │
@@ -83,27 +90,46 @@ Sensitive values stored in Key Vault:
 
 ## Deployment Process
 
-When you deploy using `azd up` or bicep:
+### First Time: Deploy Central App Configuration
+
+Before deploying any environment, deploy the central App Config once:
+
+```bash
+cd infra
+az deployment sub create \
+  --location australiaeast \
+  --template-file central-appconfig.bicep \
+  --parameters central-appconfig.bicepparam
+```
+
+This creates:
+- Resource group: `rg-fencemark-central-config`
+- App Configuration: `appcs-fencemark`
+
+### Environment Deployment
+
+When you deploy each environment using `azd up` or bicep:
 
 1. **Infrastructure Creation**:
-   - App Configuration store is created in the fencemark resource group
-   - Key Vault is created in the fencemark resource group
+   - Key Vault is created in the environment's resource group (e.g., `rg-fencemark-dev`)
    - Managed identities are created for API and Web services
+   - Azure Maps account is created
 
-2. **RBAC Assignments**:
-   - API Service managed identity gets "App Configuration Data Reader" role
-   - Web Frontend managed identity gets "App Configuration Data Reader" role
-   - Both identities get "Key Vault Secrets User" role
+2. **RBAC Assignments (Cross-Resource Group)**:
+   - API Service managed identity gets "App Configuration Data Reader" role on central App Config
+   - Web Frontend managed identity gets "App Configuration Data Reader" role on central App Config
+   - Both identities get "Key Vault Secrets User" role on the environment's Key Vault
 
 3. **Configuration Population**:
-   - Azure Maps primary key is retrieved and stored in Key Vault
-   - All configuration values are stored in App Config with environment label
-   - Key Vault references are created in App Config for sensitive values
+   - Azure Maps primary key is retrieved and stored in the environment's Key Vault
+   - All configuration values are stored in central App Config with the environment label
+   - Key Vault references in App Config point to the environment-specific Key Vault
 
 4. **Application Startup**:
-   - Containers start with `AppConfig__Endpoint` and `AppConfig__Label` environment variables
+   - Containers start with `AppConfig__Endpoint` (central) and `AppConfig__Label` (environment) variables
    - Applications use DefaultAzureCredential (managed identity) to connect
-   - Configuration is loaded from App Config with Key Vault references resolved
+   - Configuration is loaded from central App Config filtered by label
+   - Key Vault references are resolved using the environment's Key Vault
 
 ## Local Development with Aspire
 

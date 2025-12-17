@@ -31,6 +31,13 @@ param webFrontendMaxReplicas = 3
 param customDomain = 'stgfencemark.modernplatforms.dev'
 
 // ============================================================================
+// Central App Configuration
+// ============================================================================
+// The central App Config is deployed separately and shared across all environments
+param centralAppConfigName = 'appcs-fencemark'
+param centralAppConfigResourceGroup = 'rg-fencemark-central-config'
+
+// ============================================================================
 // Azure Entra External ID Authentication
 // ============================================================================
 // NOTE: These values are stored in Azure App Configuration during deployment.

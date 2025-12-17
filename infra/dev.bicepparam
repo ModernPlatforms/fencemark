@@ -29,7 +29,14 @@ param webFrontendCpu = '0.25'
 param webFrontendMemory = '0.5Gi'
 param webFrontendMinReplicas = 0
 param webFrontendMaxReplicas = 2
-param externalidRg = 'rg-fencemark-identity-dev' 
+param externalidRg = 'rg-fencemark-identity-dev'
+
+// ============================================================================
+// Central App Configuration
+// ============================================================================
+// The central App Config is deployed separately and shared across all environments
+param centralAppConfigName = 'appcs-fencemark'
+param centralAppConfigResourceGroup = 'rg-fencemark-central-config' 
 
 // ============================================================================
 // Azure Entra External ID Authentication
