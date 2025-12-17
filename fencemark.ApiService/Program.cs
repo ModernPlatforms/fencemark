@@ -5,7 +5,9 @@ using fencemark.ApiService.Features.Components;
 using fencemark.ApiService.Features.Discounts;
 using fencemark.ApiService.Features.Drawings;
 using fencemark.ApiService.Features.Fences;
+using fencemark.ApiService.Features.FenceSegments;
 using fencemark.ApiService.Features.Gates;
+using fencemark.ApiService.Features.GatePositions;
 using fencemark.ApiService.Features.Jobs;
 using fencemark.ApiService.Features.Organization;
 using fencemark.ApiService.Features.Parcels;
@@ -134,6 +136,8 @@ app.MapTaxRegionEndpoints();
 app.MapDiscountEndpoints();
 app.MapParcelEndpoints();
 app.MapDrawingEndpoints();
+app.MapFenceSegmentEndpoints();
+app.MapGatePositionEndpoints();
 
 // Keep the original weather forecast endpoint for backward compatibility
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
