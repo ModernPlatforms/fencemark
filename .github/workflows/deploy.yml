@@ -134,6 +134,53 @@ jobs:
           retention-days: 1
 
   # ============================================================================
+  # Deploy Central App Configuration
+  # ============================================================================
+  # Deploys the centralized App Configuration store that serves all environments.
+  # This is deployed once and shared across dev, staging, and prod using labels.
+  # Uses a conditional check to avoid redeploying if it already exists.
+  # ============================================================================
+  deploy-central-config:
+    name: Deploy Central App Config
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Check if central config resource group exists
+        id: check-rg
+        continue-on-error: true
+        run: |
+          az group show --name rg-fencemark-central-config
+          echo "exists=$?" >> $GITHUB_OUTPUT
+
+      - name: Deploy Central App Configuration
+        if: steps.check-rg.outputs.exists != '0'
+        uses: azure/bicep-deploy@v2
+        with:
+          type: deployment
+          operation: create
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          scope: subscription
+          location: ${{ env.AZURE_LOCATION }}
+          template-file: ./infra/central-appconfig.bicep
+          parameters-file: ./infra/central-appconfig.bicepparam
+
+      - name: Verify Central App Configuration exists
+        run: |
+          az appconfig show --name appcs-fencemark --resource-group rg-fencemark-central-config
+
+  # ============================================================================
   # Deploy to Dev Environment
   # ============================================================================
   # Automatically deploys to dev on push to main (excluding doc changes).
@@ -149,7 +196,7 @@ jobs:
   deploy-dev:
     name: Deploy to Dev
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, deploy-central-config]
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     environment: dev
     timeout-minutes: 30
@@ -339,7 +386,7 @@ jobs:
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, deploy-central-config]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     environment: staging
     timeout-minutes: 30
@@ -447,7 +494,7 @@ jobs:
   deploy-prod:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, deploy-central-config]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     environment: prod
     timeout-minutes: 30

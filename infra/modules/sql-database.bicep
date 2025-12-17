@@ -126,8 +126,8 @@ output sqlDatabaseResourceId string = sqlDatabase.id
 @description('The name of the SQL Database')
 output sqlDatabaseName string = sqlDatabase.name
 
-@description('The connection string for the SQL Database (without password)')
-output connectionStringTemplate string = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${databaseName};Persist Security Info=False;User ID=${administratorLogin};Password={your_password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+@description('The connection string template for the SQL Database (without credentials)')
+output connectionStringTemplate string = 'Server=tcp:${sqlServer.properties.fullyQualifiedDomainName},1433;Initial Catalog=${databaseName};Persist Security Info=False;User ID={your_username};Password={your_password};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
 
 @description('The principal ID of the SQL Server managed identity')
 output sqlServerIdentityPrincipalId string = sqlServer.identity.principalId
