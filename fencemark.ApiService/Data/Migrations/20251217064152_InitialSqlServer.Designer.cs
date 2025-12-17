@@ -12,7 +12,7 @@ using fencemark.ApiService.Data;
 namespace fencemark.ApiService.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251217002215_InitialSqlServer")]
+    [Migration("20251217064152_InitialSqlServer")]
     partial class InitialSqlServer
     {
         /// <inheritdoc />
@@ -346,6 +346,134 @@ namespace fencemark.ApiService.Data.Migrations
                     b.ToTable("Components");
                 });
 
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.DiscountRule", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("DiscountType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MinimumLinearFeet")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MinimumOrderValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PromoCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("PromoCode");
+
+                    b.ToTable("DiscountRules");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.Drawing", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DrawingType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("JobId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("MimeType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ParcelId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ParcelId");
+
+                    b.ToTable("Drawings");
+                });
+
             modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceComponent", b =>
                 {
                     b.Property<string>("Id")
@@ -371,6 +499,73 @@ namespace fencemark.ApiService.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("FenceComponents");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceSegment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FenceTypeId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GeoJsonGeometry")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsSnappedToBoundary")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVerifiedOnsite")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("LengthInFeet")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("LengthInMeters")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("OnsiteVerifiedLengthInFeet")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ParcelId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FenceTypeId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("ParcelId");
+
+                    b.ToTable("FenceSegments");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceType", b =>
@@ -442,6 +637,57 @@ namespace fencemark.ApiService.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("GateComponents");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.GatePosition", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FenceSegmentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GateTypeId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("GeoJsonLocation")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsVerifiedOnsite")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("PositionAlongSegment")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FenceSegmentId");
+
+                    b.HasIndex("GateTypeId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("GatePositions");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.GateType", b =>
@@ -648,10 +894,16 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("DefaultTaxRegionId")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("UnitSystem")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -698,6 +950,61 @@ namespace fencemark.ApiService.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("OrganizationMembers");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.Parcel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("AreaUnit")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Coordinates")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("JobId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ParcelNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("TotalArea")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("Parcels");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.PricingConfig", b =>
@@ -766,6 +1073,13 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Property<int>("CurrentVersion")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DiscountRuleId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<decimal>("GrandTotal")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -812,6 +1126,9 @@ namespace fencemark.ApiService.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("TaxRegionId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Terms")
                         .HasColumnType("nvarchar(max)");
 
@@ -827,6 +1144,8 @@ namespace fencemark.ApiService.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DiscountRuleId");
+
                     b.HasIndex("JobId");
 
                     b.HasIndex("OrganizationId");
@@ -837,6 +1156,8 @@ namespace fencemark.ApiService.Data.Migrations
                         .IsUnique();
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("TaxRegionId");
 
                     b.ToTable("Quotes");
                 });
@@ -906,6 +1227,49 @@ namespace fencemark.ApiService.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("QuoteVersions");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.TaxRegion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("OrganizationId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "IsDefault");
+
+                    b.ToTable("TaxRegions");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -988,6 +1352,42 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.DiscountRule", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.Drawing", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Parcel", "Parcel")
+                        .WithMany("Drawings")
+                        .HasForeignKey("ParcelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Parcel");
+                });
+
             modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceComponent", b =>
                 {
                     b.HasOne("fencemark.ApiService.Data.Models.Component", "Component")
@@ -1005,6 +1405,39 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Navigation("Component");
 
                     b.Navigation("FenceType");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceSegment", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.FenceType", "FenceType")
+                        .WithMany()
+                        .HasForeignKey("FenceTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Parcel", "Parcel")
+                        .WithMany()
+                        .HasForeignKey("ParcelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("FenceType");
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("Parcel");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceType", b =>
@@ -1035,6 +1468,32 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Navigation("Component");
 
                     b.Navigation("GateType");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.GatePosition", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.FenceSegment", "FenceSegment")
+                        .WithMany("GatePositions")
+                        .HasForeignKey("FenceSegmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("fencemark.ApiService.Data.Models.GateType", "GateType")
+                        .WithMany()
+                        .HasForeignKey("GateTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FenceSegment");
+
+                    b.Navigation("GateType");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.GateType", b =>
@@ -1114,6 +1573,25 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.Parcel", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("fencemark.ApiService.Data.Models.PricingConfig", b =>
                 {
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
@@ -1127,6 +1605,11 @@ namespace fencemark.ApiService.Data.Migrations
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.Quote", b =>
                 {
+                    b.HasOne("fencemark.ApiService.Data.Models.DiscountRule", "DiscountRule")
+                        .WithMany()
+                        .HasForeignKey("DiscountRuleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
                         .WithMany()
                         .HasForeignKey("JobId")
@@ -1144,11 +1627,20 @@ namespace fencemark.ApiService.Data.Migrations
                         .HasForeignKey("PricingConfigId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("fencemark.ApiService.Data.Models.TaxRegion", "TaxRegion")
+                        .WithMany()
+                        .HasForeignKey("TaxRegionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DiscountRule");
+
                     b.Navigation("Job");
 
                     b.Navigation("Organization");
 
                     b.Navigation("PricingConfig");
+
+                    b.Navigation("TaxRegion");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.QuoteVersion", b =>
@@ -1162,9 +1654,25 @@ namespace fencemark.ApiService.Data.Migrations
                     b.Navigation("Quote");
                 });
 
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.TaxRegion", b =>
+                {
+                    b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("fencemark.ApiService.Data.Models.ApplicationUser", b =>
                 {
                     b.Navigation("OrganizationMemberships");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceSegment", b =>
+                {
+                    b.Navigation("GatePositions");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.FenceType", b =>
@@ -1185,6 +1693,11 @@ namespace fencemark.ApiService.Data.Migrations
             modelBuilder.Entity("fencemark.ApiService.Data.Models.Organization", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("fencemark.ApiService.Data.Models.Parcel", b =>
+                {
+                    b.Navigation("Drawings");
                 });
 
             modelBuilder.Entity("fencemark.ApiService.Data.Models.PricingConfig", b =>
