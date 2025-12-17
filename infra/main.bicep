@@ -117,10 +117,6 @@ param sqlAzureAdAdminLogin string = ''
 // Uses uniqueString with multiple inputs for entropy, plus special chars for complexity
 var generatedSqlPassword = '${uniqueString(subscription().id, resourceGroupName, 'sql-admin')}!Aa1${uniqueString(resourceGroupName, environmentName, 'sql-pwd')}'
 
-// Validate authentication configuration if any auth parameter is provided
-var isAuthConfigured = !empty(entraExternalIdClientId) || !empty(keyVaultUrl)
-var authValidationMessage = isAuthConfigured && empty(entraExternalIdTenantId) ? 'ERROR: entraExternalIdTenantId is required when authentication is configured. Use infra/get-tenant-id.sh to retrieve it.' : ''
-
 // ============================================================================
 // Variables
 // ============================================================================
@@ -171,7 +167,6 @@ module logAnalytics 'br/public:avm/res/operational-insights/workspace:0.11.1' = 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
   name: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
   scope: rg
-  dependsOn: [logAnalytics]
 }
 
 // ============================================================================
@@ -210,7 +205,6 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.9.1' =
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: '${abbrs.containerRegistryRegistries}${resourceToken}'
   scope: rg
-  dependsOn: [containerRegistry]
 }
 
 // ============================================================================
@@ -230,7 +224,6 @@ module mapsAccount './maps-account.bicep' = {
 resource mapsAccountResource 'Microsoft.Maps/accounts@2024-01-01-preview' existing = {
   name: '${abbrs.mapsAccounts}${resourceToken}'
   scope: rg
-  dependsOn: [mapsAccount]
 }
 
 // ============================================================================
@@ -701,36 +694,31 @@ module mapsPrimaryKeyInKeyVault './modules/keyvault-secret.bicep' = {
 // RBAC Role Assignments for Central App Configuration
 // ============================================================================
 // Grant managed identities from this environment access to the central App Config
-// Note: The ?? '' pattern is intentional - if principal ID is not available,
-// the empty string will cause the role assignment to fail with a clear error
+// Note: Direct role assignments on the App Config resource in the central RG
 
 // Role definition IDs
 var appConfigDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071' // App Configuration Data Reader
 
 // Grant API Service access to Central App Configuration (cross-resource group)
-module apiServiceAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
-  name: 'apiServiceAppConfigRoleAssignment'
-  scope: resourceGroup(centralAppConfigResourceGroup)
-  params: {
-    appConfigName: centralAppConfigName
-    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionId: appConfigDataReaderRoleId
+resource apiServiceAppConfigRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(centralAppConfig.id, apiService.outputs.systemAssignedMIPrincipalId, appConfigDataReaderRoleId)
+  scope: centralAppConfig
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', appConfigDataReaderRoleId)
+    principalId: apiService.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
   }
-  dependsOn: [centralAppConfig, apiService]
 }
 
 // Grant Web Frontend access to Central App Configuration (cross-resource group)
-module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
-  name: 'webFrontendAppConfigRoleAssignment'
-  scope: resourceGroup(centralAppConfigResourceGroup)
-  params: {
-    appConfigName: centralAppConfigName
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionId: appConfigDataReaderRoleId
+resource webFrontendAppConfigRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(centralAppConfig.id, webFrontend.outputs.systemAssignedMIPrincipalId, appConfigDataReaderRoleId)
+  scope: centralAppConfig
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', appConfigDataReaderRoleId)
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
   }
-  dependsOn: [centralAppConfig, webFrontend]
 }
 
 // ============================================================================
@@ -744,11 +732,11 @@ var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6' // Key Va
 
 // Grant API Service access to Key Vault secrets
 resource apiServiceKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.outputs.resourceId, apiService.outputs.?systemAssignedMIPrincipalId ?? '', keyVaultSecretsUserRoleId)
+  name: guid(keyVault.outputs.resourceId, apiService.outputs.systemAssignedMIPrincipalId, keyVaultSecretsUserRoleId)
   scope: resourceGroup()
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalId: apiService.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
   }
   dependsOn: [keyVault, apiService]
@@ -756,11 +744,11 @@ resource apiServiceKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignmen
 
 // Grant Web Frontend access to Key Vault secrets
 resource webFrontendKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.outputs.resourceId, webFrontend.outputs.?systemAssignedMIPrincipalId ?? '', keyVaultSecretsUserRoleId)
+  name: guid(keyVault.outputs.resourceId, webFrontend.outputs.systemAssignedMIPrincipalId, keyVaultSecretsUserRoleId)
   scope: resourceGroup()
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
   }
   dependsOn: [keyVault, webFrontend]
@@ -990,13 +978,14 @@ output keyVaultName string = keyVault.outputs.name
 // Assign Key Vault Certificate User role to the managed identity
 // ============================================================================
 
-module keyVaultAccessModule './keyvault-access.bicep' = {
+module keyVaultAccessModule './keyvault-access.bicep' = if (!empty(externalidRg)) {
   name: 'keyVaultAccessModule'
   scope: resourceGroup(externalidRg)
   params: {
-    keyVaultName: keyVault.name
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    keyVaultName: externalIdKeyVault.name
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Certificate User'
   }
+  dependsOn: [externalIdKeyVault]
 }
