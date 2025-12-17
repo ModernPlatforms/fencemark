@@ -369,6 +369,91 @@ jobs:
           echo "- **Client ID:** 5b204301-0113-4b40-bd2e-e0ef8be99f48" >> $GITHUB_STEP_SUMMARY
           echo "- **Key Vault:** kv-ciambfwyw65gna5lu" >> $GITHUB_STEP_SUMMARY
 
+      # ============================================================================
+      # E2E Tests with Playwright
+      # ============================================================================
+
+      - name: Get Key Vault name
+        id: get-keyvault
+        run: |
+          KV_NAME="${{ steps.deploy-infra.outputs.keyVaultName }}"
+          echo "keyvault-name=$KV_NAME" >> $GITHUB_OUTPUT
+          echo "Key Vault: $KV_NAME"
+
+      - name: Get test user credentials from Key Vault
+        id: get-test-creds
+        run: |
+          KV_NAME="${{ steps.get-keyvault.outputs.keyvault-name }}"
+          
+          # Get test user email
+          TEST_EMAIL=$(az keyvault secret show --vault-name $KV_NAME --name test-user-email --query value -o tsv)
+          echo "test-email=$TEST_EMAIL" >> $GITHUB_OUTPUT
+          echo "Test user email retrieved: $TEST_EMAIL"
+          
+          # Get test user password (masked in output)
+          TEST_PASSWORD=$(az keyvault secret show --vault-name $KV_NAME --name test-user-password --query value -o tsv)
+          echo "::add-mask::$TEST_PASSWORD"
+          echo "test-password=$TEST_PASSWORD" >> $GITHUB_OUTPUT
+          echo "Test user password retrieved (masked)"
+
+      - name: Setup .NET for E2E tests
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install Playwright browsers
+        run: |
+          dotnet build fencemark.Tests/fencemark.Tests.csproj
+          pwsh fencemark.Tests/bin/Debug/net10.0/playwright.ps1 install chromium
+
+      - name: Temporarily enable E2E tests (remove Skip attributes)
+        run: |
+          # Remove Skip attributes from E2E test files to allow execution in CI
+          Get-ChildItem -Path fencemark.Tests/E2E/*.cs -Recurse | ForEach-Object {
+            $content = Get-Content $_.FullName -Raw
+            $content = $content -replace '\[Fact\(Skip = "[^"]*"\)\]', '[Fact]'
+            Set-Content -Path $_.FullName -Value $content -NoNewline
+          }
+          echo "✅ Enabled E2E tests for CI execution"
+
+      - name: Run E2E Playwright tests
+        id: e2e-tests
+        continue-on-error: true
+        env:
+          TEST_BASE_URL: ${{ steps.get-outputs.outputs.web-frontend-url }}
+          TEST_USER_EMAIL: ${{ steps.get-test-creds.outputs.test-email }}
+          TEST_USER_PASSWORD: ${{ steps.get-test-creds.outputs.test-password }}
+          TEST_HEADLESS: "true"
+        run: |
+          dotnet test fencemark.Tests/fencemark.Tests.csproj \
+            --filter-namespace "fencemark.Tests.E2E" \
+            --logger "console;verbosity=detailed"
+
+      - name: Upload Playwright artifacts on failure
+        if: steps.e2e-tests.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-dev
+          path: |
+            fencemark.Tests/screenshots/
+            fencemark.Tests/videos/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Report E2E test results
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎭 E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.e2e-tests.outcome }}" = "success" ]; then
+            echo "✅ **E2E Tests:** All tests passed" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.e2e-tests.outcome }}" = "failure" ]; then
+            echo "❌ **E2E Tests:** Some tests failed (see artifacts)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **E2E Tests:** Tests were skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+
   # ============================================================================
   # Deploy to Staging Environment
   # ============================================================================
