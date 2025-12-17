@@ -250,11 +250,7 @@ module keyVault './modules/keyvault.bicep' = {
 // ============================================================================
 // The central App Config is deployed separately via central-appconfig.bicep
 // It serves all environments using labels (dev, staging, prod)
-
-resource centralAppConfig 'Microsoft.AppConfiguration/configurationStores@2023-03-01' existing = {
-  name: centralAppConfigName
-  scope: resourceGroup(centralAppConfigResourceGroup)
-}
+// Note: No need for explicit resource reference - using parameters directly
 
 // ============================================================================
 // Container Apps Environment
@@ -673,7 +669,6 @@ module sqlPasswordInKeyVault './modules/keyvault-secret.bicep' = if (provisionSq
     contentType: 'SQL Server admin password'
     tags: defaultTags
   }
-  dependsOn: [keyVault]
 }
 
 // Store Maps primary key
@@ -687,7 +682,7 @@ module mapsPrimaryKeyInKeyVault './modules/keyvault-secret.bicep' = {
     contentType: 'Azure Maps Primary Key'
     tags: defaultTags
   }
-  dependsOn: [keyVault, mapsAccount]
+  dependsOn: [mapsAccount]
 }
 
 // ============================================================================
@@ -701,11 +696,11 @@ var appConfigDataReaderRoleId = '516239f1-63e1-4d78-a4de-a74fb236a071' // App Co
 
 // Grant API Service access to Central App Configuration (cross-resource group)
 module apiServiceAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
-  name: 'apiServiceAppConfigRoleAssignment'
+  name: 'apiSvcAppCfgRole'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
-    principalId: apiService.outputs.systemAssignedMIPrincipalId
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
     roleDefinitionId: appConfigDataReaderRoleId
     principalType: 'ServicePrincipal'
   }
@@ -713,11 +708,11 @@ module apiServiceAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
 
 // Grant Web Frontend access to Central App Configuration (cross-resource group)
 module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
-  name: 'webFrontendAppConfigRoleAssignment'
+  name: 'webAppCfgRole'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     roleDefinitionId: appConfigDataReaderRoleId
     principalType: 'ServicePrincipal'
   }
@@ -727,28 +722,25 @@ module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
 // RBAC Role Assignments for Key Vault
 // ============================================================================
 
-// Role definition IDs for Key Vault
-var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6' // Key Vault Secrets User
-
 // Grant API Service access to Key Vault secrets
-module apiServiceKeyVaultRoleAssignment './modules/keyvault-access.bicep' = {
+module apiServiceKeyVaultRoleAssignment './keyvault-access.bicep' = {
   name: 'apiServiceKeyVaultRoleAssignment'
   scope: rg
   params: {
     keyVaultName: keyVault.outputs.name
-    principalId: apiService.outputs.systemAssignedMIPrincipalId
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Secrets User'
   }
 }
 
 // Grant Web Frontend access to Key Vault secrets
-module webFrontendKeyVaultRoleAssignment './modules/keyvault-access.bicep' = {
+module webFrontendKeyVaultRoleAssignment './keyvault-access.bicep' = {
   name: 'webFrontendKeyVaultRoleAssignment'
   scope: rg
   params: {
     keyVaultName: keyVault.outputs.name
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Secrets User'
   }
@@ -762,7 +754,7 @@ module webFrontendKeyVaultRoleAssignment './modules/keyvault-access.bicep' = {
 
 // SQL Connection String
 module appConfigSqlConnection './modules/app-config-key-value.bicep' = if (provisionSqlDatabase) {
-  name: 'appConfigSqlConnection-${environmentName}'
+  name: 'cfg-1-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -775,7 +767,7 @@ module appConfigSqlConnection './modules/app-config-key-value.bicep' = if (provi
 
 // Azure Maps Primary Key as Key Vault Reference
 module appConfigMapsKey './modules/app-config-key-value.bicep' = {
-  name: 'appConfigMapsKey-${environmentName}'
+  name: 'cfg-2-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -789,7 +781,7 @@ module appConfigMapsKey './modules/app-config-key-value.bicep' = {
 
 // Azure Maps Client ID
 module appConfigMapsClientId './modules/app-config-key-value.bicep' = {
-  name: 'appConfigMapsClientId-${environmentName}'
+  name: 'cfg-3-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -802,7 +794,7 @@ module appConfigMapsClientId './modules/app-config-key-value.bicep' = {
 
 // Entra External ID - Instance
 module appConfigEntraInstance './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdInstance)) {
-  name: 'appConfigEntraInstance-${environmentName}'
+  name: 'cfg-4-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -815,7 +807,7 @@ module appConfigEntraInstance './modules/app-config-key-value.bicep' = if (!empt
 
 // Entra External ID - Tenant ID
 module appConfigEntraTenantId './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdTenantId)) {
-  name: 'appConfigEntraTenantId-${environmentName}'
+  name: 'cfg-5-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -828,7 +820,7 @@ module appConfigEntraTenantId './modules/app-config-key-value.bicep' = if (!empt
 
 // Entra External ID - Client ID
 module appConfigEntraClientId './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdClientId)) {
-  name: 'appConfigEntraClientId-${environmentName}'
+  name: 'cfg-6-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -841,7 +833,7 @@ module appConfigEntraClientId './modules/app-config-key-value.bicep' = if (!empt
 
 // Entra External ID - Domain
 module appConfigEntraDomain './modules/app-config-key-value.bicep' = if (!empty(entraExternalIdDomain)) {
-  name: 'appConfigEntraDomain-${environmentName}'
+  name: 'cfg-7-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -854,7 +846,7 @@ module appConfigEntraDomain './modules/app-config-key-value.bicep' = if (!empty(
 
 // Key Vault URL (External ID Key Vault for certificates)
 module appConfigKeyVaultUrl './modules/app-config-key-value.bicep' = if (!empty(keyVaultUrl)) {
-  name: 'appConfigKeyVaultUrl-${environmentName}'
+  name: 'cfg-8-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -867,7 +859,7 @@ module appConfigKeyVaultUrl './modules/app-config-key-value.bicep' = if (!empty(
 
 // Certificate Name
 module appConfigCertificateName './modules/app-config-key-value.bicep' = if (!empty(certificateName)) {
-  name: 'appConfigCertificateName-${environmentName}'
+  name: 'cfg-9-${resourceToken}'
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
@@ -970,14 +962,13 @@ output keyVaultName string = keyVault.outputs.name
 // Assign Key Vault Certificate User role to the managed identity
 // ============================================================================
 
-module externalKeyVaultAccessModule './keyvault-access.bicep' = if (!empty(externalidRg) && !empty(webFrontend.outputs.?systemAssignedMIPrincipalId ?? '')) {
+module externalKeyVaultAccessModule './keyvault-access.bicep' = if (!empty(externalidRg)) {
   name: 'externalKeyVaultAccessModule'
   scope: resourceGroup(externalidRg)
   params: {
     keyVaultName: externalIdKeyVault.name
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Certificate User'
   }
-  dependsOn: [externalIdKeyVault, webFrontend]
 }
