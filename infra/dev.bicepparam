@@ -34,7 +34,8 @@ param externalidRg = 'rg-fencemark-identity-dev'
 // ============================================================================
 // Azure Entra External ID Authentication
 // ============================================================================
-
+// NOTE: These values are stored in Azure App Configuration during deployment.
+// Applications use managed identity to read from App Config at runtime.
 // CIAM tenant configuration
 // NOTE: Run ./infra/get-tenant-id.sh rg-fencemark-identity-dev to retrieve the tenant ID
 param entraExternalIdTenantId = '153c1433-2dfc-4a35-9aab-52219c3ca071' 

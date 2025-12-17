@@ -7,6 +7,8 @@ using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Azure.Identity;
+using Microsoft.Extensions.Configuration;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -35,11 +37,43 @@ public static class Extensions
             http.AddServiceDiscovery();
         });
 
+        // Add Azure App Configuration if not running locally via Aspire
+        builder.AddAzureAppConfiguration();
+
         // Uncomment the following to restrict the allowed schemes for service discovery.
         // builder.Services.Configure<ServiceDiscoveryOptions>(options =>
         // {
         //     options.AllowedSchemes = ["https"];
         // });
+
+        return builder;
+    }
+
+    public static TBuilder AddAzureAppConfiguration<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        var appConfigEndpoint = builder.Configuration["AppConfig:Endpoint"];
+        var appConfigLabel = builder.Configuration["AppConfig:Label"];
+
+        // Only use App Configuration when running in Azure (not local Aspire)
+        // When AppConfig:Endpoint is set, we're running in Azure Container Apps
+        if (!string.IsNullOrEmpty(appConfigEndpoint))
+        {
+            builder.Configuration.AddAzureAppConfiguration(options =>
+            {
+                var credential = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+                {
+                    ExcludeVisualStudioCredential = true
+                });
+
+                options.Connect(new Uri(appConfigEndpoint), credential)
+                    .Select("*", string.IsNullOrEmpty(appConfigLabel) ? LabelFilter.Null : appConfigLabel)
+                    .ConfigureKeyVault(kv =>
+                    {
+                        // Use managed identity to access Key Vault references
+                        kv.SetCredential(credential);
+                    });
+            });
+        }
 
         return builder;
     }
