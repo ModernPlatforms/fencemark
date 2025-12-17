@@ -55,7 +55,7 @@ module appConfig './modules/app-config.bicep' = {
     name: appConfigNamePrefix
     location: location
     tags: defaultTags
-    sku: 'standard'
+    sku: 'free'
     publicNetworkAccess: true
   }
 }

@@ -18,6 +18,8 @@ param tags object = {}
 @allowed([
   'free'
   'standard'
+  'premium'
+  'developer'
 ])
 param sku string = 'standard'
 
