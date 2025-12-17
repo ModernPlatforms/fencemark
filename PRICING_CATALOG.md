@@ -234,10 +234,8 @@ The seed data service provides a complete starter catalog with Australian/metric
     - 1800mm-2100mm: 1.25x multiplier (25% increase)
     - Over 2100mm: 1.5x multiplier (50% increase)
 
-### Tax Regions
-- **New South Wales**: 10% GST (default)
-- **Victoria**: 10% GST
-- **Queensland**: 10% GST
+### Tax Region
+- **Australia**: 10% GST
 
 ### Discount Rules
 - **Volume Discount**: 10% off for orders over 150 linear metres

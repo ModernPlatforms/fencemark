@@ -260,35 +260,11 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "New South Wales",
-                Code = "NSW",
+                Name = "Australia",
+                Code = "AU",
                 TaxRate = 0.10m, // 10% GST
                 Description = "Australian GST",
                 IsDefault = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new TaxRegion
-            {
-                Id = Guid.NewGuid().ToString(),
-                OrganizationId = organizationId,
-                Name = "Victoria",
-                Code = "VIC",
-                TaxRate = 0.10m, // 10% GST
-                Description = "Australian GST",
-                IsDefault = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new TaxRegion
-            {
-                Id = Guid.NewGuid().ToString(),
-                OrganizationId = organizationId,
-                Name = "Queensland",
-                Code = "QLD",
-                TaxRate = 0.10m, // 10% GST
-                Description = "Australian GST",
-                IsDefault = false,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
