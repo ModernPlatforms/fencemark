@@ -11,9 +11,11 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
     public ApplicationDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
-        
-        // Use SQLite for design-time operations
-        optionsBuilder.UseSqlite("Data Source=fencemark.db");
+
+        var cs = Environment.GetEnvironmentVariable("ConnectionStrings__fencemark")
+                 ?? "Server=localhost;Database=fencemark;Trusted_Connection=True;TrustServerCertificate=True;";
+
+        optionsBuilder.UseSqlServer(cs);
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }

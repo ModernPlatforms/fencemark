@@ -18,16 +18,25 @@ public interface ICurrentUserService
 /// <summary>
 /// Implementation of current user service that resolves user context from HTTP context
 /// </summary>
-public class CurrentUserService(IHttpContextAccessor httpContextAccessor, ApplicationDbContext context) : ICurrentUserService
+public class CurrentUserService : ICurrentUserService
 {
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServiceScopeFactory _scopeFactory;
+
     private string? _organizationId;
     private bool _organizationIdLoaded;
 
-    public string? UserId => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public CurrentUserService(IHttpContextAccessor httpContextAccessor, IServiceScopeFactory scopeFactory)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _scopeFactory = scopeFactory;
+    }
 
-    public string? Email => httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
+    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    public bool IsAuthenticated => httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+    public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
+
+    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
     public string? OrganizationId
     {
@@ -35,6 +44,8 @@ public class CurrentUserService(IHttpContextAccessor httpContextAccessor, Applic
         {
             if (!_organizationIdLoaded && UserId is not null)
             {
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 _organizationId = context.OrganizationMembers
                     .Where(m => m.UserId == UserId)
                     .Select(m => m.OrganizationId)
