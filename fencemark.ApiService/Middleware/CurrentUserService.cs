@@ -42,14 +42,25 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
+            // First try to get from claims (fastest, no DB query)
+            var organizationIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirstValue("OrganizationId");
+            if (!string.IsNullOrEmpty(organizationIdClaim))
+            {
+                return organizationIdClaim;
+            }
+
+            // Fallback to database query for backward compatibility (cached)
             if (!_organizationIdLoaded && UserId is not null)
             {
                 using var scope = _scopeFactory.CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 _organizationId = context.OrganizationMembers
+                    .AsNoTracking()
                     .Where(m => m.UserId == UserId)
                     .Select(m => m.OrganizationId)
-                    .FirstOrDefault();
+                    .FirstOrDefaultAsync()
+                    .GetAwaiter()
+                    .GetResult();
                 _organizationIdLoaded = true;
             }
             return _organizationId;
