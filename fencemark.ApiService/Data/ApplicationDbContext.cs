@@ -84,6 +84,26 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     /// </summary>
     public DbSet<BillOfMaterialsItem> BillOfMaterialsItems => Set<BillOfMaterialsItem>();
 
+    /// <summary>
+    /// Parcels (properties)
+    /// </summary>
+    public DbSet<Parcel> Parcels => Set<Parcel>();
+
+    /// <summary>
+    /// Drawings and blueprints
+    /// </summary>
+    public DbSet<Drawing> Drawings => Set<Drawing>();
+
+    /// <summary>
+    /// Tax regions
+    /// </summary>
+    public DbSet<TaxRegion> TaxRegions => Set<TaxRegion>();
+
+    /// <summary>
+    /// Discount rules
+    /// </summary>
+    public DbSet<DiscountRule> DiscountRules => Set<DiscountRule>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -304,6 +324,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.TotalAmount).HasPrecision(18, 2);
             entity.Property(e => e.TaxAmount).HasPrecision(18, 2);
             entity.Property(e => e.GrandTotal).HasPrecision(18, 2);
+            entity.Property(e => e.DiscountAmount).HasPrecision(18, 2);
             
             entity.HasOne(e => e.Job)
                 .WithMany()
@@ -318,6 +339,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasOne(e => e.PricingConfig)
                 .WithMany()
                 .HasForeignKey(e => e.PricingConfigId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.TaxRegion)
+                .WithMany()
+                .HasForeignKey(e => e.TaxRegionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.DiscountRule)
+                .WithMany()
+                .HasForeignKey(e => e.DiscountRuleId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasIndex(e => e.JobId);
@@ -369,6 +400,99 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
             entity.HasIndex(e => e.QuoteId);
             entity.HasIndex(e => e.Category);
+        });
+
+        // Configure Parcel
+        builder.Entity<Parcel>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Address).HasMaxLength(500);
+            entity.Property(e => e.ParcelNumber).HasMaxLength(100);
+            entity.Property(e => e.TotalArea).HasPrecision(18, 2);
+            entity.Property(e => e.AreaUnit).HasMaxLength(20);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.JobId);
+        });
+
+        // Configure Drawing
+        builder.Entity<Drawing>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.DrawingType).HasMaxLength(100);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.MimeType).HasMaxLength(100);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Job)
+                .WithMany()
+                .HasForeignKey(e => e.JobId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Parcel)
+                .WithMany(p => p.Drawings)
+                .HasForeignKey(e => e.ParcelId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.JobId);
+            entity.HasIndex(e => e.ParcelId);
+        });
+
+        // Configure TaxRegion
+        builder.Entity<TaxRegion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Code).HasMaxLength(50);
+            entity.Property(e => e.TaxRate).HasPrecision(5, 4);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => new { e.OrganizationId, e.IsDefault });
+        });
+
+        // Configure DiscountRule
+        builder.Entity<DiscountRule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.DiscountValue).HasPrecision(18, 4);
+            entity.Property(e => e.MinimumOrderValue).HasPrecision(18, 2);
+            entity.Property(e => e.MinimumLinearFeet).HasPrecision(18, 2);
+            entity.Property(e => e.PromoCode).HasMaxLength(50);
+            
+            entity.HasOne(e => e.Organization)
+                .WithMany()
+                .HasForeignKey(e => e.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.OrganizationId);
+            entity.HasIndex(e => e.PromoCode);
+            entity.HasIndex(e => e.IsActive);
         });
 
         // ============================================================================
