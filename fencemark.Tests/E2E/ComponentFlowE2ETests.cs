@@ -17,38 +17,19 @@ public class ComponentFlowE2ETests : PlaywrightTestBase, IAsyncLifetime
         await SetupAsync();
         _authHelper = new PlaywrightAuthHelper(Page!, BaseUrl);
         
-        // Generate unique test user credentials
+        // Use persistent test user credentials from environment
         _testUserEmail = TestConfiguration.TestUserEmail;
         _testUserPassword = TestConfiguration.TestUserPassword;
         
-        // Register and login test user
-        var (success, userId, organizationId) = await _authHelper.RegisterAsync(
-            _testUserEmail,
-            _testUserPassword,
-            TestConfiguration.TestOrganizationName);
-        
-        Assert.True(success, "Test user registration failed");
-        
-        // Login to establish session
+        // Login with existing test user
         var loginSuccess = await _authHelper.LoginAsync(_testUserEmail, _testUserPassword);
-        Assert.True(loginSuccess, "Test user login failed");
+        Assert.True(loginSuccess, "Test user login failed - ensure TEST_USER_EMAIL and TEST_USER_PASSWORD are set correctly");
     }
 
     public async ValueTask DisposeAsync()
     {
-        // Cleanup: Delete test user account if cleanup is enabled
-        if (TestConfiguration.CleanupAfterTest && _authHelper != null)
-        {
-            try
-            {
-                await _authHelper.DeleteAccountAsync();
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-        
+        // Cleanup test data but keep the user account
+        // Note: Individual tests should clean up their test data (components, jobs, etc.)
         await TeardownAsync();
     }
 

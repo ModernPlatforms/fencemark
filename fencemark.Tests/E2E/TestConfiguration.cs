@@ -15,26 +15,21 @@ public static class TestConfiguration
 
     /// <summary>
     /// Test user email
-    /// Can be set via TEST_USER_EMAIL environment variable
-    /// Falls back to generated email for test isolation
+    /// REQUIRED: Must be set via TEST_USER_EMAIL environment variable
+    /// This should be a persistent test user account in the dev environment
     /// </summary>
     public static string TestUserEmail => 
         Environment.GetEnvironmentVariable("TEST_USER_EMAIL") 
-        ?? $"test-user-{Guid.NewGuid().ToString()[..8]}@fencemark-test.com";
+        ?? throw new InvalidOperationException("TEST_USER_EMAIL environment variable must be set");
 
     /// <summary>
     /// Test user password
-    /// Can be set via TEST_USER_PASSWORD environment variable
+    /// REQUIRED: Must be set via TEST_USER_PASSWORD environment variable
     /// Should be stored in Azure Key Vault for dev/staging/prod
     /// </summary>
     public static string TestUserPassword => 
-        Environment.GetEnvironmentVariable("TEST_USER_PASSWORD") ?? "TestPassword123!";
-
-    /// <summary>
-    /// Test organization name
-    /// </summary>
-    public static string TestOrganizationName => 
-        $"Test Org {Guid.NewGuid().ToString()[..8]}";
+        Environment.GetEnvironmentVariable("TEST_USER_PASSWORD") 
+        ?? throw new InvalidOperationException("TEST_USER_PASSWORD environment variable must be set");
 
     /// <summary>
     /// Whether to run in headless mode

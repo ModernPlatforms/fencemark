@@ -48,16 +48,18 @@ Located in `fencemark.Tests/SqlServerIntegrationTests.cs`, these tests verify:
 Located in `fencemark.Tests/E2E/`, these tests verify the complete user workflow using browser automation:
 
 **Test Suites:**
-- **AuthenticationFlowE2ETests** - Registration, login, logout, account deletion
+- **AuthenticationFlowE2ETests** - Login, logout, and session management with persistent test user
 - **ComponentFlowE2ETests** - Component CRUD operations via UI and API
 - **ComprehensiveJobFlowE2ETests** - Job management including create, update, delete, and view
+- **AllEndpointsE2ETests** - Comprehensive tests for all major endpoints with automatic cleanup
 - **JobFlowE2ETests** - Legacy job workflow tests
 - **QuoteFlowE2ETests** - Quote generation and management
 - **BillingFlowE2ETests** - Billing and pricing configuration
 
 **Key Features:**
-- ✅ Automatic test user creation and cleanup
+- ✅ Uses persistent test user (no registration/deletion during tests)
 - ✅ Cookie-based authentication with session management
+- ✅ Automatic cleanup of test data (components, jobs, fences, gates)
 - ✅ Screenshot capture for debugging
 - ✅ Video recording of test runs
 - ✅ Environment variable configuration
@@ -66,12 +68,11 @@ Located in `fencemark.Tests/E2E/`, these tests verify the complete user workflow
 **Running E2E Tests:**
 
 ```bash
-# Set environment variables (optional)
-export TEST_BASE_URL="https://localhost:7074"
-export TEST_USER_EMAIL="test@example.com"
-export TEST_USER_PASSWORD="TestPassword123!"
-export TEST_HEADLESS="false"  # Set to false to see browser
-export TEST_CLEANUP="true"    # Set to false to keep test data
+# Set REQUIRED environment variables
+export TEST_BASE_URL="https://your-dev-environment.azurewebsites.net"
+export TEST_USER_EMAIL="testuser@yourdomain.com"  # REQUIRED: Persistent test user
+export TEST_USER_PASSWORD="YourSecurePassword"     # REQUIRED: From Azure Key Vault
+export TEST_HEADLESS="false"  # Optional: Set to false to see browser
 
 # Run all E2E tests (requires running application)
 dotnet test --filter "FullyQualifiedName~E2ETests"
@@ -80,21 +81,33 @@ dotnet test --filter "FullyQualifiedName~E2ETests"
 dotnet test --filter "AuthenticationFlowE2ETests"
 dotnet test --filter "ComponentFlowE2ETests"
 dotnet test --filter "ComprehensiveJobFlowE2ETests"
+dotnet test --filter "AllEndpointsE2ETests"
 
 # Run single test
-dotnet test --filter "CanRegisterNewUser"
+dotnet test --filter "CanCreateAndDeleteComponent"
 ```
 
 **Prerequisites:**
-- Application must be running (via `dotnet run --project fencemark.AppHost`)
+- Application must be running (via `dotnet run --project fencemark.AppHost` or deployed to Azure)
 - Playwright browsers installed (`playwright install chromium`)
-- Test user credentials configured (via environment variables or Key Vault)
+- **Persistent test user created in the environment** with email and password
+- Test user credentials stored in Azure Key Vault and loaded via environment variables
 
 **Test User Management:**
-- Tests automatically create unique test users for isolation
-- Tests clean up test users after completion (configurable)
-- Supports reading credentials from Azure Key Vault for dev/staging/prod
-- Account deletion endpoint available at `DELETE /api/auth/account`
+- Tests use a single persistent test user (set via `TEST_USER_EMAIL` environment variable)
+- Tests login at the start and reuse the same session
+- Tests clean up test data (components, jobs, fences, gates) after completion
+- Test user account is NOT deleted - it's reused across test runs
+- Test user credentials should be stored in Azure Key Vault
+
+**Setting Up Test User in Dev:**
+1. Create a test user account in your dev environment (register via UI or API)
+2. Store credentials in Azure Key Vault:
+   ```bash
+   az keyvault secret set --vault-name your-dev-keyvault --name test-user-email --value "testuser@yourdomain.com"
+   az keyvault secret set --vault-name your-dev-keyvault --name test-user-password --value "YourSecurePassword"
+   ```
+3. Configure environment variables to read from Key Vault or set them directly for local testing
 
 **What These Tests Validate:**
 
