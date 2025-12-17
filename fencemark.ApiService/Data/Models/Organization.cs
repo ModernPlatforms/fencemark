@@ -21,6 +21,16 @@ public class Organization
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// Preferred unit system for the organization (Imperial or Metric)
+    /// </summary>
+    public UnitSystem UnitSystem { get; set; } = UnitSystem.Imperial;
+
+    /// <summary>
+    /// Default tax region ID for the organization (optional)
+    /// </summary>
+    public string? DefaultTaxRegionId { get; set; }
+
+    /// <summary>
     /// Navigation property for organization members
     /// </summary>
     public ICollection<OrganizationMember> Members { get; set; } = [];

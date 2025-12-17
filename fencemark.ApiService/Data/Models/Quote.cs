@@ -26,6 +26,21 @@ public class Quote : IOrganizationScoped
     public string? PricingConfigId { get; set; }
 
     /// <summary>
+    /// Tax region applied to this quote
+    /// </summary>
+    public string? TaxRegionId { get; set; }
+
+    /// <summary>
+    /// Discount rule applied to this quote (optional)
+    /// </summary>
+    public string? DiscountRuleId { get; set; }
+
+    /// <summary>
+    /// Discount amount applied to this quote
+    /// </summary>
+    public decimal DiscountAmount { get; set; }
+
+    /// <summary>
     /// Quote number (for display purposes)
     /// </summary>
     public required string QuoteNumber { get; set; }
@@ -119,6 +134,16 @@ public class Quote : IOrganizationScoped
     /// Navigation property for the pricing configuration
     /// </summary>
     public PricingConfig? PricingConfig { get; set; }
+
+    /// <summary>
+    /// Navigation property for the tax region
+    /// </summary>
+    public TaxRegion? TaxRegion { get; set; }
+
+    /// <summary>
+    /// Navigation property for the discount rule
+    /// </summary>
+    public DiscountRule? DiscountRule { get; set; }
 
     /// <summary>
     /// Navigation property for quote versions
