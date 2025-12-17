@@ -75,8 +75,8 @@ public class OrchestrationTests
     }
 
     [Theory]
-    [InlineData("Development", "SQLite")]
-    [InlineData("Test", "SQLite")]
+    [InlineData("Development", "SQL Server\"")]
+    [InlineData("Test", "SQL Server\"")]
     [InlineData("Staging", "SQL Server")]
     [InlineData("Production", "SQL Server")]
     public void Environment_UsesCorrectDatabaseProvider(string environment, string expectedProvider)
@@ -87,11 +87,11 @@ public class OrchestrationTests
         // Arrange
         var expectedDatabaseType = environment switch
         {
-            "Development" => "SQLite",
-            "Test" => "SQLite",
+            "Development" => "SQL Server",
+            "Test" => "SQL Server",
             "Staging" => "SQL Server",
             "Production" => "SQL Server",
-            _ => "SQLite"
+            _ => "SQL Server"
         };
 
         // Assert
@@ -251,8 +251,8 @@ public class OrchestrationTests
             ? appHostContent.Substring(apiServiceStart, nextSection - apiServiceStart)
             : appHostContent.Substring(apiServiceStart, Math.Min(500, appHostContent.Length - apiServiceStart));
 
-        Assert.Contains(".WithReference(sql)", apiServiceSection);
-        Assert.Contains(".WaitFor(sql)", apiServiceSection);
+        Assert.Contains(".WithReference(sqldb)", apiServiceSection);
+        Assert.Contains(".WaitFor(sqldb)", apiServiceSection);
     }
 
     [Fact(Timeout = 30000)] // 30 second timeout
