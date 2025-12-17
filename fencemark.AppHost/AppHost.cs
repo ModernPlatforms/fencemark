@@ -14,14 +14,18 @@ Console.WriteLine($"Starting Aspire orchestration for environment: {environmentN
 // When running under Aspire locally, this SQL resource will be started
 // in a container and its connection string will be injected as
 // ConnectionStrings:DefaultConnection into referencing projects.
-var sql = builder.AddSqlServer("sql").AddDatabase("fencemark");
+var sql = builder.AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent);
+
+var sqldb=sql.AddDatabase("fencemark");
+ 
 
 // ============================================================================
 // API Service Configuration
 // ============================================================================
 var apiService = builder.AddProject<Projects.fencemark_ApiService>("apiservice")
-    .WithReference(sql)
-    .WaitFor(sql)
+    .WithReference(sqldb)
+    .WaitFor(sqldb)
     .WithHttpHealthCheck("/health")
     .WithReplicas(GetMinReplicas(environmentName, "ApiService"));
 

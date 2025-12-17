@@ -6,6 +6,7 @@ using fencemark.ApiService.Features.Fences;
 using fencemark.ApiService.Features.Gates;
 using fencemark.ApiService.Features.Jobs;
 using fencemark.ApiService.Features.Organization;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.AspNetCore.Identity;
@@ -27,8 +28,12 @@ builder.Services.AddOpenApi();
 // AppHost, DefaultConnection is provided by the referenced SQL resource.
 // When running the ApiService project directly (without AppHost), fall back
 // to a local SQL Server/SQL Express instance for convenience.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+var connectionString =
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? builder.Configuration.GetConnectionString("fencemark")   // use Aspire-injected connection
     ?? "Server=localhost;Database=fencemark;Trusted_Connection=True;TrustServerCertificate=True;";
+
+Console.WriteLine($"[ApiService] Using DefaultConnection: {connectionString}");
 
 // Always use SQL Server with TenantConnectionInterceptor (RLS via SESSION_CONTEXT)
 builder.Services.AddScoped<TenantConnectionInterceptor>();
@@ -41,6 +46,9 @@ builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =
     options.UseSqlServer(connectionString)
         .AddInterceptors(serviceProvider.GetRequiredService<TenantConnectionInterceptor>());
 });
+
+// Apply EF Core migrations on startup with retries
+builder.Services.AddHostedService<DatabaseMigrationHostedService>();
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -93,13 +101,6 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-
-// Apply database migrations on startup
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
-}
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
