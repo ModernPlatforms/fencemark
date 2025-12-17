@@ -185,10 +185,10 @@ public static class DiscountEndpoints
             return Results.BadRequest(new { error = "Promo code has expired" });
 
         // Check minimum requirements if provided in request
-        if (discount.MinimumOrderValue.HasValue && request.OrderValue < discount.MinimumOrderValue.Value)
+        if (discount.MinimumOrderValue.HasValue && request.OrderValue.GetValueOrDefault() < discount.MinimumOrderValue.Value)
             return Results.BadRequest(new { error = $"Minimum order value of ${discount.MinimumOrderValue.Value:F2} required" });
 
-        if (discount.MinimumLinearFeet.HasValue && request.LinearFeet < discount.MinimumLinearFeet.Value)
+        if (discount.MinimumLinearFeet.HasValue && request.LinearFeet.GetValueOrDefault() < discount.MinimumLinearFeet.Value)
             return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear feet required" });
 
         return Results.Ok(discount);

@@ -35,7 +35,10 @@ public class SeedDataService : ISeedDataService
     {
         // Don't seed if data already exists
         if (await HasSampleDataAsync(organizationId))
+        {
+            // Data already exists, nothing to do
             return;
+        }
 
         // Seed Components
         var components = new List<Component>
