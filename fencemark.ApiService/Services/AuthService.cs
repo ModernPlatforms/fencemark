@@ -79,6 +79,9 @@ public class AuthService(
 
         await context.SaveChangesAsync(cancellationToken);
 
+        // Add organization ID as a claim
+        await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", organization.Id));
+
         // Generate email verification token (for future use)
         var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
@@ -107,6 +110,26 @@ public class AuthService(
             };
         }
 
+        // Get user's organization before sign-in to add as claim
+        var membership = await context.OrganizationMembers
+            .Include(m => m.Organization)
+            .FirstOrDefaultAsync(m => m.UserId == user.Id, cancellationToken);
+
+        // Add organization ID as a claim if the user has one
+        if (membership is not null)
+        {
+            // Remove any existing OrganizationId claims first
+            var existingClaims = await userManager.GetClaimsAsync(user);
+            var orgClaims = existingClaims.Where(c => c.Type == "OrganizationId").ToList();
+            foreach (var claim in orgClaims)
+            {
+                await userManager.RemoveClaimAsync(user, claim);
+            }
+            
+            // Add the current organization ID claim
+            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
+        }
+
         var result = await signInManager.PasswordSignInAsync(
             user,
             request.Password,
@@ -121,11 +144,6 @@ public class AuthService(
                 Message = "Invalid email or password"
             };
         }
-
-        // Get user's organization
-        var membership = await context.OrganizationMembers
-            .Include(m => m.Organization)
-            .FirstOrDefaultAsync(m => m.UserId == user.Id, cancellationToken);
 
         return new AuthResponse
         {

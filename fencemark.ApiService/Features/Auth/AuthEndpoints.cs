@@ -26,6 +26,10 @@ public static class AuthEndpoints
             .RequireAuthorization()
             .WithName("GetCurrentUser");
 
+        group.MapDelete("/account", DeleteAccount)
+            .RequireAuthorization()
+            .WithName("DeleteAccount");
+
         return app;
     }
 
@@ -66,5 +70,40 @@ public static class AuthEndpoints
             email = currentUser.Email,
             organizationId = currentUser.OrganizationId
         }));
+    }
+
+    private static async Task<IResult> DeleteAccount(
+        ICurrentUserService currentUser,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await userManager.FindByIdAsync(currentUser.UserId);
+        if (user == null)
+        {
+            return Results.NotFound();
+        }
+
+        // Sign out the user first
+        await signInManager.SignOutAsync();
+
+        // Delete the user account
+        var result = await userManager.DeleteAsync(user);
+        
+        if (!result.Succeeded)
+        {
+            return Results.BadRequest(new { 
+                success = false, 
+                message = "Failed to delete account",
+                errors = result.Errors.Select(e => e.Description)
+            });
+        }
+
+        return Results.Ok(new { success = true, message = "Account deleted successfully" });
     }
 }

@@ -218,6 +218,9 @@ public class OrganizationService(
 
         await context.SaveChangesAsync(cancellationToken);
 
+        // Add organization ID as a claim
+        await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
+
         return new AuthResponse
         {
             Success = true,
