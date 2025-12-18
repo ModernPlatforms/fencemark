@@ -96,8 +96,9 @@ builder.Services.AddDataProtection()
 
 // Configure authentication with shared cookie for API session
 // Cookie will be set by API after Entra External ID authentication
-builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, options =>
+// Start with Cookies as the default scheme
+var authBuilder = builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
         options.Cookie.Name = ".AspNetCore.Identity.Application"; // Same as API service
         options.Cookie.HttpOnly = true;
@@ -129,8 +130,6 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
             return Task.CompletedTask;
         };
     });
-
-var authBuilder = builder.Services.AddAuthentication();
 
 // Configure Azure Entra External ID (CIAM) authentication
 var azureAdSection = builder.Configuration.GetSection("AzureAd");
@@ -171,7 +170,7 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
             {
                 builder.Configuration.Bind("AzureAd", options);
             },
-            cookieScheme: Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+            cookieScheme: null, // Use the already registered cookie scheme
             displayName: "Entra External ID")
         .EnableTokenAcquisitionToCallDownstreamApi()
         .AddInMemoryTokenCaches();
@@ -197,7 +196,7 @@ else if (azureAdSection.Exists())
                 OnTokenValidated = HandleExternalAuthenticationAsync
             };
         },
-        cookieScheme: Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
+        cookieScheme: null, // Use the already registered cookie scheme
         displayName: "Entra External ID")
     .EnableTokenAcquisitionToCallDownstreamApi()
     .AddInMemoryTokenCaches();
