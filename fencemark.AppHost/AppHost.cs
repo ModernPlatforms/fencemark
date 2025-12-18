@@ -26,6 +26,7 @@ var sqldb=sql.AddDatabase("fencemark");
 // API Service Configuration
 // ============================================================================
 var apiService = builder.AddProject<Projects.fencemark_ApiService>("apiservice")
+    .WaitFor(sqldb)
     .WithReference(sqldb)
     .WithReplicas(GetMinReplicas(environmentName, "ApiService"));
 
