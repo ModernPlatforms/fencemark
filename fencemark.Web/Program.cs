@@ -118,8 +118,8 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
     catch (Exception ex)
     {
         Console.Error.WriteLine($"Failed to configure certificate from Key Vault. Error: {ex.Message}");
-        // Don't throw - allow app to work with just cookie auth
-        Console.Error.WriteLine("Continuing with cookie-based authentication only.");
+        Console.Error.WriteLine("Entra External ID authentication will be unavailable.");
+        Console.Error.WriteLine("Application will continue with cookie-based authentication only (API login will still work).");
     }
 }
 else if (azureAdSection.Exists())

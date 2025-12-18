@@ -22,13 +22,18 @@ public class AuthenticationDelegatingHandler : DelegatingHandler
         
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
-            // Forward cookies for cookie-based authentication
-            // This includes the .AspNetCore.Identity.Application cookie set by the API service
-            var cookies = httpContext.Request.Cookies;
+            // Forward only authentication cookies to the API service
+            // Only include the .AspNetCore.Identity.Application cookie (and antiforgery if needed)
+            var authCookieName = ".AspNetCore.Identity.Application";
+            var antiForgeryPrefix = ".AspNetCore.Antiforgery.";
             
-            if (cookies.Any())
+            var authCookies = httpContext.Request.Cookies
+                .Where(c => c.Key == authCookieName || c.Key.StartsWith(antiForgeryPrefix))
+                .ToList();
+            
+            if (authCookies.Any())
             {
-                var cookieHeader = string.Join("; ", cookies.Select(c => $"{c.Key}={c.Value}"));
+                var cookieHeader = string.Join("; ", authCookies.Select(c => $"{c.Key}={c.Value}"));
                 request.Headers.Add("Cookie", cookieHeader);
             }
         }
