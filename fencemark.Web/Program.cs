@@ -134,8 +134,9 @@ else if (azureAdSection.Exists())
     .AddInMemoryTokenCaches();
 }
 
-builder.Services.AddControllersWithViews()
-    .AddMicrosoftIdentityUI();
+// Note: AddMicrosoftIdentityUI() is removed because it requires OpenIdConnect as the default scheme
+// We use cookie authentication as default and have a custom /login page
+builder.Services.AddControllersWithViews();
 
 builder.Services.AddAuthorization();
 
