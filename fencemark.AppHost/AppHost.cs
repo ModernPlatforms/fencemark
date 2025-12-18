@@ -41,6 +41,7 @@ if (!isLocal)
 // ============================================================================
 var webFrontend = builder.AddProject<Projects.fencemark_Web>("webfrontend")
     .WithExternalHttpEndpoints()
+    .WaitFor(apiService)
     .WithReference(apiService)
     .WithReplicas(GetMinReplicas(environmentName, "WebFrontend"));
 
