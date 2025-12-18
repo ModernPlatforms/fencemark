@@ -94,42 +94,9 @@ builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStat
 builder.Services.AddDataProtection()
     .SetApplicationName("fencemark");
 
-// Configure authentication with shared cookie for API session
-// Cookie will be set by API after Entra External ID authentication
-// Start with Cookies as the default scheme
-var authBuilder = builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.Cookie.Name = ".AspNetCore.Identity.Application"; // Same as API service
-        options.Cookie.HttpOnly = true;
-        
-        // In development, allow cookies to work across localhost ports
-        if (builder.Environment.IsDevelopment())
-        {
-            options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Allow HTTP in dev
-            options.Cookie.SameSite = SameSiteMode.Lax; // Allow cross-site in dev
-        }
-        else
-        {
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Strict;
-        }
-        
-        options.ExpireTimeSpan = TimeSpan.FromDays(30);
-        options.SlidingExpiration = true;
-        
-        // Don't redirect to login page - return 401 instead
-        options.Events.OnRedirectToLogin = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        };
-        options.Events.OnRedirectToAccessDenied = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        };
-    });
+// Configure authentication - Entra External ID only
+// The API will set a session cookie after successful Entra authentication
+var authBuilder = builder.Services.AddAuthentication();
 
 // Configure Azure Entra External ID (CIAM) authentication
 var azureAdSection = builder.Configuration.GetSection("AzureAd");
@@ -169,8 +136,9 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
             options =>
             {
                 builder.Configuration.Bind("AzureAd", options);
+                // Configure cookie to match API's cookie name for session sharing
+                options.Cookie.Name = ".AspNetCore.Identity.Application";
             },
-            cookieScheme: null, // Use the already registered cookie scheme
             displayName: "Entra External ID")
         .EnableTokenAcquisitionToCallDownstreamApi()
         .AddInMemoryTokenCaches();
@@ -179,7 +147,7 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
     {
         Console.Error.WriteLine($"Failed to configure certificate from Key Vault. Error: {ex.Message}");
         Console.Error.WriteLine("Entra External ID authentication will be unavailable.");
-        Console.Error.WriteLine("Application will continue with cookie-based authentication only (API login will still work).");
+        Console.Error.WriteLine("Application requires Entra External ID to be configured properly to function.");
     }
 }
 else if (azureAdSection.Exists())
@@ -196,7 +164,12 @@ else if (azureAdSection.Exists())
                 OnTokenValidated = HandleExternalAuthenticationAsync
             };
         },
-        cookieScheme: null, // Use the already registered cookie scheme
+        cookieOptions =>
+        {
+            builder.Configuration.Bind("AzureAd", cookieOptions);
+            // Configure cookie to match API's cookie name for session sharing
+            cookieOptions.Cookie.Name = ".AspNetCore.Identity.Application";
+        },
         displayName: "Entra External ID")
     .EnableTokenAcquisitionToCallDownstreamApi()
     .AddInMemoryTokenCaches();
