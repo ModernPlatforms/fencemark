@@ -9,10 +9,10 @@ using fencemark.ApiService.Data;
 
 #nullable disable
 
-namespace fencemark.ApiService.Data.Migrations
+namespace fencemark.ApiService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251217064152_InitialSqlServer")]
+    [Migration("20251218005532_InitialSqlServer")]
     partial class InitialSqlServer
     {
         /// <inheritdoc />
@@ -1368,18 +1368,18 @@ namespace fencemark.ApiService.Data.Migrations
                     b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("fencemark.ApiService.Data.Models.Parcel", "Parcel")
                         .WithMany("Drawings")
                         .HasForeignKey("ParcelId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Job");
 
@@ -1417,19 +1417,19 @@ namespace fencemark.ApiService.Data.Migrations
                     b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("fencemark.ApiService.Data.Models.Parcel", "Parcel")
                         .WithMany()
                         .HasForeignKey("ParcelId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("FenceType");
 
@@ -1486,7 +1486,7 @@ namespace fencemark.ApiService.Data.Migrations
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("FenceSegment");
@@ -1584,7 +1584,7 @@ namespace fencemark.ApiService.Data.Migrations
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Job");
@@ -1608,29 +1608,29 @@ namespace fencemark.ApiService.Data.Migrations
                     b.HasOne("fencemark.ApiService.Data.Models.DiscountRule", "DiscountRule")
                         .WithMany()
                         .HasForeignKey("DiscountRuleId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("fencemark.ApiService.Data.Models.Job", "Job")
                         .WithMany()
                         .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("fencemark.ApiService.Data.Models.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("fencemark.ApiService.Data.Models.PricingConfig", "PricingConfig")
                         .WithMany()
                         .HasForeignKey("PricingConfigId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("fencemark.ApiService.Data.Models.TaxRegion", "TaxRegion")
                         .WithMany()
                         .HasForeignKey("TaxRegionId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("DiscountRule");
 
