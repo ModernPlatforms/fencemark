@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Hosting;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 // ============================================================================
@@ -14,7 +16,7 @@ Console.WriteLine($"Starting Aspire orchestration for environment: {environmentN
 // When running under Aspire locally, this SQL resource will be started
 // in a container and its connection string will be injected as
 // ConnectionStrings:DefaultConnection into referencing projects.
-var sql = builder.AddSqlServer("sql")
+var sql = builder.AddSqlServer("sql", port: 1433)
     .WithLifetime(ContainerLifetime.Persistent);
 
 var sqldb=sql.AddDatabase("fencemark");
@@ -25,8 +27,6 @@ var sqldb=sql.AddDatabase("fencemark");
 // ============================================================================
 var apiService = builder.AddProject<Projects.fencemark_ApiService>("apiservice")
     .WithReference(sqldb)
-    .WaitFor(sqldb)
-    .WithHttpHealthCheck("/health")
     .WithReplicas(GetMinReplicas(environmentName, "ApiService"));
 
 // Apply environment-specific resource limits for non-local environments
@@ -40,9 +40,7 @@ if (!isLocal)
 // ============================================================================
 var webFrontend = builder.AddProject<Projects.fencemark_Web>("webfrontend")
     .WithExternalHttpEndpoints()
-    .WithHttpHealthCheck("/health")
     .WithReference(apiService)
-    .WaitFor(apiService)
     .WithReplicas(GetMinReplicas(environmentName, "WebFrontend"));
 
 // Apply environment-specific resource limits for non-local environments
@@ -51,11 +49,13 @@ if (!isLocal)
     webFrontend = ApplyResourceLimits(webFrontend, environmentName, "WebFrontend");
 }
 
+var host = builder.Build();
+
 Console.WriteLine($"Aspire orchestration configured for {environmentName} environment");
 Console.WriteLine($"API Service: {GetMinReplicas(environmentName, "ApiService")} replica(s)");
 Console.WriteLine($"Web Frontend: {GetMinReplicas(environmentName, "WebFrontend")} replica(s)");
 
-builder.Build().Run();
+host.Run();
 
 // ============================================================================
 // Helper Methods for Environment-Specific Configuration

@@ -1,3 +1,4 @@
+using System;
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
 using fencemark.ApiService.Features.Auth;
@@ -16,8 +17,10 @@ using fencemark.ApiService.Features.TaxRegions;
 using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +43,11 @@ var connectionString =
     ?? builder.Configuration.GetConnectionString("fencemark")   // use Aspire-injected connection
     ?? "Server=localhost;Database=fencemark;Trusted_Connection=True;TrustServerCertificate=True;";
 
+if (!connectionString.Contains("Connection Timeout", StringComparison.OrdinalIgnoreCase))
+{
+    connectionString += ";Connection Timeout=5";
+}
+
 Console.WriteLine($"[ApiService] Using DefaultConnection: {connectionString}");
 
 // Always use SQL Server with TenantConnectionInterceptor (RLS via SESSION_CONTEXT)
@@ -56,6 +64,13 @@ builder.Services.AddDbContext<ApplicationDbContext>((serviceProvider, options) =
 
 // Apply EF Core migrations on startup with retries
 builder.Services.AddHostedService<DatabaseMigrationHostedService>();
+
+// Add custom health check that waits for migrations
+builder.Services.AddHealthChecks()
+    .AddCheck("migrations", () => 
+        DatabaseMigrationHostedService.MigrationsCompleted 
+            ? HealthCheckResult.Healthy("Migrations completed") 
+            : HealthCheckResult.Unhealthy("Migrations still running"));
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -76,12 +91,28 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
+// Configure Data Protection for shared cookies
+builder.Services.AddDataProtection()
+    .SetApplicationName("fencemark");
+
 // Configure authentication cookie
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.Name = ".AspNetCore.Identity.Application"; // Shared cookie name
+    
+    // In development, allow cookies to work across localhost ports
+    if (builder.Environment.IsDevelopment())
+    {
+        options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Allow HTTP in dev
+        options.Cookie.SameSite = SameSiteMode.Lax; // Allow cross-site in dev
+    }
+    else
+    {
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    }
+    
     options.ExpireTimeSpan = TimeSpan.FromDays(30);
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>
@@ -121,8 +152,8 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Health endpoint for container liveness/readiness probes
-app.MapGet("/health", () => Results.Ok("OK"));
+// Map default endpoints (including health checks) early
+app.MapDefaultEndpoints();
 
 // Map feature endpoints
 app.MapAuthEndpoints();
@@ -155,8 +186,6 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
-
-app.MapDefaultEndpoints();
 
 // Quote endpoints
 app.MapPost("/api/quotes/generate", async (GenerateQuoteRequest request, IPricingService pricingService, ICurrentUserService currentUser, CancellationToken ct) =>

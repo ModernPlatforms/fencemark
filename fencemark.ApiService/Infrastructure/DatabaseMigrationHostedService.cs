@@ -14,6 +14,8 @@ public sealed class DatabaseMigrationHostedService : IHostedService
 
     private const int MaxAttempts = 10;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
+    
+    public static bool MigrationsCompleted { get; private set; }
 
     public DatabaseMigrationHostedService(
         IServiceScopeFactory scopeFactory,
@@ -40,6 +42,7 @@ public sealed class DatabaseMigrationHostedService : IHostedService
 
 
                 _logger.LogInformation("[ApiService] EF Core migrations completed successfully.");
+                MigrationsCompleted = true;
                 return;
             }
             catch (Exception ex) when (attempt < MaxAttempts && !cancellationToken.IsCancellationRequested)
