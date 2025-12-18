@@ -12,10 +12,10 @@
         <AuthorizeView>
             <Authorized>
                 <MudText Typo="Typo.body2" Class="mr-4">@context.User.Identity?.Name</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="/logout" />
+                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="MicrosoftIdentity/Account/SignOut" />
             </Authorized>
             <NotAuthorized>
-                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="MicrosoftIdentity/Account/SignIn" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
             </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>

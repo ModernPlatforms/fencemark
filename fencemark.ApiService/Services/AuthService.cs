@@ -12,6 +12,7 @@ public interface IAuthService
 {
     Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
     Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<AuthResponse> ExternalLoginAsync(ExternalLoginRequest request, CancellationToken cancellationToken = default);
     Task<bool> VerifyEmailAsync(string userId, string token, CancellationToken cancellationToken = default);
 }
 
@@ -151,6 +152,115 @@ public class AuthService(
             Message = "Login successful",
             UserId = user.Id,
             OrganizationId = membership?.OrganizationId,
+            Email = user.Email,
+            IsGuest = user.IsGuest
+        };
+    }
+
+    public async Task<AuthResponse> ExternalLoginAsync(ExternalLoginRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Try to find user by external ID first, then by email
+        var user = await userManager.Users
+            .FirstOrDefaultAsync(u => u.ExternalId == request.ExternalId && u.ExternalProvider == request.Provider, cancellationToken);
+
+        if (user is null)
+        {
+            // Try to find by email
+            user = await userManager.FindByEmailAsync(request.Email);
+            
+            if (user is not null)
+            {
+                // Existing user, link external identity
+                user.ExternalId = request.ExternalId;
+                user.ExternalProvider = request.Provider;
+                user.IsEmailVerified = true; // External provider verified the email
+                user.IsGuest = false;
+                await userManager.UpdateAsync(user);
+            }
+            else
+            {
+                // Create new user
+                user = new ApplicationUser
+                {
+                    UserName = request.Email,
+                    Email = request.Email,
+                    ExternalId = request.ExternalId,
+                    ExternalProvider = request.Provider,
+                    IsEmailVerified = true, // External provider verified the email
+                    IsGuest = false,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var result = await userManager.CreateAsync(user);
+                if (!result.Succeeded)
+                {
+                    return new AuthResponse
+                    {
+                        Success = false,
+                        Message = string.Join(", ", result.Errors.Select(e => e.Description))
+                    };
+                }
+
+                // Find or create organization
+                var organization = await context.Organizations
+                    .FirstOrDefaultAsync(o => o.Name == request.OrganizationName, cancellationToken);
+
+                if (organization is null)
+                {
+                    organization = new Organization
+                    {
+                        Name = request.OrganizationName,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    context.Organizations.Add(organization);
+                }
+
+                // Add user as owner of the organization
+                var membership = new OrganizationMember
+                {
+                    UserId = user.Id,
+                    OrganizationId = organization.Id,
+                    Role = Role.Owner,
+                    JoinedAt = DateTime.UtcNow,
+                    IsAccepted = true
+                };
+                context.OrganizationMembers.Add(membership);
+
+                await context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        // Get user's organization to add as claim
+        var userMembership = await context.OrganizationMembers
+            .Include(m => m.Organization)
+            .FirstOrDefaultAsync(m => m.UserId == user.Id, cancellationToken);
+
+        // Add organization ID as a claim if the user has one
+        if (userMembership is not null)
+        {
+            // Remove any existing OrganizationId claims first
+            var existingClaims = await userManager.GetClaimsAsync(user);
+            var orgClaims = existingClaims.Where(c => c.Type == "OrganizationId").ToList();
+            foreach (var claim in orgClaims)
+            {
+                await userManager.RemoveClaimAsync(user, claim);
+            }
+            
+            // Add the current organization ID claim
+            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", userMembership.OrganizationId));
+        }
+
+        // Sign in the user to create the authentication cookie
+        await signInManager.SignInAsync(user, isPersistent: true);
+
+        return new AuthResponse
+        {
+            Success = true,
+            Message = "External login successful",
+            UserId = user.Id,
+            OrganizationId = userMembership?.OrganizationId,
             Email = user.Email,
             IsGuest = user.IsGuest
         };
