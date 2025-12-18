@@ -8,8 +8,10 @@ using fencemark.Web.Features.Gates;
 using fencemark.Web.Features.GatePositions;
 using fencemark.Web.Features.Components;
 using fencemark.Web.Features.Jobs;
+using fencemark.Web.Infrastructure;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Identity.Web;
 using Microsoft.Identity.Web.UI;
 using Azure.Identity;
@@ -92,20 +94,32 @@ else
 builder.Services.AddControllersWithViews()
     .AddMicrosoftIdentityUI();
 
+// Configure Data Protection for shared cookies
+builder.Services.AddDataProtection()
+    .SetApplicationName("fencemark");
+
 builder.Services.AddAuthorization();
+
+// Add HttpContextAccessor for authentication forwarding
+builder.Services.AddHttpContextAccessor();
+
+// Register the authentication delegating handler
+builder.Services.AddScoped<AuthenticationDelegatingHandler>();
 
 builder.Services.AddHttpClient<WeatherApiClient>(client =>
     {
         // This URL uses "https+http://" to indicate HTTPS is preferred over HTTP.
         // Learn more about service discovery scheme resolution at https://aka.ms/dotnet/sdschemes.
         client.BaseAddress = new("https+http://apiservice");
-    });
+    })
+    .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
-// Add HttpClient for API calls
+// Add HttpClient for API calls with authentication
 builder.Services.AddHttpClient("API", client =>
 {
     client.BaseAddress = new("https+http://apiservice");
-});
+})
+.AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 // Register API clients
 builder.Services.AddScoped<AuthApiClient>();
