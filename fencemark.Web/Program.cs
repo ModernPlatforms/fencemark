@@ -36,10 +36,48 @@ builder.Services.AddOutputCache();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
-// Configure Azure Entra External ID (CIAM) authentication
-var azureAdSection = builder.Configuration.GetSection("AzureAd");
+// Configure Data Protection for shared cookies with API service
+builder.Services.AddDataProtection()
+    .SetApplicationName("fencemark");
 
-// Check if KeyVault configuration is present for certificate-based authentication
+// Configure DUAL authentication: Entra External ID (for future) + API Cookie (for current login)
+// The default scheme is Cookie auth since that's what the Login page uses with the API
+var authBuilder = builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme, options =>
+    {
+        options.Cookie.Name = ".AspNetCore.Identity.Application"; // Same as API service
+        options.Cookie.HttpOnly = true;
+        
+        // In development, allow cookies to work across localhost ports
+        if (builder.Environment.IsDevelopment())
+        {
+            options.Cookie.SecurePolicy = CookieSecurePolicy.None; // Allow HTTP in dev
+            options.Cookie.SameSite = SameSiteMode.Lax; // Allow cross-site in dev
+        }
+        else
+        {
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+            options.Cookie.SameSite = SameSiteMode.Strict;
+        }
+        
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
+        
+        // Don't redirect to login page - return 401 instead
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+    });
+
+// Configure Azure Entra External ID (CIAM) authentication as an additional scheme
+var azureAdSection = builder.Configuration.GetSection("AzureAd");
 var keyVaultUrl = builder.Configuration["KeyVault:Url"];
 var certificateName = builder.Configuration["KeyVault:CertificateName"];
 
@@ -56,47 +94,48 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
         var client = new CertificateClient(new Uri(keyVaultUrl), credential);
         var certificate = await client.GetCertificateAsync(certificateName);
 
-        builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
-            .AddMicrosoftIdentityWebApp(
-                options =>
-                {
-                    builder.Configuration.Bind("AzureAd", options);
+        authBuilder.AddMicrosoftIdentityWebApp(
+            options =>
+            {
+                builder.Configuration.Bind("AzureAd", options);
 
-                    // Configure certificate from Key Vault
-                    options.ClientCertificates = new[]
-                    {
-                        CertificateDescription.FromKeyVault(keyVaultUrl, certificateName)
-                    };
-                },
-                options =>
+                // Configure certificate from Key Vault
+                options.ClientCertificates = new[]
                 {
-                    builder.Configuration.Bind("AzureAd", options);
-                },
-                displayName: "AzureAd")
-            .EnableTokenAcquisitionToCallDownstreamApi()
-            .AddInMemoryTokenCaches();
+                    CertificateDescription.FromKeyVault(keyVaultUrl, certificateName)
+                };
+            },
+            options =>
+            {
+                builder.Configuration.Bind("AzureAd", options);
+            },
+            openIdConnectScheme: "EntraExternalId", // Named scheme, not default
+            cookieScheme: null, // Don't use a separate cookie for OIDC
+            displayName: "Entra External ID")
+        .EnableTokenAcquisitionToCallDownstreamApi()
+        .AddInMemoryTokenCaches();
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine($"Failed to configure certificate from Key Vault. Error: {ex.Message}");
-        throw;
+        // Don't throw - allow app to work with just cookie auth
+        Console.Error.WriteLine("Continuing with cookie-based authentication only.");
     }
 }
-else
+else if (azureAdSection.Exists())
 {
-    // Client secret based authentication (for development)
-    builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectDefaults.AuthenticationScheme)
-        .AddMicrosoftIdentityWebApp(azureAdSection)
-        .EnableTokenAcquisitionToCallDownstreamApi()
-        .AddInMemoryTokenCaches();
+    // Client secret based authentication (for development) - also as a non-default scheme
+    authBuilder.AddMicrosoftIdentityWebApp(
+        azureAdSection,
+        openIdConnectScheme: "EntraExternalId", // Named scheme, not default
+        cookieScheme: null,
+        displayName: "Entra External ID")
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddInMemoryTokenCaches();
 }
 
 builder.Services.AddControllersWithViews()
     .AddMicrosoftIdentityUI();
-
-// Configure Data Protection for shared cookies
-builder.Services.AddDataProtection()
-    .SetApplicationName("fencemark");
 
 builder.Services.AddAuthorization();
 
