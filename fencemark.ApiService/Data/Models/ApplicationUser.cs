@@ -23,6 +23,16 @@ public class ApplicationUser : IdentityUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>
+    /// External identity provider ID (e.g., Azure AD object ID)
+    /// </summary>
+    public string? ExternalId { get; set; }
+
+    /// <summary>
+    /// External identity provider name (e.g., "AzureAD")
+    /// </summary>
+    public string? ExternalProvider { get; set; }
+
+    /// <summary>
     /// Navigation property for organization memberships
     /// </summary>
     public ICollection<OrganizationMember> OrganizationMemberships { get; set; } = [];

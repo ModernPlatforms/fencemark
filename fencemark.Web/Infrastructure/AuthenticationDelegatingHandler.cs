@@ -1,11 +1,9 @@
-using Microsoft.AspNetCore.Components.Authorization;
-using System.Security.Claims;
-
 namespace fencemark.Web.Infrastructure;
 
 /// <summary>
 /// Delegating handler that forwards authentication from Blazor Server to API calls.
-/// For Blazor Server, we use a shared cookie between Web and API services.
+/// For Blazor Server with cookie auth, we forward the authentication cookie to the API service.
+/// This works because both Web and API share the same cookie authentication configuration.
 /// </summary>
 public class AuthenticationDelegatingHandler : DelegatingHandler
 {
@@ -24,13 +22,18 @@ public class AuthenticationDelegatingHandler : DelegatingHandler
         
         if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
-            // For Blazor Server with cookie auth, we need to forward the cookie
-            // Get all cookies from the incoming request
-            var cookies = httpContext.Request.Cookies;
+            // Forward only authentication cookies to the API service
+            // Only include the .AspNetCore.Identity.Application cookie (and antiforgery if needed)
+            var authCookieName = ".AspNetCore.Identity.Application";
+            var antiForgeryPrefix = ".AspNetCore.Antiforgery.";
             
-            if (cookies.Any())
+            var authCookies = httpContext.Request.Cookies
+                .Where(c => c.Key == authCookieName || c.Key.StartsWith(antiForgeryPrefix))
+                .ToList();
+            
+            if (authCookies.Any())
             {
-                var cookieHeader = string.Join("; ", cookies.Select(c => $"{c.Key}={c.Value}"));
+                var cookieHeader = string.Join("; ", authCookies.Select(c => $"{c.Key}={c.Value}"));
                 request.Headers.Add("Cookie", cookieHeader);
             }
         }

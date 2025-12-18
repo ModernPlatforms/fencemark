@@ -80,3 +80,16 @@ public record UpdateRoleRequest
     public required string UserId { get; init; }
     public required string Role { get; init; }
 }
+
+/// <summary>
+/// Request model for external identity login (Entra External ID)
+/// </summary>
+public record ExternalLoginRequest
+{
+    public required string Email { get; init; }
+    public required string ExternalId { get; init; }
+    public required string Provider { get; init; }
+    public string? GivenName { get; init; }
+    public string? FamilyName { get; init; }
+    public required string OrganizationName { get; init; }
+}

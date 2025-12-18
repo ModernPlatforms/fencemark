@@ -18,6 +18,9 @@ public static class AuthEndpoints
         group.MapPost("/login", Login)
             .WithName("Login");
 
+        group.MapPost("/external-login", ExternalLogin)
+            .WithName("ExternalLogin");
+
         group.MapPost("/logout", Logout)
             .RequireAuthorization()
             .WithName("Logout");
@@ -49,6 +52,15 @@ public static class AuthEndpoints
     {
         var result = await authService.LoginAsync(request, ct);
         return result.Success ? Results.Ok(result) : Results.Unauthorized();
+    }
+
+    private static async Task<IResult> ExternalLogin(
+        ExternalLoginRequest request,
+        IAuthService authService,
+        CancellationToken ct)
+    {
+        var result = await authService.ExternalLoginAsync(request, ct);
+        return result.Success ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> Logout(SignInManager<ApplicationUser> signInManager)
