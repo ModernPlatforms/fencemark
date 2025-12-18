@@ -18,8 +18,62 @@ using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Helper method for handling external authentication sync
+static async Task HandleExternalAuthenticationAsync(TokenValidatedContext context)
+{
+    // Extract user information from Entra External ID claims
+    var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                ?? context.Principal?.FindFirst("preferred_username")?.Value
+                ?? context.Principal?.FindFirst("upn")?.Value;
+    var externalId = context.Principal?.FindFirst("oid")?.Value
+                    ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var givenName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+    var familyName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
+
+    if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(externalId))
+    {
+        context.Fail("Email or External ID claim not found");
+        return;
+    }
+
+    // Extract organization name from email domain
+    var organizationName = "Default Organization";
+    if (email.Contains('@'))
+    {
+        var parts = email.Split('@');
+        if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+        {
+            organizationName = parts[1];
+        }
+    }
+
+    // Call API to sync user and establish session
+    var httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
+    var httpClient = httpClientFactory.CreateClient("API");
+
+    var externalLoginRequest = new
+    {
+        email = email,
+        externalId = externalId,
+        provider = "AzureAD",
+        givenName = givenName,
+        familyName = familyName,
+        organizationName = organizationName
+    };
+
+    var response = await httpClient.PostAsJsonAsync("/api/auth/external-login", externalLoginRequest);
+    if (!response.IsSuccessStatusCode)
+    {
+        context.Fail("Failed to sync user with API");
+        return;
+    }
+
+    // Cookie is now set by API, authentication is complete
+}
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
@@ -108,48 +162,9 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
                 };
                 
                 // Configure event to sync user with API after Entra authentication
-                options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+                options.Events = new OpenIdConnectEvents
                 {
-                    OnTokenValidated = async context =>
-                    {
-                        // Extract user information from Entra External ID claims
-                        var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                                    ?? context.Principal?.FindFirst("preferred_username")?.Value
-                                    ?? context.Principal?.FindFirst("upn")?.Value;
-                        var externalId = context.Principal?.FindFirst("oid")?.Value
-                                        ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                        var givenName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-                        var familyName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-
-                        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(externalId))
-                        {
-                            context.Fail("Email or External ID claim not found");
-                            return;
-                        }
-
-                        // Call API to sync user and establish session
-                        var httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
-                        var httpClient = httpClientFactory.CreateClient("API");
-
-                        var externalLoginRequest = new
-                        {
-                            email = email,
-                            externalId = externalId,
-                            provider = "AzureAD",
-                            givenName = givenName,
-                            familyName = familyName,
-                            organizationName = email.Split('@')[1] // Use domain as default org name
-                        };
-
-                        var response = await httpClient.PostAsJsonAsync("/api/auth/external-login", externalLoginRequest);
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            context.Fail("Failed to sync user with API");
-                            return;
-                        }
-
-                        // Cookie is now set by API, authentication is complete
-                    }
+                    OnTokenValidated = HandleExternalAuthenticationAsync
                 };
             },
             options =>
@@ -177,48 +192,9 @@ else if (azureAdSection.Exists())
             builder.Configuration.Bind("AzureAd", options);
             
             // Configure event to sync user with API after Entra authentication
-            options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+            options.Events = new OpenIdConnectEvents
             {
-                OnTokenValidated = async context =>
-                {
-                    // Extract user information from Entra External ID claims
-                    var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                                ?? context.Principal?.FindFirst("preferred_username")?.Value
-                                ?? context.Principal?.FindFirst("upn")?.Value;
-                    var externalId = context.Principal?.FindFirst("oid")?.Value
-                                    ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                    var givenName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-                    var familyName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-
-                    if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(externalId))
-                    {
-                        context.Fail("Email or External ID claim not found");
-                        return;
-                    }
-
-                    // Call API to sync user and establish session
-                    var httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
-                    var httpClient = httpClientFactory.CreateClient("API");
-
-                    var externalLoginRequest = new
-                    {
-                        email = email,
-                        externalId = externalId,
-                        provider = "AzureAD",
-                        givenName = givenName,
-                        familyName = familyName,
-                        organizationName = email.Split('@')[1] // Use domain as default org name
-                    };
-
-                    var response = await httpClient.PostAsJsonAsync("/api/auth/external-login", externalLoginRequest);
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        context.Fail("Failed to sync user with API");
-                        return;
-                    }
-
-                    // Cookie is now set by API, authentication is complete
-                }
+                OnTokenValidated = HandleExternalAuthenticationAsync
             };
         },
         cookieScheme: Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme,
