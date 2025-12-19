@@ -36,7 +36,8 @@ package-lock.json
 # User-specific files
 *.user
 *.userosscache
-
+appsettings.json
+appsettings.Development.json
 # NuGet
 *.nupkg
 *.snupkg
