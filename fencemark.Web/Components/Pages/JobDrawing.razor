@@ -1,4 +1,5 @@
 @page "/jobs/{jobId}/drawing"
+@rendermode InteractiveServer
 @using fencemark.Web.Features.FenceSegments
 @using fencemark.Web.Features.GatePositions
 @using fencemark.Web.Features.Jobs
@@ -8,6 +9,7 @@
 @inject FenceSegmentApiClient FenceSegmentClient
 @inject GatePositionApiClient GatePositionClient
 @inject JobApiClient JobClient
+@inject IConfiguration Configuration
 @attribute [Authorize]
 
 <PageTitle>Job Drawing - Fencemark</PageTitle>
@@ -237,8 +239,11 @@
     {
         if (firstRender)
         {
-            // Initialize Azure Maps
-            await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId);
+            // Get Azure Maps subscription key from configuration
+            var subscriptionKey = Configuration["AzureMaps:SubscriptionKey"];
+            
+            // Initialize Azure Maps with the subscription key
+            await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId, subscriptionKey);
         }
     }
 

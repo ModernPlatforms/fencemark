@@ -35,10 +35,21 @@ public static class FenceEndpoints
     private static async Task<IResult> GetAllFences(
         ApplicationDbContext db,
         ICurrentUserService currentUser,
+        HttpContext httpContext,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("FenceEndpoints");
+        logger.LogInformation("GetAllFences - IsAuthenticated: {IsAuth}, User: {User}, AuthType: {AuthType}", 
+            currentUser.IsAuthenticated, 
+            currentUser.Email,
+            httpContext.User?.Identity?.AuthenticationType);
+        
         if (!currentUser.IsAuthenticated)
+        {
+            logger.LogWarning("GetAllFences - Returning Unauthorized");
             return Results.Unauthorized();
+        }
 
         var fences = await db.FenceTypes
             .Where(f => f.OrganizationId == currentUser.OrganizationId)

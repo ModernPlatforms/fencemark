@@ -1,6 +1,9 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Json
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient ApiClient
+@inject IDialogService DialogService
 
 <MudLayout>
     <MudAppBar Elevation="2">
@@ -39,9 +42,75 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _onboardingChecked = false;
 
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_onboardingChecked)
+        {
+            _onboardingChecked = true;
+            await CheckOnboardingStatus();
+        }
+    }
+    
+    private async Task CheckOnboardingStatus()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity?.IsAuthenticated ?? true)
+                return;
+            
+            // Get current user info from API
+            var response = await ApiClient.GetAsync("/api/auth/me");
+            if (!response.IsSuccessStatusCode)
+                return;
+                
+            var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
+            if (userInfo?.OrganizationName == null)
+                return;
+            
+            // Check if organization name looks like an email domain or common provider name
+            var commonProviders = new[] { "hotmail", "gmail", "yahoo", "outlook", "live", "msn", "icloud" };
+            var isEmailDomain = userInfo.OrganizationName.Contains(".") || 
+                               commonProviders.Any(p => userInfo.OrganizationName.Equals(p, StringComparison.OrdinalIgnoreCase));
+            
+            if (isEmailDomain)
+            {
+                var parameters = new DialogParameters
+                {
+                    { "CurrentOrganizationName", userInfo.OrganizationName },
+                    { "OrganizationId", userInfo.OrganizationId }
+                };
+                
+                var options = new DialogOptions 
+                { 
+                    CloseOnEscapeKey = false,
+                    CloseButton = false,
+                    MaxWidth = MaxWidth.Small,
+                    FullWidth = true
+                };
+                
+                await DialogService.ShowAsync<Pages.OrganizationSetup>("Organization Setup", parameters, options);
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Silently fail onboarding check
+        }
+    }
+    
+    private class UserInfoResponse
+    {
+        public string? UserId { get; set; }
+        public string? Email { get; set; }
+        public string? OrganizationId { get; set; }
+        public string? OrganizationName { get; set; }
     }
 }

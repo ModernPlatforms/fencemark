@@ -11,14 +11,14 @@ let placedGates = [];
 let currentDrawing = [];
 
 // Initialize Azure Maps
-window.initializeAzureMap = function (jobId) {
+window.initializeAzureMap = function (jobId, subscriptionKey) {
     currentJobId = jobId;
     
-    // IMPORTANT: Replace this placeholder with your actual Azure Maps subscription key
-    // Get your key from: https://portal.azure.com -> Azure Maps -> Authentication
-    // For production, load this from server-side configuration via an API endpoint
-    // to prevent exposing the key in client-side code
-    const subscriptionKey = 'YOUR_AZURE_MAPS_SUBSCRIPTION_KEY';
+    // Validate subscription key is provided
+    if (!subscriptionKey || subscriptionKey === 'YOUR_AZURE_MAPS_SUBSCRIPTION_KEY') {
+        console.error('Azure Maps subscription key not configured. Please add AzureMaps:SubscriptionKey to appsettings.json');
+        return;
+    }
 
     try {
         // Initialize the map centered on Australia

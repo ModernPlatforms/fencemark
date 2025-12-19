@@ -16,13 +16,12 @@ public class TenantConnectionInterceptor : DbConnectionInterceptor
         _currentUserService = currentUserService;
     }
 
-    public override async ValueTask<InterceptionResult> ConnectionOpeningAsync(
+    public override async Task ConnectionOpenedAsync(
         DbConnection connection,
-        ConnectionEventData eventData,
-        InterceptionResult result,
+        ConnectionEndEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        await base.ConnectionOpeningAsync(connection, eventData, result, cancellationToken);
+        await base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
 
         // Set the SESSION_CONTEXT for SQL Server RLS
         var organizationId = _currentUserService.OrganizationId;
@@ -40,16 +39,13 @@ public class TenantConnectionInterceptor : DbConnectionInterceptor
             command.Parameters.Add(parameter);
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
-
-        return result;
     }
 
-    public override InterceptionResult ConnectionOpening(
+    public override void ConnectionOpened(
         DbConnection connection,
-        ConnectionEventData eventData,
-        InterceptionResult result)
+        ConnectionEndEventData eventData)
     {
-        base.ConnectionOpening(connection, eventData, result);
+        base.ConnectionOpened(connection, eventData);
 
         // Set the SESSION_CONTEXT for SQL Server RLS (sync version)
         var organizationId = _currentUserService.OrganizationId;
@@ -67,7 +63,5 @@ public class TenantConnectionInterceptor : DbConnectionInterceptor
             command.Parameters.Add(parameter);
             command.ExecuteNonQuery();
         }
-
-        return result;
     }
 }

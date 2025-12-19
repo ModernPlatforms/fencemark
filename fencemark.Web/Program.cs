@@ -25,54 +25,75 @@ var builder = WebApplication.CreateBuilder(args);
 // Helper method for handling external authentication sync
 static async Task HandleExternalAuthenticationAsync(TokenValidatedContext context)
 {
-    // Extract user information from Entra External ID claims
-    var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                ?? context.Principal?.FindFirst("preferred_username")?.Value
-                ?? context.Principal?.FindFirst("upn")?.Value;
-    var externalId = context.Principal?.FindFirst("oid")?.Value
-                    ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    var givenName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
-    var familyName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
-
-    if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(externalId))
+    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+    
+    try
     {
-        context.Fail("Email or External ID claim not found");
-        return;
-    }
+        // Extract user information from Entra External ID claims
+        var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                    ?? context.Principal?.FindFirst("preferred_username")?.Value
+                    ?? context.Principal?.FindFirst("upn")?.Value;
+        var externalId = context.Principal?.FindFirst("oid")?.Value
+                        ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var givenName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value;
+        var familyName = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Surname)?.Value;
 
-    // Extract organization name from email domain
-    var organizationName = "Default Organization";
-    if (email.Contains('@'))
-    {
-        var parts = email.Split('@');
-        if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(externalId))
         {
-            organizationName = parts[1];
+            logger.LogError("Email or External ID claim not found in token. Available claims: {Claims}",
+                string.Join(", ", context.Principal?.Claims.Select(c => $"{c.Type}={c.Value}") ?? Array.Empty<string>()));
+            context.Fail("Email or External ID claim not found");
+            return;
         }
+
+        logger.LogInformation("Syncing user {Email} with API", email);
+
+        // Extract organization name from email domain
+        var organizationName = "Default Organization";
+        if (email.Contains('@'))
+        {
+            var parts = email.Split('@');
+            if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+            {
+                organizationName = parts[1];
+            }
+        }
+
+        // Call API to sync user and establish session
+        var httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
+        var httpClient = httpClientFactory.CreateClient("API");
+
+        var externalLoginRequest = new
+        {
+            email = email,
+            externalId = externalId,
+            provider = "AzureAD",
+            givenName = givenName,
+            familyName = familyName,
+            organizationName = organizationName
+        };
+
+        logger.LogInformation("Calling API external-login for {Email}", email);
+        var response = await httpClient.PostAsJsonAsync("/api/auth/external-login", externalLoginRequest);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync();
+            logger.LogError("Failed to sync user with API. Status: {Status}, Error: {Error}",
+                response.StatusCode, errorContent);
+            context.Fail("Failed to sync user with API");
+            return;
+        }
+
+        logger.LogInformation("Successfully synced user {Email} with API", email);
+        
+        // Cookie should now be set by API, authentication is complete
     }
-
-    // Call API to sync user and establish session
-    var httpClientFactory = context.HttpContext.RequestServices.GetRequiredService<IHttpClientFactory>();
-    var httpClient = httpClientFactory.CreateClient("API");
-
-    var externalLoginRequest = new
+    catch (Exception ex)
     {
-        email = email,
-        externalId = externalId,
-        provider = "AzureAD",
-        givenName = givenName,
-        familyName = familyName,
-        organizationName = organizationName
-    };
-
-    var response = await httpClient.PostAsJsonAsync("/api/auth/external-login", externalLoginRequest);
-    if (!response.IsSuccessStatusCode)
-    {
-        context.Fail("Failed to sync user with API");
-        return;
+        logger.LogError(ex, "Exception during external authentication sync");
+        context.Fail($"Exception during authentication: {ex.Message}");
     }
-
-    // Cookie is now set by API, authentication is complete
 }
 
 // Add service defaults & Aspire client integrations.
@@ -96,12 +117,14 @@ builder.Services.AddDataProtection()
 
 // Configure authentication - Entra External ID only
 // The API will set a session cookie after successful Entra authentication
-var authBuilder = builder.Services.AddAuthentication();
+var authBuilder = builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme);
 
 // Configure Azure Entra External ID (CIAM) authentication
 var azureAdSection = builder.Configuration.GetSection("AzureAd");
 var keyVaultUrl = builder.Configuration["KeyVault:Url"];
 var certificateName = builder.Configuration["KeyVault:CertificateName"];
+
+bool authConfigured = false;
 
 if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certificateName))
 {
@@ -121,6 +144,9 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
             {
                 builder.Configuration.Bind("AzureAd", options);
 
+                // Save tokens so we can forward them to API
+                options.SaveTokens = true;
+                
                 // Configure certificate from Key Vault
                 options.ClientCertificates = new[]
                 {
@@ -140,39 +166,70 @@ if (!string.IsNullOrWhiteSpace(keyVaultUrl) && !string.IsNullOrWhiteSpace(certif
                 options.Cookie.Name = ".AspNetCore.Identity.Application";
             },
             displayName: "Entra External ID")
-        .EnableTokenAcquisitionToCallDownstreamApi()
+        .EnableTokenAcquisitionToCallDownstreamApi()  // No scopes here - will be requested on-demand
         .AddInMemoryTokenCaches();
+        
+        Console.WriteLine($"[Web] Configured for on-demand token acquisition. Scopes: {builder.Configuration.GetValue<string>("AzureAd:Scopes")}");
+        
+        authConfigured = true;
+        Console.WriteLine("✓ Configured Entra External ID with Key Vault certificate");
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine($"Failed to configure certificate from Key Vault. Error: {ex.Message}");
-        Console.Error.WriteLine("Entra External ID authentication will be unavailable.");
-        Console.Error.WriteLine("Application requires Entra External ID to be configured properly to function.");
+        Console.Error.WriteLine("Falling back to client secret authentication...");
     }
 }
-else if (azureAdSection.Exists())
+
+if (!authConfigured && azureAdSection.Exists())
 {
-    // Client secret based authentication (for development)
-    authBuilder.AddMicrosoftIdentityWebApp(
-        options =>
-        {
-            builder.Configuration.Bind("AzureAd", options);
-            
-            // Configure event to sync user with API after Entra authentication
-            options.Events = new OpenIdConnectEvents
+    // Client secret based authentication (for development or fallback)
+    try
+    {
+        Console.WriteLine("Attempting to configure Entra External ID with client secret...");
+        authBuilder.AddMicrosoftIdentityWebApp(
+            options =>
             {
-                OnTokenValidated = HandleExternalAuthenticationAsync
-            };
-        },
-        cookieOptions =>
-        {
-            builder.Configuration.Bind("AzureAd", cookieOptions);
-            // Configure cookie to match API's cookie name for session sharing
-            cookieOptions.Cookie.Name = ".AspNetCore.Identity.Application";
-        },
-        displayName: "Entra External ID")
-    .EnableTokenAcquisitionToCallDownstreamApi()
-    .AddInMemoryTokenCaches();
+                builder.Configuration.Bind("AzureAd", options);
+                
+                Console.WriteLine($"AzureAd Configuration - Instance: {options.Instance}, ClientId: {options.ClientId}, TenantId: {options.TenantId}");
+                
+                // Save tokens so we can forward them to API
+                options.SaveTokens = true;
+                
+                // Configure event to sync user with API after Entra authentication
+                options.Events = new OpenIdConnectEvents
+                {
+                    OnTokenValidated = HandleExternalAuthenticationAsync
+                };
+            },
+            cookieOptions =>
+            {
+                builder.Configuration.Bind("AzureAd", cookieOptions);
+                // Configure cookie to match API's cookie name for session sharing
+                cookieOptions.Cookie.Name = ".AspNetCore.Identity.Application";
+            },
+            displayName: "Entra External ID")
+        .EnableTokenAcquisitionToCallDownstreamApi()  // No scopes here - will be requested on-demand
+        .AddInMemoryTokenCaches();
+        
+        Console.WriteLine($"[Web] Configured for on-demand token acquisition. Scopes: {builder.Configuration.GetValue<string>("AzureAd:Scopes")}");
+        
+        authConfigured = true;
+        Console.WriteLine("✓ Configured Entra External ID with client secret");
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Failed to configure authentication with client secret: {ex.Message}");
+        Console.Error.WriteLine($"Stack trace: {ex.StackTrace}");
+        throw;
+    }
+}
+
+if (!authConfigured)
+{
+    throw new InvalidOperationException(
+        "No authentication configured. Please configure AzureAd section in appsettings.json or set up Key Vault.");
 }
 
 builder.Services.AddControllersWithViews()
@@ -225,7 +282,7 @@ var forwardedHeadersOptions = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor
 };
-forwardedHeadersOptions.KnownNetworks.Clear();
+forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 

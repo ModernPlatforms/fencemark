@@ -22,7 +22,8 @@ public interface IAuthService
 public class AuthService(
     UserManager<ApplicationUser> userManager,
     SignInManager<ApplicationUser> signInManager,
-    ApplicationDbContext context) : IAuthService
+    ApplicationDbContext context,
+    ISeedDataService seedDataService) : IAuthService
 {
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
@@ -79,6 +80,9 @@ public class AuthService(
         context.OrganizationMembers.Add(membership);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Seed standard data for new organization
+        await seedDataService.SeedSampleDataAsync(organization.Id);
 
         // Add organization ID as a claim
         await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", organization.Id));
@@ -229,6 +233,9 @@ public class AuthService(
                 context.OrganizationMembers.Add(membership);
 
                 await context.SaveChangesAsync(cancellationToken);
+
+                // Seed standard data for new organization
+                await seedDataService.SeedSampleDataAsync(organization.Id);
             }
         }
 
@@ -252,9 +259,6 @@ public class AuthService(
             await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", userMembership.OrganizationId));
         }
 
-        // Sign in the user to create the authentication cookie
-        await signInManager.SignInAsync(user, isPersistent: true);
-
         return new AuthResponse
         {
             Success = true,
@@ -262,7 +266,8 @@ public class AuthService(
             UserId = user.Id,
             OrganizationId = userMembership?.OrganizationId,
             Email = user.Email,
-            IsGuest = user.IsGuest
+            IsGuest = user.IsGuest,
+            OrganizationName = userMembership?.Organization?.Name
         };
     }
 

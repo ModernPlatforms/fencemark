@@ -28,6 +28,7 @@ public record AuthResponse
     public string? Message { get; init; }
     public string? UserId { get; init; }
     public string? OrganizationId { get; init; }
+    public string? OrganizationName { get; init; }
     public string? Email { get; init; }
     public bool IsGuest { get; init; }
 }

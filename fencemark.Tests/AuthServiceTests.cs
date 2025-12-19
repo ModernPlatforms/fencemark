@@ -69,6 +69,18 @@ public class AuthServiceTests
             userManager, contextAccessor, claimsFactory, options, logger, null!, null);
     }
 
+    private static ISeedDataService CreateMockSeedDataService()
+    {
+        // Return a mock implementation that does nothing
+        return new MockSeedDataService();
+    }
+
+    private class MockSeedDataService : ISeedDataService
+    {
+        public Task SeedSampleDataAsync(string organizationId) => Task.CompletedTask;
+        public Task<bool> HasSampleDataAsync(string organizationId) => Task.FromResult(false);
+    }
+
     [Fact]
     public async Task WhenNewUserRegistersOrganizationIsAutomaticallyCreated()
     {
@@ -76,7 +88,8 @@ public class AuthServiceTests
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
         var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -106,8 +119,8 @@ public class AuthServiceTests
         // Arrange
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var signInManager = CreateSignInManager(userManager, context);        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -136,8 +149,8 @@ public class AuthServiceTests
         // Arrange
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var signInManager = CreateSignInManager(userManager, context);        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -165,8 +178,8 @@ public class AuthServiceTests
         // Arrange
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var signInManager = CreateSignInManager(userManager, context);        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -197,8 +210,8 @@ public class AuthServiceTests
         // Arrange
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var signInManager = CreateSignInManager(userManager, context);        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -230,8 +243,8 @@ public class AuthServiceTests
         // Arrange
         await using var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var signInManager = CreateSignInManager(userManager, context);
-        var authService = new AuthService(userManager, signInManager, context);
+        var signInManager = CreateSignInManager(userManager, context);        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
 
         var request = new RegisterRequest
         {
@@ -248,3 +261,4 @@ public class AuthServiceTests
         Assert.NotNull(response.Message);
     }
 }
+
