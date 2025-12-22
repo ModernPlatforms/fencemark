@@ -4,165 +4,126 @@
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Fencemark - Professional Fence Management</PageTitle>
+<PageTitle>Fencemark - Professional Fencing Planning Software</PageTitle>
 
-<style>
-    .hero-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 60px 20px;
-        border-radius: 12px;
-        margin-bottom: 40px;
-    }
-</style>
-
-<div class="hero-section">
-    <MudGrid Justify="Justify.Center">
-        <MudItem xs="12" md="6">
-            <MudText Typo="Typo.h2" Class="mb-4 fw-bold">
-                <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Large" /> Fencemark
-            </MudText>
-            <MudText Typo="Typo.h6" Class="mb-4" Style="opacity: 0.95;">
-                Professional fence and gate management made simple. Estimate jobs, track components, manage inventory, and deliver accurate quotes to your customers.
-            </MudText>
+<!-- Modern Hero Section -->
+<div class="modern-hero">
+    <div class="modern-hero-content">
+        <div class="flex flex-col items-center text-center">
+            <div class="mb-6 flex items-center gap-2 rounded modern-badge modern-badge-secondary" style="padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.2);">
+                <span class="pulse-dot"></span>
+                <span style="color: white;">Trusted by fencing professionals across Australia</span>
+            </div>
+            <h1 class="mb-6 text-4xl font-bold leading-tight text-balance" style="color: white; max-width: 900px; font-size: clamp(2rem, 5vw, 3.5rem);">
+                Professional Planning Software for Australian Fencing
+            </h1>
+            <p class="mb-8 text-lg leading-relaxed" style="color: rgba(255, 255, 255, 0.9); max-width: 700px; font-size: clamp(1rem, 2vw, 1.25rem);">
+                Streamline your fencing projects from quote to completion. Manage jobs, components, fences, and gates all in one powerful platform.
+            </p>
             
             <AuthorizeView>
                 <Authorized>
-                    <MudStack Row="true" Spacing="3" Class="mt-4">
-                        <MudButton Variant="Variant.Filled" Color="Color.Surface" Size="Size.Large" Href="/fences" StartIcon="@Icons.Material.Filled.Fence">
+                    <div class="flex flex-col gap-4" style="flex-direction: row; flex-wrap: wrap; justify-content: center;">
+                        <a href="/fences" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                            <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Small" />
                             Manage Fences
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Surface" Size="Size.Large" Href="/jobs" StartIcon="@Icons.Material.Filled.Work">
+                        </a>
+                        <a href="/jobs" class="modern-btn modern-btn-lg modern-btn-outline" style="border-color: white; color: white;">
+                            <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Small" />
                             View Jobs
-                        </MudButton>
-                    </MudStack>
+                        </a>
+                    </div>
                 </Authorized>
                 <NotAuthorized>
-                    <MudStack Row="true" Spacing="3" Class="mt-4">
-                        <MudButton Variant="Variant.Filled" Color="Color.Surface" Size="Size.Large" Href="MicrosoftIdentity/Account/SignIn" StartIcon="@Icons.Material.Filled.Login">
+                    <div class="flex flex-col gap-4" style="flex-direction: row; flex-wrap: wrap; justify-content: center;">
+                        <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                            <MudIcon Icon="@Icons.Material.Filled.Login" Size="Size.Small" />
                             Sign In with Entra
-                        </MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Surface" Size="Size.Large" Href="#features">
+                        </a>
+                        <a href="#features" class="modern-btn modern-btn-lg modern-btn-outline" style="border-color: white; color: white;">
                             Learn More
-                        </MudButton>
-                    </MudStack>
+                        </a>
+                    </div>
                 </NotAuthorized>
             </AuthorizeView>
-        </MudItem>
-        <MudItem xs="12" md="6" Class="d-flex align-center justify-center">
-            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto;">
-                <defs>
-                    <linearGradient id="woodGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#8B4513;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#654321;stop-opacity:1" />
-                    </linearGradient>
-                    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#87CEEB;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#E0F6FF;stop-opacity:1" />
-                    </linearGradient>
-                </defs>
-                <rect width="400" height="200" fill="url(#skyGradient)"/>
-                <rect y="200" width="400" height="100" fill="#90EE90"/>
-                <rect x="50" y="150" width="15" height="120" fill="url(#woodGradient)" rx="2"/>
-                <rect x="110" y="150" width="15" height="120" fill="url(#woodGradient)" rx="2"/>
-                <rect x="170" y="150" width="15" height="120" fill="url(#woodGradient)" rx="2"/>
-                <rect x="230" y="150" width="15" height="120" fill="url(#woodGradient)" rx="2"/>
-                <rect x="290" y="150" width="15" height="120" fill="url(#woodGradient)" rx="2"/>
-                <rect x="40" y="170" width="270" height="12" fill="#A0522D" rx="2"/>
-                <rect x="40" y="210" width="270" height="12" fill="#A0522D" rx="2"/>
-                <rect x="40" y="250" width="270" height="12" fill="#A0522D" rx="2"/>
-                <g>
-                    <rect x="330" y="160" width="50" height="100" fill="none" stroke="#654321" stroke-width="3"/>
-                    <line x1="330" y1="185" x2="380" y2="185" stroke="#654321" stroke-width="2"/>
-                    <line x1="330" y1="210" x2="380" y2="210" stroke="#654321" stroke-width="2"/>
-                    <line x1="330" y1="235" x2="380" y2="235" stroke="#654321" stroke-width="2"/>
-                    <circle cx="340" cy="210" r="3" fill="#FFD700"/>
-                </g>
-                <circle cx="350" cy="50" r="25" fill="#FFD700"/>
-                <ellipse cx="80" cy="40" rx="20" ry="12" fill="white" opacity="0.8"/>
-                <ellipse cx="95" cy="40" rx="25" ry="15" fill="white" opacity="0.8"/>
-                <ellipse cx="65" cy="40" rx="18" ry="10" fill="white" opacity="0.8"/>
-            </svg>
-        </MudItem>
-    </MudGrid>
+        </div>
+    </div>
 </div>
 
-<div id="features">
-    <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-6">Everything You Need to Manage Your Fence Business</MudText>
-    
-    <MudGrid>
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Fence Management</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Create and manage different fence types with customizable components and pricing. Track materials and specifications for accurate estimates.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
+<!-- Features Section -->
+<div id="features" class="modern-section">
+    <div class="modern-container">
+        <h2 class="modern-section-title">Everything You Need to Manage Fencing Projects</h2>
+        <p class="modern-section-description">
+            Purpose-built tools for fencing professionals to increase efficiency and accuracy
+        </p>
         
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.DoorFront" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Gate Catalog</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Maintain a comprehensive catalog of gate styles, components, and pricing. Quickly add gates to any fence project.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Job Tracking</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Create new jobs, generate quotes, and track project progress. Keep all your fence installation projects organized.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.ViewInAr" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Component Library</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Build a library of posts, rails, panels, and hardware. Update prices and specifications in one place.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.Calculate" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Accurate Pricing</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Automatic cost calculations based on your component library. Generate professional quotes with confidence.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        
-        <MudItem xs="12" md="4">
-            <MudCard Elevation="2" Class="pa-4 h-100">
-                <MudCardContent>
-                    <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
-                    <MudText Typo="Typo.h6" Class="mb-2">Secure & Reliable</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Enterprise-grade security with Azure authentication. Your data is safe and always available.
-                    </MudText>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-    </MudGrid>
+        <div class="modern-grid modern-grid-cols-4">
+            <div class="modern-card">
+                <div class="modern-icon-container modern-icon-container-primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Large" />
+                </div>
+                <h3 class="modern-card-title">Job Management</h3>
+                <p class="text-muted leading-relaxed text-sm">
+                    Track all your fencing projects from quote to completion with comprehensive job management tools
+                </p>
+            </div>
+            
+            <div class="modern-card">
+                <div class="modern-icon-container modern-icon-container-accent">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewInAr" Size="Size.Large" />
+                </div>
+                <h3 class="modern-card-title">Component Library</h3>
+                <p class="text-muted leading-relaxed text-sm">
+                    Maintain a detailed inventory of posts, panels, rails, and all fencing components with pricing
+                </p>
+            </div>
+            
+            <div class="modern-card">
+                <div class="modern-icon-container modern-icon-container-primary">
+                    <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Large" />
+                </div>
+                <h3 class="modern-card-title">Fence Planning</h3>
+                <p class="text-muted leading-relaxed text-sm">
+                    Design and plan fence installations with precise measurements and material calculations
+                </p>
+            </div>
+            
+            <div class="modern-card">
+                <div class="modern-icon-container modern-icon-container-accent">
+                    <MudIcon Icon="@Icons.Material.Filled.DoorFront" Size="Size.Large" />
+                </div>
+                <h3 class="modern-card-title">Gate Configuration</h3>
+                <p class="text-muted leading-relaxed text-sm">
+                    Configure gates with custom dimensions, hardware, and installation requirements
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="modern-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+    <div class="modern-container text-center">
+        <h2 class="text-3xl font-bold mb-6 text-balance" style="color: white; font-size: clamp(1.875rem, 4vw, 3rem);">
+            Ready to Transform Your Fencing Business?
+        </h2>
+        <p class="text-lg mb-8 leading-relaxed" style="color: rgba(255, 255, 255, 0.9); max-width: 700px; margin-left: auto; margin-right: auto;">
+            Join hundreds of Australian fencing professionals using Fencemark to streamline their operations
+        </p>
+        <AuthorizeView>
+            <NotAuthorized>
+                <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                    Start Your Free Trial Today
+                </a>
+            </NotAuthorized>
+            <Authorized>
+                <a href="/jobs" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                    Get Started with Your First Job
+                </a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 </div>
 
 @code {
