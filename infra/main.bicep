@@ -443,6 +443,10 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'AppConfig__Label'
             value: environmentName
           }
+          {
+            name: 'ASPNETCORE_ENVIRONMENT'
+            value: environmentName == 'dev' ? 'Development' : 'Production'
+          }
         ]
         probes: [
           {
@@ -570,6 +574,10 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'AzureAd__SignedOutCallbackPath'
             value: '/signout-callback-oidc'
+          }
+          {
+            name: 'ASPNETCORE_ENVIRONMENT'
+            value: environmentName == 'dev' ? 'Development' : 'Production'
           }
         ]
         probes: [
