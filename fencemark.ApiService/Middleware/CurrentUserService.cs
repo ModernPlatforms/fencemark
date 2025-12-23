@@ -35,9 +35,9 @@ public class CurrentUserService : ICurrentUserService
         ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid");
 
     public string? Email => 
-        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
         ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("preferred_username")
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
         ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
