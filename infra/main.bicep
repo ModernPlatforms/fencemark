@@ -246,6 +246,24 @@ module keyVault './modules/keyvault.bicep' = {
 }
 
 // ============================================================================
+// Data Protection Key in Key Vault
+// ============================================================================
+// Create RSA key for ASP.NET Core Data Protection
+// This key is used to protect authentication state across container instances
+
+module dataProtectionKey './modules/keyvault-key.bicep' = {
+  name: 'dataProtectionKey'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    keyName: 'dataprotection-key'
+    keyType: 'RSA'
+    keySize: 2048
+    tags: defaultTags
+  }
+}
+
+// ============================================================================
 // Reference to Central App Configuration
 // ============================================================================
 // The central App Config is deployed separately via central-appconfig.bicep
