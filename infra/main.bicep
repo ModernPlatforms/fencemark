@@ -447,6 +447,16 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'ASPNETCORE_ENVIRONMENT'
             value: environmentName == 'dev' ? 'Development' : 'Production'
           }
+          // Configure Data Protection to use Azure Key Vault for persistent key storage
+          // This ensures encrypted data survives container restarts and works across instances
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYSTORE'
+            value: 'AzureKeyVault'
+          }
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_URI'
+            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/'
+          }
         ]
         probes: [
           {
@@ -578,6 +588,16 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'ASPNETCORE_ENVIRONMENT'
             value: environmentName == 'dev' ? 'Development' : 'Production'
+          }
+          // Configure Data Protection to use Azure Key Vault for persistent key storage
+          // This ensures CSRF tokens and other encrypted data survive container restarts
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYSTORE'
+            value: 'AzureKeyVault'
+          }
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_URI'
+            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/'
           }
         ]
         probes: [

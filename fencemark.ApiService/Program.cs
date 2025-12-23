@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.DataProtection.AzureKeyVault;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +102,26 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Configure Data Protection to use Azure Key Vault for persistent key storage
+// This ensures encrypted data survives container restarts and works across instances
+var dataProtectionBuilder = builder.Services.AddDataProtection()
+    .SetApplicationName("fencemark");
+
+if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_URI"]))
+{
+    try
+    {
+        var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];
+        var credential = new Azure.Identity.DefaultAzureCredential();
+        dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyIdentifier), credential);
+        Console.WriteLine($"[ApiService] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ApiService] Warning: Could not configure Key Vault for data protection: {ex.Message}");
+    }
+}
 
 // CRITICAL: Override Identity's default authentication scheme
 // Identity sets Cookie as default, but this API should use JWT Bearer

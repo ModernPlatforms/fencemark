@@ -19,6 +19,7 @@ using Azure.Security.KeyVault.Certificates;
 using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.DataProtection.AzureKeyVault;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,8 +113,26 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStateProvider>();
 
 // Configure Data Protection for shared cookies with API service
-builder.Services.AddDataProtection()
+var dataProtectionBuilder = builder.Services.AddDataProtection()
     .SetApplicationName("fencemark");
+
+// In production/Azure, use Key Vault for persistent key storage
+// This ensures encryption keys survive container restarts
+if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_URI"]))
+{
+    try
+    {
+        var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];
+        var credential = new Azure.Identity.DefaultAzureCredential();
+        dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyIdentifier), credential);
+        Console.WriteLine($"[ApiService] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ApiService] Warning: Could not configure Key Vault for data protection: {ex.Message}");
+    }
+}
+
 
 // Configure authentication - Entra External ID only
 // The API will set a session cookie after successful Entra authentication
