@@ -101,8 +101,12 @@
     
     private bool IsActive(string path)
     {
-        var currentPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        return currentPath.StartsWith(path.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+        var currentPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        
+        // Exact match or match with trailing slash
+        return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals(path + "/", StringComparison.OrdinalIgnoreCase) ||
+               (currentPath.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase) && path != "/");
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -336,6 +336,16 @@ body {
     color: var(--foreground);
 }
 
+.modern-btn-danger {
+    background-color: transparent;
+    color: var(--error);
+}
+
+.modern-btn-danger:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
 .modern-btn-lg {
     padding: 0.875rem 1.75rem;
     font-size: 1rem;
@@ -587,10 +597,6 @@ body {
 
 .justify-between {
     justify-content: space-between;
-}
-
-.justify-center {
-    justify-content: center;
 }
 
 .justify-center {
