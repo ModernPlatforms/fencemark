@@ -457,6 +457,10 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_URI'
             value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/'
           }
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER'
+            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/Keys/dataprotection-key'
+          }
         ]
         probes: [
           {
@@ -598,6 +602,10 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
           {
             name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_URI'
             value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/'
+          }
+          {
+            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER'
+            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/Keys/dataprotection-key'
           }
         ]
         probes: [
@@ -762,6 +770,18 @@ module apiServiceKeyVaultRoleAssignment './keyvault-access.bicep' = {
   }
 }
 
+// Grant API Service access to Key Vault key (Crypto User)
+module apiServiceKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
+  name: 'apiServiceKeyVaultCryptoRoleAssignment'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+    roleName: 'Key Vault Crypto Officer'
+  }
+}
+
 // Grant Web Frontend access to Key Vault secrets
 module webFrontendKeyVaultRoleAssignment './keyvault-access.bicep' = {
   name: 'webFrontendKeyVaultRoleAssignment'
@@ -771,6 +791,18 @@ module webFrontendKeyVaultRoleAssignment './keyvault-access.bicep' = {
     principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Secrets User'
+  }
+}
+
+// Grant Web Frontend access to Key Vault key (Crypto User)
+module webFrontendKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
+  name: 'webFrontendKeyVaultCryptoRoleAssignment'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+    roleName: 'Key Vault Crypto Officer'
   }
 }
 
