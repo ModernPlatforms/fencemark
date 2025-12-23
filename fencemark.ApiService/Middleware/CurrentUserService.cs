@@ -29,9 +29,16 @@ public class CurrentUserService : ICurrentUserService
         _logger = logger;
     }
 
-    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public string? UserId => 
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid");
 
-    public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
+    public string? Email => 
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("preferred_username")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
