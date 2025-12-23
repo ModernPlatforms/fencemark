@@ -29,9 +29,18 @@ public class CurrentUserService : ICurrentUserService
         _logger = logger;
     }
 
-    public string? UserId => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+    public string? UserId => 
+        // Azure AD tokens use 'oid' (object id) as the primary user identifier
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    public string? Email => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email);
+    public string? Email => 
+        // Azure AD v1.0 tokens use ClaimTypes.Name for the email
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Name)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Email)
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("preferred_username")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
 
