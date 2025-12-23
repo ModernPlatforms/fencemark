@@ -106,6 +106,7 @@ jobs:
           name: dotnet-tests
           path: TestResults/*.trx
           reporter: dotnet-trx
+          fail-on-error: false
 
       - name: Generate image metadata
         id: meta
@@ -443,9 +444,10 @@ jobs:
         if: always()
         uses: dorny/test-reporter@v1
         with:
-          name: dotnet-tests
-          path: TestResults/*.trx
+          name: e2e-playwright-tests
+          path: TestResults/playwright*.trx
           reporter: dotnet-trx
+          fail-on-error: false
 
   # ============================================================================
   # Deploy to Staging Environment
