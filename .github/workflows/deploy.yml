@@ -438,6 +438,7 @@ jobs:
         with:
           name: test-results
           path: TestResults/playwright/*.trx
+          overwrite: true
           if-no-files-found: warn
           retention-days: 30
 
