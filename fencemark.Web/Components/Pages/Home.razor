@@ -10,37 +10,37 @@
 <div class="modern-hero">
     <div class="modern-hero-content">
         <div class="flex flex-col items-center text-center">
-            <div class="mb-6 flex items-center gap-2 rounded modern-badge modern-badge-secondary" style="padding: 0.5rem 1rem; background: rgba(255, 255, 255, 0.2);">
+            <div class="mb-6 flex items-center gap-2 rounded modern-badge modern-badge-secondary hero-badge">
                 <span class="pulse-dot"></span>
-                <span style="color: white;">Trusted by fencing professionals across Australia</span>
+                <span class="hero-badge-text">Trusted by fencing professionals across Australia</span>
             </div>
-            <h1 class="mb-6 text-4xl font-bold leading-tight text-balance" style="color: white; max-width: 900px; font-size: clamp(2rem, 5vw, 3.5rem);">
+            <h1 class="mb-6 text-4xl font-bold leading-tight text-balance hero-title">
                 Professional Planning Software for Australian Fencing
             </h1>
-            <p class="mb-8 text-lg leading-relaxed" style="color: rgba(255, 255, 255, 0.9); max-width: 700px; font-size: clamp(1rem, 2vw, 1.25rem);">
+            <p class="mb-8 text-lg leading-relaxed hero-description">
                 Streamline your fencing projects from quote to completion. Manage jobs, components, fences, and gates all in one powerful platform.
             </p>
             
             <AuthorizeView>
                 <Authorized>
-                    <div class="flex flex-col gap-4" style="flex-direction: row; flex-wrap: wrap; justify-content: center;">
-                        <a href="/fences" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                    <div class="flex flex-row flex-wrap gap-4 justify-center">
+                        <a href="/fences" class="modern-btn modern-btn-lg hero-btn-primary">
                             <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Small" />
                             Manage Fences
                         </a>
-                        <a href="/jobs" class="modern-btn modern-btn-lg modern-btn-outline" style="border-color: white; color: white;">
+                        <a href="/jobs" class="modern-btn modern-btn-lg modern-btn-outline hero-btn-outline">
                             <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Small" />
                             View Jobs
                         </a>
                     </div>
                 </Authorized>
                 <NotAuthorized>
-                    <div class="flex flex-col gap-4" style="flex-direction: row; flex-wrap: wrap; justify-content: center;">
-                        <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                    <div class="flex flex-row flex-wrap gap-4 justify-center">
+                        <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg hero-btn-primary">
                             <MudIcon Icon="@Icons.Material.Filled.Login" Size="Size.Small" />
                             Sign In with Entra
                         </a>
-                        <a href="#features" class="modern-btn modern-btn-lg modern-btn-outline" style="border-color: white; color: white;">
+                        <a href="#features" class="modern-btn modern-btn-lg modern-btn-outline hero-btn-outline">
                             Learn More
                         </a>
                     </div>
@@ -103,22 +103,22 @@
 </div>
 
 <!-- CTA Section -->
-<div class="modern-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+<div class="modern-section modern-cta-section">
     <div class="modern-container text-center">
-        <h2 class="text-3xl font-bold mb-6 text-balance" style="color: white; font-size: clamp(1.875rem, 4vw, 3rem);">
+        <h2 class="text-3xl font-bold mb-6 text-balance cta-title">
             Ready to Transform Your Fencing Business?
         </h2>
-        <p class="text-lg mb-8 leading-relaxed" style="color: rgba(255, 255, 255, 0.9); max-width: 700px; margin-left: auto; margin-right: auto;">
+        <p class="text-lg mb-8 leading-relaxed cta-description">
             Join hundreds of Australian fencing professionals using Fencemark to streamline their operations
         </p>
         <AuthorizeView>
             <NotAuthorized>
-                <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg hero-btn-primary">
                     Start Your Free Trial Today
                 </a>
             </NotAuthorized>
             <Authorized>
-                <a href="/jobs" class="modern-btn modern-btn-lg" style="background: white; color: #667eea;">
+                <a href="/jobs" class="modern-btn modern-btn-lg hero-btn-primary">
                     Get Started with Your First Job
                 </a>
             </Authorized>

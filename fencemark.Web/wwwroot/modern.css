@@ -52,6 +52,15 @@ body {
 /* Modern Typography */
 .text-balance {
     text-wrap: balance;
+    /* Fallback for browsers that don't support text-wrap */
+    max-width: 100%;
+}
+
+@supports not (text-wrap: balance) {
+    .text-balance {
+        /* Fallback for older browsers */
+        text-align: center;
+    }
 }
 
 .leading-relaxed {
@@ -89,6 +98,64 @@ body {
     z-index: 1;
     max-width: 1200px;
     margin: 0 auto;
+}
+
+.hero-badge {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.hero-badge-text {
+    color: white;
+}
+
+.hero-title {
+    color: white;
+    max-width: 900px;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.hero-description {
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 700px;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.hero-btn-primary {
+    background: white;
+    color: #667eea;
+}
+
+.hero-btn-primary:hover {
+    background: #f0f0f0;
+    color: #667eea;
+}
+
+.hero-btn-outline {
+    border-color: white;
+    color: white;
+}
+
+.hero-btn-outline:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.modern-cta-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.cta-title {
+    color: white;
+    font-size: clamp(1.875rem, 4vw, 3rem);
+}
+
+.cta-description {
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .pulse-dot {
@@ -171,6 +238,16 @@ body {
 .modern-nav a.active {
     color: var(--primary);
     font-weight: 600;
+}
+
+.modern-nav-actions .modern-user-name {
+    display: none; /* Hidden by default, can be shown via media query if needed */
+}
+
+@media (min-width: 1024px) {
+    .modern-nav-actions .modern-user-name {
+        display: inline; /* Show on larger screens if desired */
+    }
 }
 
 /* Modern Card Styles */
@@ -500,12 +577,20 @@ body {
     flex-direction: row;
 }
 
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
 .items-center {
     align-items: center;
 }
 
 .justify-between {
     justify-content: space-between;
+}
+
+.justify-center {
+    justify-content: center;
 }
 
 .justify-center {

@@ -10,7 +10,7 @@
 <PageTitle>Jobs - Fencemark</PageTitle>
 
 <div class="modern-container">
-    <div class="flex flex-col gap-4 mb-8" style="flex-direction: row; align-items: center; justify-content: space-between;">
+    <div class="flex flex-row flex-wrap gap-4 mb-8 items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold" style="margin-bottom: 0.25rem;">Jobs</h1>
             <p class="text-muted">Manage all your fencing projects</p>
@@ -46,7 +46,7 @@
                     <div class="modern-job-card-header">
                         <div class="flex items-center justify-between mb-2">
                             <h3 class="modern-card-title" style="margin: 0;">@job.Name</h3>
-                            <span class="modern-badge @GetStatusBadgeClass(job.Status)">@job.Status</span>
+                            <span class="modern-badge @GetStatusBadgeClass(job.Status)">@GetStatusDisplayName(job.Status)</span>
                         </div>
                         <p class="modern-card-description" style="margin: 0;">@job.CustomerName</p>
                     </div>
@@ -371,6 +371,17 @@
         JobStatusDto.Completed => "modern-badge-success",
         JobStatusDto.Cancelled => "modern-badge-error",
         _ => "modern-badge-secondary"
+    };
+    
+    private string GetStatusDisplayName(JobStatusDto status) => status switch
+    {
+        JobStatusDto.Draft => "Draft",
+        JobStatusDto.Quoted => "Quoted",
+        JobStatusDto.Approved => "Approved",
+        JobStatusDto.InProgress => "In Progress",
+        JobStatusDto.Completed => "Completed",
+        JobStatusDto.Cancelled => "Cancelled",
+        _ => status.ToString()
     };
     
     private int CalculateProgress(JobDto job)
