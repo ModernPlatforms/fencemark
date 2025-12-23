@@ -580,11 +580,11 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
           }
           {
             name: 'services__apiservice__http__0'
-            value: 'http://${abbrs.appContainerApps}apiservice-${resourceToken}'
+            value: 'http://${apiService.outputs.fqdn}'
           }
           {
             name: 'services__apiservice__https__0'
-            value: 'https://${abbrs.appContainerApps}apiservice-${resourceToken}'
+            value: 'https://${apiService.outputs.fqdn}'
           }
           {
             name: 'AppConfig__Endpoint'
