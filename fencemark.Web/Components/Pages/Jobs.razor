@@ -9,103 +9,121 @@
 
 <PageTitle>Jobs - Fencemark</PageTitle>
 
-<div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-briefcase"></i> Jobs</h2>
-        <button class="btn btn-primary" @onclick="ShowCreateModal">
-            <i class="bi bi-plus-circle"></i> Create New Job
+<div class="modern-container">
+    <div class="flex flex-row flex-wrap gap-4 mb-8 items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold" style="margin-bottom: 0.25rem;">Jobs</h1>
+            <p class="text-muted">Manage all your fencing projects</p>
+        </div>
+        <button class="modern-btn modern-btn-primary gap-2" @onclick="ShowCreateModal">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+            New Job
         </button>
     </div>
 
     @if (isLoading)
     {
-        <div class="text-center py-5">
+        <div class="text-center" style="padding: 3rem 0;">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
-            <p class="mt-2">Loading jobs...</p>
+            <p class="mt-3">Loading jobs...</p>
         </div>
     }
     else if (jobs == null || !jobs.Any())
     {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No jobs found. Create your first job to get started!
+        <div class="modern-card" style="padding: 2rem; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Info" Class="mb-3" />
+            <p class="text-muted">No jobs found. Create your first job to get started!</p>
         </div>
     }
     else
     {
-        <div class="row g-4">
+        <div class="modern-grid modern-grid-cols-3">
             @foreach (var job in jobs)
             {
-                <div class="col-md-6 col-lg-4">
-                    <div class="card job-card h-100">
-                        <div class="card-header">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">@job.Name</h5>
-                                <span class="badge bg-@GetStatusColor(job.Status)">@job.Status</span>
+                <div class="modern-job-card">
+                    <div class="modern-job-card-header">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="modern-card-title" style="margin: 0;">@job.Name</h3>
+                            <span class="modern-badge @GetStatusBadgeClass(job.Status)">@GetStatusDisplayName(job.Status)</span>
+                        </div>
+                        <p class="modern-card-description" style="margin: 0;">@job.CustomerName</p>
+                    </div>
+                    
+                    <div class="modern-job-card-body">
+                        <div style="margin-bottom: 1rem;">
+                            @if (!string.IsNullOrEmpty(job.CustomerEmail))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" />
+                                    <span>@job.CustomerEmail</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(job.CustomerPhone))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" />
+                                    <span>@job.CustomerPhone</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(job.InstallationAddress))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                    <span>@job.InstallationAddress</span>
+                                </div>
+                            }
+                            <div class="modern-info-item" style="margin-top: 0.75rem;">
+                                <MudIcon Icon="@Icons.Material.Filled.Straighten" Size="Size.Small" />
+                                <span><strong>@job.TotalLinearFeet ft</strong> total</span>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <div class="job-info">
-                                <div class="info-item">
-                                    <i class="bi bi-person"></i>
-                                    <strong>@job.CustomerName</strong>
-                                </div>
-                                @if (!string.IsNullOrEmpty(job.CustomerEmail))
-                                {
-                                    <div class="info-item">
-                                        <i class="bi bi-envelope"></i>
-                                        @job.CustomerEmail
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(job.CustomerPhone))
-                                {
-                                    <div class="info-item">
-                                        <i class="bi bi-telephone"></i>
-                                        @job.CustomerPhone
-                                    </div>
-                                }
-                                @if (!string.IsNullOrEmpty(job.InstallationAddress))
-                                {
-                                    <div class="info-item">
-                                        <i class="bi bi-geo-alt"></i>
-                                        @job.InstallationAddress
-                                    </div>
-                                }
-                                <div class="info-item mt-3">
-                                    <i class="bi bi-rulers"></i>
-                                    <strong>@job.TotalLinearFeet ft</strong> total
-                                </div>
+                        
+                        <div style="margin-top: 1rem; padding-top: 1rem;" class="border-t">
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span class="text-muted">Materials:</span>
+                                <span>$@job.MaterialsCost.ToString("F2")</span>
                             </div>
-                            <div class="job-pricing mt-3 pt-3 border-top">
-                                <div class="d-flex justify-content-between">
-                                    <span>Materials:</span>
-                                    <span>$@job.MaterialsCost.ToString("F2")</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>Labor:</span>
-                                    <span>$@job.LaborCost.ToString("F2")</span>
-                                </div>
-                                <div class="d-flex justify-content-between fw-bold mt-2">
-                                    <span>Total:</span>
-                                    <span class="text-success">$@job.TotalCost.ToString("F2")</span>
-                                </div>
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span class="text-muted">Labor:</span>
+                                <span>$@job.LaborCost.ToString("F2")</span>
+                            </div>
+                            <div class="flex justify-between font-bold mt-3">
+                                <span>Total:</span>
+                                <span class="text-success">$@job.TotalCost.ToString("F2")</span>
                             </div>
                         </div>
-                        <div class="card-footer bg-transparent">
-                            <div class="d-grid gap-2">
-                                <button class="btn btn-primary" @onclick="() => OpenDrawing(job.Id)">
-                                    <i class="bi bi-map"></i> Open Drawing
-                                </button>
-                                <div class="btn-group">
-                                    <button class="btn btn-outline-primary" @onclick="() => EditJob(job)">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </button>
-                                    <button class="btn btn-outline-danger" @onclick="() => DeleteJob(job)">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
+                        
+                        @if (job.TotalLinearFeet > 0)
+                        {
+                            var progress = CalculateProgress(job);
+                            <div style="margin-top: 1rem;">
+                                <div class="flex justify-between mb-1 text-sm">
+                                    <span class="text-muted">Progress</span>
+                                    <span class="font-semibold">@progress%</span>
+                                </div>
+                                <div class="modern-progress">
+                                    <div class="modern-progress-bar" style="width: @(progress)%"></div>
                                 </div>
                             </div>
+                        }
+                    </div>
+                    
+                    <div class="modern-job-card-footer">
+                        <button class="modern-btn modern-btn-primary w-full mb-2" @onclick="() => OpenDrawing(job.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" />
+                            Open Drawing
+                        </button>
+                        <div class="flex gap-2">
+                            <button class="modern-btn modern-btn-outline" style="flex: 1;" @onclick="() => EditJob(job)">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                Edit
+                            </button>
+                            <button class="modern-btn modern-btn-danger" style="flex: 1;" @onclick="() => DeleteJob(job)">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -218,30 +236,6 @@
         </div>
     </div>
 }
-
-<style>
-    .job-card {
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid #e0e0e0;
-    }
-
-    .job-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .job-info .info-item {
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .job-info .info-item i {
-        width: 20px;
-        color: #667eea;
-    }
-</style>
 
 @code {
     private List<JobDto>? jobs;
@@ -368,14 +362,39 @@
         Navigation.NavigateTo($"/jobs/{jobId}/drawing");
     }
 
-    private string GetStatusColor(JobStatusDto status) => status switch
+    private string GetStatusBadgeClass(JobStatusDto status) => status switch
     {
-        JobStatusDto.Draft => "secondary",
-        JobStatusDto.Quoted => "info",
-        JobStatusDto.Approved => "primary",
-        JobStatusDto.InProgress => "warning",
-        JobStatusDto.Completed => "success",
-        JobStatusDto.Cancelled => "danger",
-        _ => "secondary"
+        JobStatusDto.Draft => "modern-badge-secondary",
+        JobStatusDto.Quoted => "modern-badge-info",
+        JobStatusDto.Approved => "modern-badge-info",
+        JobStatusDto.InProgress => "modern-badge-warning",
+        JobStatusDto.Completed => "modern-badge-success",
+        JobStatusDto.Cancelled => "modern-badge-error",
+        _ => "modern-badge-secondary"
     };
+    
+    private string GetStatusDisplayName(JobStatusDto status) => status switch
+    {
+        JobStatusDto.Draft => "Draft",
+        JobStatusDto.Quoted => "Quoted",
+        JobStatusDto.Approved => "Approved",
+        JobStatusDto.InProgress => "In Progress",
+        JobStatusDto.Completed => "Completed",
+        JobStatusDto.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
+    
+    private int CalculateProgress(JobDto job)
+    {
+        return job.Status switch
+        {
+            JobStatusDto.Draft => 10,
+            JobStatusDto.Quoted => 25,
+            JobStatusDto.Approved => 40,
+            JobStatusDto.InProgress => 65,
+            JobStatusDto.Completed => 100,
+            JobStatusDto.Cancelled => 0,
+            _ => 0
+        };
+    }
 }
