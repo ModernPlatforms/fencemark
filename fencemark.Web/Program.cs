@@ -125,11 +125,11 @@ if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVA
         var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];
         var credential = new Azure.Identity.DefaultAzureCredential();
         dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyIdentifier), credential);
-        Console.WriteLine($"[ApiService] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
+        Console.WriteLine($"[Web] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[ApiService] Warning: Could not configure Key Vault for data protection: {ex.Message}");
+        Console.WriteLine($"[Web] Warning: Could not configure Key Vault for data protection: {ex.Message}");
     }
 }
 
