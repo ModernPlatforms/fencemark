@@ -583,10 +583,6 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
             value: 'http://${apiService.outputs.fqdn}'
           }
           {
-            name: 'services__apiservice__https__0'
-            value: 'https://${apiService.outputs.fqdn}'
-          }
-          {
             name: 'AppConfig__Endpoint'
             value: 'https://${centralAppConfigName}.azconfig.io'
           }
