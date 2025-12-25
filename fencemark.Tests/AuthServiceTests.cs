@@ -260,5 +260,165 @@ public class AuthServiceTests
         Assert.False(response.Success);
         Assert.NotNull(response.Message);
     }
+
+    [Fact]
+    public async Task WhenExistingUserWithoutOrganizationLogsInViaExternalProviderOrganizationIsCreated()
+    {
+        // Arrange
+        await using var context = CreateDbContext();
+        var userManager = CreateUserManager(context);
+        var signInManager = CreateSignInManager(userManager, context);
+        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
+
+        // Create a user without an organization (simulating deleted organization membership)
+        var user = new ApplicationUser
+        {
+            UserName = "orphan@example.com",
+            Email = "orphan@example.com",
+            IsGuest = true,
+            IsEmailVerified = false,
+            CreatedAt = DateTime.UtcNow
+        };
+        await userManager.CreateAsync(user, "Password123!");
+
+        // Verify user has no organization membership
+        var membershipBefore = await context.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.UserId == user.Id);
+        Assert.Null(membershipBefore);
+
+        var request = new ExternalLoginRequest
+        {
+            Email = "orphan@example.com",
+            ExternalId = "ext-123",
+            Provider = "AzureAD",
+            OrganizationName = "Auto Created Org"
+        };
+
+        // Act
+        var response = await authService.ExternalLoginAsync(request);
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.NotNull(response.OrganizationId);
+        Assert.Equal("Auto Created Org", response.OrganizationName);
+
+        // Verify organization was created
+        var organization = await context.Organizations.FindAsync(response.OrganizationId);
+        Assert.NotNull(organization);
+        Assert.Equal("Auto Created Org", organization.Name);
+
+        // Verify user is now a member with Owner role
+        var membership = await context.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.UserId == user.Id && m.OrganizationId == response.OrganizationId);
+        Assert.NotNull(membership);
+        Assert.Equal(Role.Owner, membership.Role);
+        Assert.True(membership.IsAccepted);
+    }
+
+    [Fact]
+    public async Task WhenNewUserLogsInViaExternalProviderOrganizationIsCreated()
+    {
+        // Arrange
+        await using var context = CreateDbContext();
+        var userManager = CreateUserManager(context);
+        var signInManager = CreateSignInManager(userManager, context);
+        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
+
+        var request = new ExternalLoginRequest
+        {
+            Email = "newuser@example.com",
+            ExternalId = "ext-456",
+            Provider = "AzureAD",
+            OrganizationName = "New User Org"
+        };
+
+        // Act
+        var response = await authService.ExternalLoginAsync(request);
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.NotNull(response.UserId);
+        Assert.NotNull(response.OrganizationId);
+        Assert.Equal("New User Org", response.OrganizationName);
+
+        // Verify organization was created
+        var organization = await context.Organizations.FindAsync(response.OrganizationId);
+        Assert.NotNull(organization);
+        Assert.Equal("New User Org", organization.Name);
+
+        // Verify user was created and is a member
+        var user = await userManager.FindByIdAsync(response.UserId!);
+        Assert.NotNull(user);
+        Assert.Equal("newuser@example.com", user.Email);
+        Assert.False(user.IsGuest);
+        Assert.True(user.IsEmailVerified);
+
+        var membership = await context.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.UserId == user.Id && m.OrganizationId == response.OrganizationId);
+        Assert.NotNull(membership);
+        Assert.Equal(Role.Owner, membership.Role);
+    }
+
+    [Fact]
+    public async Task WhenExistingUserWithOrganizationLogsInViaExternalProviderExistingOrganizationIsUsed()
+    {
+        // Arrange
+        await using var context = CreateDbContext();
+        var userManager = CreateUserManager(context);
+        var signInManager = CreateSignInManager(userManager, context);
+        var seedDataService = CreateMockSeedDataService();
+        var authService = new AuthService(userManager, signInManager, context, seedDataService);
+
+        // Create a user with an organization
+        var user = new ApplicationUser
+        {
+            UserName = "existing@example.com",
+            Email = "existing@example.com",
+            IsGuest = false,
+            IsEmailVerified = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        await userManager.CreateAsync(user, "Password123!");
+
+        var organization = new Organization
+        {
+            Name = "Existing Org",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Organizations.Add(organization);
+
+        var membership = new OrganizationMember
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Role = Role.Owner,
+            JoinedAt = DateTime.UtcNow,
+            IsAccepted = true
+        };
+        context.OrganizationMembers.Add(membership);
+        await context.SaveChangesAsync();
+
+        var request = new ExternalLoginRequest
+        {
+            Email = "existing@example.com",
+            ExternalId = "ext-789",
+            Provider = "AzureAD",
+            OrganizationName = "Ignored New Org Name"
+        };
+
+        // Act
+        var response = await authService.ExternalLoginAsync(request);
+
+        // Assert
+        Assert.True(response.Success);
+        Assert.Equal(organization.Id, response.OrganizationId);
+        Assert.Equal("Existing Org", response.OrganizationName);
+
+        // Verify no new organization was created
+        var orgCount = await context.Organizations.CountAsync();
+        Assert.Equal(1, orgCount);
+    }
 }
 
