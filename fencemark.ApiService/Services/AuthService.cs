@@ -206,37 +206,47 @@ public class AuthService(
                         Message = string.Join(", ", result.Errors.Select(e => e.Description))
                     };
                 }
-
-                // Find or create organization
-                var organization = await context.Organizations
-                    .FirstOrDefaultAsync(o => o.Name == request.OrganizationName, cancellationToken);
-
-                if (organization is null)
-                {
-                    organization = new Organization
-                    {
-                        Name = request.OrganizationName,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    context.Organizations.Add(organization);
-                }
-
-                // Add user as owner of the organization
-                var membership = new OrganizationMember
-                {
-                    UserId = user.Id,
-                    OrganizationId = organization.Id,
-                    Role = Role.Owner,
-                    JoinedAt = DateTime.UtcNow,
-                    IsAccepted = true
-                };
-                context.OrganizationMembers.Add(membership);
-
-                await context.SaveChangesAsync(cancellationToken);
-
-                // Seed standard data for new organization
-                await seedDataService.SeedSampleDataAsync(organization.Id);
             }
+        }
+
+        // Ensure the user has an organization membership
+        // This handles cases where:
+        // 1. A new user was just created and needs an organization
+        // 2. An existing user was found but has no organization (e.g., deleted from DB)
+        var existingMembership = await context.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.UserId == user.Id, cancellationToken);
+
+        if (existingMembership is null)
+        {
+            // Find or create organization
+            var organization = await context.Organizations
+                .FirstOrDefaultAsync(o => o.Name == request.OrganizationName, cancellationToken);
+
+            if (organization is null)
+            {
+                organization = new Organization
+                {
+                    Name = request.OrganizationName,
+                    CreatedAt = DateTime.UtcNow
+                };
+                context.Organizations.Add(organization);
+            }
+
+            // Add user as owner of the organization
+            var membership = new OrganizationMember
+            {
+                UserId = user.Id,
+                OrganizationId = organization.Id,
+                Role = Role.Owner,
+                JoinedAt = DateTime.UtcNow,
+                IsAccepted = true
+            };
+            context.OrganizationMembers.Add(membership);
+
+            await context.SaveChangesAsync(cancellationToken);
+
+            // Seed standard data for new organization
+            await seedDataService.SeedSampleDataAsync(organization.Id);
         }
 
         // Get user's organization to add as claim
