@@ -89,21 +89,18 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-05-01-preview' = {
   name: databaseName
   location: location
   tags: tags
-  sku: {
-    name: 'GP_S_Gen5'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1 // 1 vCore min
-  }
+    sku: {
+      name: 'Basic'
+      tier: 'Basic'
+      capacity: 5 // 5 DTUs for Basic tier
+    }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
-    maxSizeBytes: 2147483648 // 2 GB
-    catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
-    zoneRedundant: false
-    readScale: 'Disabled'
-    autoPauseDelay: 60 // Auto-pause after 60 minutes of inactivity
-    minCapacity: json('0.5') // Minimum 0.5 vCore
-    isLedgerOn: false
+      maxSizeBytes: 2147483648 // 2 GB (Basic tier max size)
+      catalogCollation: 'SQL_Latin1_General_CP1_CI_AS'
+      zoneRedundant: false
+      readScale: 'Disabled'
+      isLedgerOn: false
   }
 }
 
