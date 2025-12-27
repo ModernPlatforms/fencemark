@@ -794,6 +794,9 @@ module apiServiceKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Crypto Officer'
   }
+  dependsOn: [
+    dataProtectionKey
+  ]
 }
 
 // Grant Web Frontend access to Key Vault secrets
@@ -818,6 +821,9 @@ module webFrontendKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Crypto Officer'
   }
+  dependsOn: [
+    dataProtectionKey
+  ]
 }
 
 // ============================================================================
