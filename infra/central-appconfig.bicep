@@ -25,6 +25,9 @@ param centralConfigResourceGroupName string = 'rg-fencemark-central-config'
 @description('Name prefix for the App Configuration store')
 param appConfigNamePrefix string = 'appcs-fencemark'
 
+@description('The domain name for the DNS zone')
+param domainName string = 'fencemark.com.au'
+
 // ============================================================================
 // Variables
 // ============================================================================
@@ -61,6 +64,20 @@ module appConfig './modules/app-config.bicep' = {
 }
 
 // ============================================================================
+// DNS Zone
+// ============================================================================
+
+resource dnsZone 'Microsoft.Network/dnsZones@2023-07-01-preview' = {
+  name: domainName
+  location: 'global'
+  tags: defaultTags
+  properties: {
+    zoneType: 'Public'
+  }
+  scope: centralConfigRg
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -75,3 +92,12 @@ output appConfigEndpoint string = appConfig.outputs.endpoint
 
 @description('The name of the central configuration resource group')
 output centralConfigResourceGroupName string = centralConfigRg.name
+
+@description('The name of the DNS zone')
+output dnsZoneName string = dnsZone.name
+
+@description('The resource ID of the DNS zone')
+output dnsZoneId string = dnsZone.id
+
+@description('The name servers for the DNS zone - Configure these at your domain registrar')
+output nameServers array = dnsZone.properties.nameServers

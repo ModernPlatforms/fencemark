@@ -13,6 +13,8 @@ param centralConfigResourceGroupName = 'rg-fencemark-central-config'
 
 param appConfigNamePrefix = 'appcs-fencemark'
 
+param domainName = 'fencemark.com.au'
+
 // ============================================================================
 // Tags
 // ============================================================================
