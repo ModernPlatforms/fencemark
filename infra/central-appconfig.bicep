@@ -67,14 +67,13 @@ module appConfig './modules/app-config.bicep' = {
 // DNS Zone
 // ============================================================================
 
-resource dnsZone 'Microsoft.Network/dnsZones@2023-07-01-preview' = {
-  name: domainName
-  location: 'global'
-  tags: defaultTags
-  properties: {
-    zoneType: 'Public'
-  }
+module dnsZone './modules/dns-zone-simple.bicep' = {
+  name: 'dnsZone'
   scope: centralConfigRg
+  params: {
+    domainName: domainName
+    tags: defaultTags
+  }
 }
 
 // ============================================================================
@@ -94,10 +93,10 @@ output appConfigEndpoint string = appConfig.outputs.endpoint
 output centralConfigResourceGroupName string = centralConfigRg.name
 
 @description('The name of the DNS zone')
-output dnsZoneName string = dnsZone.name
+output dnsZoneName string = dnsZone.outputs.dnsZoneName
 
 @description('The resource ID of the DNS zone')
-output dnsZoneId string = dnsZone.id
+output dnsZoneId string = dnsZone.outputs.dnsZoneId
 
 @description('The name servers for the DNS zone - Configure these at your domain registrar')
-output nameServers array = dnsZone.properties.nameServers
+output nameServers array = dnsZone.outputs.nameServers
