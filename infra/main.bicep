@@ -358,7 +358,7 @@ module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase &&
 // Managed Certificate for Custom Domain
 // ============================================================================
 
-module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain)) {
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate) {
   name: 'managedCertificate'
   scope: rg
   params: {
