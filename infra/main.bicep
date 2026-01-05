@@ -81,7 +81,7 @@ param certificateName string = ''
 @description('Entra External ID Resource Group')
 param externalidRg string = ''
 
-@description('Custom domain to bind to the Web frontend')
+@description('Custom domain to bind to the Web frontend - computed from environment and base domain')
 param customDomain string = ''
 
 // ============================================================================
@@ -93,6 +93,16 @@ param centralAppConfigName string = 'appcs-fencemark'
 
 @description('The resource group containing the central App Configuration')
 param centralAppConfigResourceGroup string = 'rg-fencemark-central-config'
+
+// ============================================================================
+// DNS Zone Parameters
+// ============================================================================
+
+@description('The base domain name (e.g., fencemark.com.au)')
+param baseDomainName string = 'fencemark.com.au'
+
+@description('The resource group containing the DNS zone')
+param dnsZoneResourceGroup string = 'rg-fencemark-central-config'
 
 // ============================================================================
 // Database Parameters
@@ -126,6 +136,10 @@ var resourceToken = toLower(uniqueString(subscription().id, resourceGroupName, e
 var defaultTags = union(tags, {
   'azd-env-name': environmentName
 })
+
+// Compute the custom domain based on environment
+// dev -> dev.fencemark.com.au, staging -> staging.fencemark.com.au, prod -> fencemark.com.au
+var computedCustomDomain = !empty(customDomain) ? customDomain : (environmentName == 'prod' ? baseDomainName : '${environmentName}.${baseDomainName}')
 
 // SQL Server connection string components (computed inline since module is conditional)
 var sqlServerNameValue = '${abbrs.sqlServers}${resourceToken}'
@@ -341,14 +355,14 @@ module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase &&
 // Managed Certificate for Custom Domain
 // ============================================================================
 
-module managedCertificate './modules/managed-certificate.bicep' = if (!empty(customDomain)) {
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain)) {
   name: 'managedCertificate'
   scope: rg
   params: {
-    name: 'cert-${replace(customDomain, '.', '-')}'
+    name: 'cert-${replace(computedCustomDomain, '.', '-')}'
     location: location
     environmentId: containerAppsEnvironment.outputs.resourceId
-    subjectName: customDomain
+    subjectName: computedCustomDomain
     tags: defaultTags
   }
 }
@@ -651,9 +665,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
-    customDomains: !empty(customDomain) ? [
+    customDomains: !empty(computedCustomDomain) ? [
       {
-        name: customDomain
+        name: computedCustomDomain
         bindingType: 'SniEnabled'
         certificateId: managedCertificate.?outputs.resourceId ?? ''
       }
@@ -677,6 +691,38 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
       }
     ]
   }
+}
+
+// ============================================================================
+// DNS Records for Custom Domain
+// ============================================================================
+// Create CNAME record pointing the subdomain to the Container Apps environment
+// Create TXT record for domain validation
+
+module dnsValidationRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
+  name: 'dnsValidationRecord'
+  scope: resourceGroup(dnsZoneResourceGroup)
+  params: {
+    dnsZoneName: baseDomainName
+    recordName: environmentName == 'prod' ? 'asuid' : 'asuid.${environmentName}'
+    recordType: 'TXT'
+    targetValue: containerAppsEnvironment.outputs.domainVerificationId
+    ttl: 3600
+  }
+  dependsOn: [webFrontend]
+}
+
+module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
+  name: 'dnsCnameRecord'
+  scope: resourceGroup(dnsZoneResourceGroup)
+  params: {
+    dnsZoneName: baseDomainName
+    recordName: environmentName == 'prod' ? '@' : environmentName
+    recordType: 'CNAME'
+    targetValue: webFrontend.outputs.fqdn
+    ttl: 3600
+  }
+  dependsOn: [dnsValidationRecord]
 }
 
 // ============================================================================
@@ -1003,7 +1049,7 @@ output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 output mapsAccountName string = mapsAccount.outputs.name
 
 @description('The custom domain (if configured)')
-output customDomainName string = customDomain
+output customDomainName string = computedCustomDomain
 
 @description('The Container Apps Environment default domain for CNAME setup')
 output environmentDefaultDomain string = containerAppsEnvironment.outputs.defaultDomain
