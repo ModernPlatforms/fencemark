@@ -35,7 +35,7 @@ param externalidRg = 'rg-fencemark-identity-dev'
 // Custom Domain Configuration
 // ============================================================================
 // Set to true after initial deployment once certificate is validated
-param bindCustomDomainCertificate = false
+param bindCustomDomainCertificate = true
 
 // ============================================================================
 // Central App Configuration
