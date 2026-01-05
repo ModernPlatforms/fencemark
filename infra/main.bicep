@@ -84,6 +84,9 @@ param externalidRg string = ''
 @description('Custom domain to bind to the Web frontend - computed from environment and base domain')
 param customDomain string = ''
 
+@description('Bind certificate to custom domain (set to true after initial deployment and certificate validation)')
+param bindCustomDomainCertificate bool = false
+
 // ============================================================================
 // Central App Configuration Parameters
 // ============================================================================
@@ -668,8 +671,8 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     customDomains: !empty(computedCustomDomain) ? [
       {
         name: computedCustomDomain
-        bindingType: 'SniEnabled'
-        certificateId: managedCertificate.?outputs.resourceId ?? ''
+        bindingType: bindCustomDomainCertificate ? 'SniEnabled' : 'Disabled'
+        certificateId: bindCustomDomainCertificate ? (managedCertificate.?outputs.resourceId ?? '') : null
       }
     ] : null
     registries: [

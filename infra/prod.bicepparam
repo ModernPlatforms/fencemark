@@ -31,6 +31,12 @@ param webFrontendMaxReplicas = 10
 param customDomain = 'fencemark.com.au'
 
 // ============================================================================
+// Custom Domain Configuration
+// ============================================================================
+// Set to true after initial deployment once certificate is validated
+param bindCustomDomainCertificate = false
+
+// ============================================================================
 // Central App Configuration
 // ============================================================================
 // The central App Config is deployed separately and shared across all environments
