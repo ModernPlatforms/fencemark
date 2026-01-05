@@ -18,6 +18,9 @@
     <PackageReference Include="MudBlazor" Version="8.15.0" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.1" />
     <PackageReference Include="Azure.Identity" Version="1.17.1" />
+    <!-- Override vulnerable transitive dependencies -->
+    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.24" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
 </Project>
