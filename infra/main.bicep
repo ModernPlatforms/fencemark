@@ -504,7 +504,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
               path: '/alive'
               port: 8080
             }
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 30
           }
           {
@@ -513,7 +513,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
               path: '/health'
               port: 8080
             }
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 10
           }
         ]
@@ -646,7 +646,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
               path: '/alive'
               port: 8080
             }
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 30
           }
           {
@@ -655,7 +655,7 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
               path: '/health'
               port: 8080
             }
-            initialDelaySeconds: 5
+            initialDelaySeconds: 15
             periodSeconds: 10
           }
         ]

@@ -120,16 +120,40 @@ var dataProtectionBuilder = builder.Services.AddDataProtection()
 // This ensures encryption keys survive container restarts
 if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_URI"]))
 {
-    try
+    var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];
+    
+    if (!string.IsNullOrEmpty(keyVaultKeyIdentifier))
     {
-        var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];
         var credential = new Azure.Identity.DefaultAzureCredential();
-        dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyIdentifier), credential);
-        Console.WriteLine($"[Web] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[Web] Warning: Could not configure Key Vault for data protection: {ex.Message}");
+        
+        // Add retry logic to handle initial 401 from Key Vault during cold starts
+        // This is normal with Managed Identity - first request gets 401, then token is acquired
+        int maxRetries = 3;
+        int retryDelayMs = 1000;
+        Exception? lastException = null;
+        
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                dataProtectionBuilder.ProtectKeysWithAzureKeyVault(new Uri(keyVaultKeyIdentifier), credential);
+                Console.WriteLine($"[Web] Data Protection keys protected with Azure Key Vault: {keyVaultKeyIdentifier}");
+                lastException = null;
+                break;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                lastException = ex;
+                Console.WriteLine($"[Web] Attempt {attempt + 1}/{maxRetries + 1} - Key Vault auth in progress, retrying in {retryDelayMs}ms...");
+                await Task.Delay(retryDelayMs);
+                retryDelayMs *= 2; // Exponential backoff
+            }
+        }
+        
+        if (lastException != null)
+        {
+            Console.WriteLine($"[Web] Warning: Could not configure Key Vault for data protection after {maxRetries + 1} attempts: {lastException.Message}");
+        }
     }
 }
 
