@@ -754,7 +754,7 @@ module staticWebAppAppConfigRoleAssignment './modules/rbac-assignment.bicep' = i
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
-    principalId: staticWebApp.outputs?.systemAssignedMIPrincipalId ?? ''
+    principalId: deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
     roleDefinitionId: appConfigDataReaderRoleId
     principalType: 'ServicePrincipal'
   }
@@ -766,7 +766,7 @@ module staticWebAppKeyVaultRoleAssignment './keyvault-access.bicep' = if (deploy
   scope: rg
   params: {
     keyVaultName: keyVault.outputs.name
-    principalId: staticWebApp.outputs?.systemAssignedMIPrincipalId ?? ''
+    principalId: deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Secrets User'
   }
