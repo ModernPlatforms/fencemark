@@ -770,12 +770,22 @@ var staticSiteDnsTarget = deployStaticSite ? (
   )
 ) : ''
 
+// Extract DNS record name from custom domain
+// For 'example.com' relative to 'example.com' -> '@'
+// For 'dev.example.com' relative to 'example.com' -> 'dev'
+// For 'api.staging.example.com' relative to 'example.com' -> 'api.staging'
+var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (
+  endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? 
+    substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : 
+    staticSiteCustomDomain
+)
+
 module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && !empty(staticSiteDnsTarget)) {
   name: 'staticSiteDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: staticSiteCustomDomain == baseDomainName ? '@' : contains(staticSiteCustomDomain, '.') ? split(staticSiteCustomDomain, '.')[0] : staticSiteCustomDomain
+    recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
     targetValue: staticSiteDnsTarget
     ttl: 3600

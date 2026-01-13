@@ -139,6 +139,9 @@ resource staticWebsiteScript 'Microsoft.Resources/deploymentScripts@2023-08-01' 
 
 var staticWebsiteHost = replace(replace(storageAccount.properties.primaryEndpoints.web, 'https://', ''), '/', '')
 
+// Front Door endpoint naming
+var frontDoorEndpointName = 'endpoint-${uniqueString(name)}'
+
 // ============================================================================
 // Classic CDN (Deprecated - for backwards compatibility only)
 // ============================================================================
@@ -231,7 +234,7 @@ module frontDoor 'br/public:avm/res/cdn/profile:0.17.0' = if (effectiveCdnMode =
     
     afdEndpoints: [
       {
-        name: 'endpoint-${uniqueString(name)}'
+        name: frontDoorEndpointName
         enabledState: 'Enabled'
       }
     ]
@@ -239,7 +242,7 @@ module frontDoor 'br/public:avm/res/cdn/profile:0.17.0' = if (effectiveCdnMode =
     routes: [
       {
         name: 'default-route'
-        afdEndpointName: 'endpoint-${uniqueString(name)}'
+        afdEndpointName: frontDoorEndpointName
         originGroupName: 'storage-origin-group'
         supportedProtocols: [
           'Http'
@@ -261,7 +264,7 @@ module frontDoor 'br/public:avm/res/cdn/profile:0.17.0' = if (effectiveCdnMode =
         hostName: customDomainName
         certificateType: enableCustomDomainHttps ? 'ManagedCertificate' : 'CustomerCertificate'
         minimumTlsVersion: 'TLS12'
-        afdEndpointName: 'endpoint-${uniqueString(name)}'
+        afdEndpointName: frontDoorEndpointName
       }
     ] : []
   }
@@ -277,10 +280,10 @@ output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.name : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? '${frontDoorEndpointName}.azurefd.net' : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.name : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? '${frontDoorEndpointName}.azurefd.net' : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode
