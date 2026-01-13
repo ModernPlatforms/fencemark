@@ -108,6 +108,16 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 var dataProtectionBuilder = builder.Services.AddDataProtection()
     .SetApplicationName("fencemark");
 
+// For local development, persist keys to a shared location
+// This prevents cookies from breaking when the app restarts
+if (builder.Environment.IsDevelopment())
+{
+    var keysPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "fencemark-keys");
+    Directory.CreateDirectory(keysPath);
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    Console.WriteLine($"[ApiService] Data Protection keys persisted locally to: {keysPath}");
+}
+
 if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_URI"]))
 {
     var keyVaultKeyIdentifier = builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER"];

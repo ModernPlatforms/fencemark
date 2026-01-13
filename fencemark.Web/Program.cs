@@ -116,6 +116,16 @@ builder.Services.AddScoped<AuthenticationStateProvider, ServerAuthenticationStat
 var dataProtectionBuilder = builder.Services.AddDataProtection()
     .SetApplicationName("fencemark");
 
+// For local development, persist keys to a shared location
+// This prevents cookies from breaking when the app restarts
+if (builder.Environment.IsDevelopment())
+{
+    var keysPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "fencemark-keys");
+    Directory.CreateDirectory(keysPath);
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+    Console.WriteLine($"[Web] Data Protection keys persisted locally to: {keysPath}");
+}
+
 // In production/Azure, use Key Vault for persistent key storage
 // This ensures encryption keys survive container restarts
 if (!string.IsNullOrEmpty(builder.Configuration["ASPNETCORE_DATAPROTECTION_KEYVAULT_URI"]))
