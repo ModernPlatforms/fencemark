@@ -140,16 +140,27 @@ param deployStaticSite bool = true
 @description('Storage account SKU for the static site')
 param staticSiteStorageSku string = 'Standard_LRS'
 
-@description('Enable Azure CDN in front of the static site')
+@description('CDN/Front Door mode for static site: none (storage custom domain), classic-cdn (deprecated), or frontdoor (recommended for production)')
+@allowed([
+  'none'
+  'classic-cdn'
+  'frontdoor'
+])
+param staticSiteCdnMode string = 'none'
+
+@description('Enable Azure CDN in front of the static site (deprecated - use staticSiteCdnMode instead)')
 param enableStaticSiteCdn bool = false
 
-@description('Azure CDN SKU (Standard_Microsoft, Standard_Verizon, Standard_Akamai)')
+@description('Azure CDN SKU (Standard_Microsoft, Standard_Verizon, Standard_Akamai) - only for classic-cdn mode')
 @allowed([
   'Standard_Microsoft'
   'Standard_Verizon'
   'Standard_Akamai'
 ])
 param staticSiteCdnSku string = 'Standard_Microsoft'
+
+@description('Custom domain for the static site (optional)')
+param staticSiteCustomDomain string = ''
 
 
 // ============================================================================
@@ -736,42 +747,77 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
       'azd-service-name': 'blazor-wasm-client'
     })
     storageSku: staticSiteStorageSku
+    cdnMode: staticSiteCdnMode
     enableCdn: enableStaticSiteCdn
     cdnSku: staticSiteCdnSku
-    customDomainName: computedCustomDomain
-    enableCustomDomain: !empty(computedCustomDomain)
-    enableCustomDomainHttps: bindCustomDomainCertificate
+    customDomainName: !empty(staticSiteCustomDomain) ? staticSiteCustomDomain : ''
+    enableCustomDomainHttps: true
   }
 }
 
 // ============================================================================
-// DNS Records for Custom Domain
+// DNS Records for Custom Domain (Static Site)
 // ============================================================================
-// Create CNAME record pointing the subdomain to:
-// - Static site CDN endpoint (when enableStaticSiteCdn is true)
-// - Static site storage endpoint (when deployStaticSite is true but CDN is disabled)
-// - Container app (when static site is not deployed or CDN is disabled)
+// Create CNAME record pointing the subdomain to the static site
+// - For 'none' mode: point to storage endpoint
+// - For 'frontdoor' mode: point to AFD endpoint
+// - For 'classic-cdn' mode: point to CDN endpoint
 
 var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
-var staticSiteDnsTarget = enableStaticSiteCdn ? staticSite.outputs.cdnHostname : staticSiteHostname
-// Determine CNAME record target based on deployment configuration:
-// - When CDN is enabled: point to CDN endpoint
-// - When static site is deployed (but CDN disabled): point to static site storage endpoint
-// - Otherwise: point to container app
-var containerAppTarget = webFrontend.outputs.fqdn
-var staticSiteOnlyTarget = deployStaticSite ? staticSiteHostname : containerAppTarget
-var cnameRecordTarget = enableStaticSiteCdn ? staticSiteDnsTarget : staticSiteOnlyTarget
 
-module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
-  name: 'dnsCnameRecord'
+// Determine the DNS target based on CDN mode
+var staticSiteDnsTarget = deployStaticSite ? (
+  staticSiteCdnMode == 'frontdoor' ? staticSite.outputs.frontDoorEndpointHostname : (
+    staticSiteCdnMode == 'classic-cdn' ? staticSite.outputs.cdnHostname : staticSiteHostname
+  )
+) : ''
+
+// Extract DNS record name from custom domain
+// For 'example.com' relative to 'example.com' -> '@'
+// For 'dev.example.com' relative to 'example.com' -> 'dev'
+// For 'api.staging.example.com' relative to 'example.com' -> 'api.staging'
+var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (
+  endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? 
+    substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : 
+    staticSiteCustomDomain
+)
+
+module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && !empty(staticSiteDnsTarget)) {
+  name: 'staticSiteDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: environmentName == 'prod' ? '@' : environmentName
+    recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
     targetValue: cnameRecordTarget
+    ttl: 3600
+  }
+}
+
+// ============================================================================
+// DNS Records for Custom Domain (Container App)
+// ============================================================================
+// Create CNAME record for Container App custom domain
+// For dev/staging: dev.fencemark.com.au -> <container-app-fqdn>
+// For prod: fencemark.com.au -> <container-app-fqdn> (using @ record)
+
+// Extract DNS record name from custom domain for Container App
+var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (
+  endsWith(computedCustomDomain, '.${baseDomainName}') ? 
+    substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : 
+    computedCustomDomain
+)
+
+module webAppDnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
+  name: 'webAppDnsCnameRecord'
+  scope: resourceGroup(dnsZoneResourceGroup)
+  params: {
+    dnsZoneName: baseDomainName
+    recordName: webAppDnsRecordName
+    recordType: 'CNAME'
+    targetValue: webFrontend.outputs.fqdn
     ttl: 3600
   }
 }
@@ -1147,6 +1193,15 @@ output staticSiteUrl string = deployStaticSite ? staticSite.outputs.staticWebsit
 
 @description('The CDN endpoint hostname (if CDN enabled)')
 output staticSiteCdnHostname string = deployStaticSite ? staticSite.outputs.cdnHostname : ''
+
+@description('The Front Door endpoint hostname (if Front Door enabled)')
+output staticSiteFrontDoorHostname string = deployStaticSite ? staticSite.outputs.frontDoorEndpointHostname : ''
+
+@description('The primary hostname for the static site')
+output staticSitePrimaryHostname string = deployStaticSite ? staticSite.outputs.primaryHostname : ''
+
+@description('The CDN/Front Door mode used for static site')
+output staticSiteCdnMode string = deployStaticSite ? staticSite.outputs.cdnMode : 'none'
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
