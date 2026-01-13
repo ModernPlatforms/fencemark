@@ -294,6 +294,28 @@ builder.Services.ConfigureApplicationCookie(options =>
     };
 });
 
+// Configure CORS for Blazor WASM client
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine($"[ApiService] CORS configured for {corsOrigins.Length} origins: {string.Join(", ", corsOrigins)}");
+}
+else
+{
+    Console.WriteLine($"[ApiService] CORS configured for {corsOrigins.Length} origins");
+}
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WasmClient", policy =>
+    {
+        policy.WithOrigins(corsOrigins)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials(); // Required for cookies/authentication
+    });
+});
+
 // Add application services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
@@ -338,6 +360,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+// Enable CORS - must be before authentication/authorization
+app.UseCors("WasmClient");
 
 app.UseAuthentication();
 app.UseAuthorization();
