@@ -36,7 +36,6 @@ param customDomain = 'stgfencemark.modernplatforms.dev'
 
 param deployStaticWebApp = true
 param staticWebAppSku = 'Standard'
-param staticWebAppCustomDomain = 'app.stgfencemark.modernplatforms.dev'
 
 // ============================================================================
 // Custom Domain Configuration

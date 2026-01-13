@@ -36,7 +36,6 @@ param customDomain = 'fencemark.com.au'
 
 param deployStaticWebApp = true
 param staticWebAppSku = 'Standard'
-param staticWebAppCustomDomain = 'app.fencemark.com.au'
 
 // ============================================================================
 // Custom Domain Configuration
