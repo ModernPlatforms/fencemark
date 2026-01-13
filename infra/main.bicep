@@ -144,8 +144,6 @@ param deployStaticWebApp bool = true
 ])
 param staticWebAppSku string = 'Standard'
 
-@description('Custom domain for Static Web App (optional, computed from environment if not provided)')
-param staticWebAppCustomDomain string = ''
 
 // ============================================================================
 // Variables
@@ -1191,7 +1189,7 @@ module externalKeyVaultAccessModule './keyvault-access.bicep' = if (!empty(exter
   scope: resourceGroup(externalidRg)
   params: {
     keyVaultName: externalIdKeyVault.name
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Certificate User'
   }
