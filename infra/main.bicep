@@ -756,8 +756,11 @@ var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : 
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 var staticSiteDnsTarget = enableStaticSiteCdn ? staticSite.outputs.cdnHostname : staticSiteHostname
-// When CDN is enabled, DNS points to static site/CDN; otherwise points to container app
-var dnsTarget = enableStaticSiteCdn ? staticSiteDnsTarget : webFrontend.outputs.fqdn
+// DNS target logic:
+// - When CDN is enabled: point to CDN endpoint
+// - When static site is deployed (but CDN disabled): point to static site storage endpoint
+// - Otherwise: point to container app
+var dnsTarget = enableStaticSiteCdn ? staticSiteDnsTarget : (deployStaticSite ? staticSiteHostname : webFrontend.outputs.fqdn)
 
 module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
   name: 'dnsCnameRecord'
