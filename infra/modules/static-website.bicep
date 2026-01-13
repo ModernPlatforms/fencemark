@@ -269,13 +269,13 @@ output storageAccountName string = storageAccount.name
 output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 
 @description('CDN endpoint hostname (empty if CDN is disabled)')
-output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? 'cdnep-${name}.azureedge.net' : ''
+output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? 'endpoint-${uniqueString(name)}-${uniqueString(resourceGroup().id)}.z01.azurefd.net' : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.endpoints[0].properties.hostName : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? 'endpoint-${uniqueString(name)}-${uniqueString(resourceGroup().id)}.z01.azurefd.net' : effectiveCdnMode == 'classic-cdn' ? 'cdnep-${name}.azureedge.net' : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.endpoints[0].properties.hostName : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode
