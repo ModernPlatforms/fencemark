@@ -754,7 +754,7 @@ module staticWebAppAppConfigRoleAssignment './modules/rbac-assignment.bicep' = i
   scope: resourceGroup(centralAppConfigResourceGroup)
   params: {
     appConfigName: centralAppConfigName
-    principalId: staticWebApp.outputs.systemAssignedMIPrincipalId
+    principalId: staticWebApp.outputs?.systemAssignedMIPrincipalId ?? ''
     roleDefinitionId: appConfigDataReaderRoleId
     principalType: 'ServicePrincipal'
   }
@@ -766,25 +766,9 @@ module staticWebAppKeyVaultRoleAssignment './keyvault-access.bicep' = if (deploy
   scope: rg
   params: {
     keyVaultName: keyVault.outputs.name
-    principalId: staticWebApp.outputs.systemAssignedMIPrincipalId
+    principalId: staticWebApp.outputs?.systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Secrets User'
-  }
-}
-
-// ============================================================================
-// Store Static Web App Deployment Token in Key Vault
-// ============================================================================
-
-module staticWebAppDeploymentTokenSecret './modules/keyvault-secret.bicep' = if (deployStaticWebApp) {
-  name: 'staticWebAppDeploymentTokenSecret'
-  scope: rg
-  params: {
-    keyVaultName: keyVault.outputs.name
-    secretName: 'swa-deployment-token'
-    secretValue: staticWebApp.outputs.deploymentToken
-    contentType: 'Static Web App Deployment Token for GitHub Actions'
-    tags: defaultTags
   }
 }
 
@@ -1184,19 +1168,19 @@ output keyVaultName string = keyVault.outputs.name
 // ============================================================================
 
 @description('The name of the Static Web App (if deployed)')
-output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.name : ''
+output staticWebAppName string = deployStaticWebApp ? (staticWebApp.outputs?.name ?? '') : ''
 
 @description('The URL of the Static Web App (if deployed)')
-output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.url : ''
+output staticWebAppUrl string = deployStaticWebApp ? (staticWebApp.outputs?.url ?? '') : ''
 
 @description('The default hostname of the Static Web App (if deployed)')
-output staticWebAppHostname string = deployStaticWebApp ? staticWebApp.outputs.defaultHostname : ''
+output staticWebAppHostname string = deployStaticWebApp ? (staticWebApp.outputs?.defaultHostname ?? '') : ''
 
 @description('The principal ID of the Static Web App managed identity (if deployed)')
-output staticWebAppIdentityPrincipalId string = deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
+output staticWebAppIdentityPrincipalId string = deployStaticWebApp ? (staticWebApp.outputs?.systemAssignedMIPrincipalId ?? '') : ''
 
 @description('The resource ID of the Static Web App (if deployed)')
-output staticWebAppResourceId string = deployStaticWebApp ? staticWebApp.outputs.resourceId : ''
+output staticWebAppResourceId string = deployStaticWebApp ? (staticWebApp.outputs?.resourceId ?? '') : ''
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
