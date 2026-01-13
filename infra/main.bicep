@@ -390,8 +390,10 @@ module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase &&
 // ============================================================================
 // Managed Certificate for Custom Domain
 // ============================================================================
+// Only provision certificate for container app when CDN is not enabled
+// When CDN is enabled, the custom domain and certificate are managed by CDN
 
-module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate) {
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate && !enableStaticSiteCdn) {
   name: 'managedCertificate'
   scope: rg
   params: {
@@ -701,7 +703,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
-    customDomains: !empty(computedCustomDomain) ? [
+    // Only configure custom domain on container app when CDN is not enabled
+    // When CDN is enabled, the custom domain points to CDN instead
+    customDomains: (!empty(computedCustomDomain) && !enableStaticSiteCdn) ? [
       {
         name: computedCustomDomain
         bindingType: bindCustomDomainCertificate ? 'SniEnabled' : 'Disabled'
@@ -787,7 +791,7 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
     dnsZoneName: baseDomainName
     recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
-    targetValue: staticSiteDnsTarget
+    targetValue: cnameRecordTarget
     ttl: 3600
   }
 }
