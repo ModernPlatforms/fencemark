@@ -225,6 +225,15 @@ Fencemark uses .NET Aspire for comprehensive orchestration across all environmen
 - **Best Practices**: Guidelines for reliable orchestration
 - **Troubleshooting**: Common issues and solutions
 
+## Architecture Investigation
+
+📊 **[Blazor WebAssembly Migration Investigation](BLAZOR_WASM_SUMMARY.md)** - Executive summary of migrating to Blazor WASM client-only static app
+- Complete technical analysis in [BLAZOR_WASM_INVESTIGATION.md](BLAZOR_WASM_INVESTIGATION.md)
+- **Recommendation:** ✅ Proceed with migration
+- **Benefits:** ~60% cost reduction, better scalability, instant UI updates
+- **Timeline:** 2-3 weeks development effort
+- **Implementation:** [Migration Roadmap](BLAZOR_WASM_MIGRATION_ROADMAP.md) - 6 features split into separate PRs
+
 ## Resources
 
 - [Aspire Orchestration Guide](ASPIRE_ORCHESTRATION.md) - Comprehensive orchestration documentation
