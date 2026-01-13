@@ -1,0 +1,86 @@
+@page "/"
+@attribute [AllowAnonymous]
+
+<PageTitle>Fencemark - Professional Fencing Planning Software</PageTitle>
+
+<div style="text-align: center; padding: 3rem 1rem;">
+    <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Large" Color="Color.Primary" Style="font-size: 4rem; margin-bottom: 1rem;" />
+    
+    <MudText Typo="Typo.h3" GutterBottom="true">
+        Professional Fencing Planning Software
+    </MudText>
+    
+    <MudText Typo="Typo.h6" Color="Color.Secondary" GutterBottom="true" Style="margin-bottom: 2rem;">
+        Streamline your fencing projects from quote to completion
+    </MudText>
+    
+    <AuthorizeView>
+        <Authorized>
+            <MudText Typo="Typo.body1" Style="margin-bottom: 2rem;">
+                Welcome back, @context.User.Identity?.Name!
+            </MudText>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/fences" StartIcon="@Icons.Material.Filled.Fence" Size="Size.Large">
+                    Manage Fences
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/jobs" StartIcon="@Icons.Material.Filled.Work" Size="Size.Large">
+                    View Jobs
+                </MudButton>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <MudText Typo="Typo.body1" Style="margin-bottom: 2rem;">
+                Manage jobs, components, fences, and gates all in one powerful platform
+            </MudText>
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="authentication/login" StartIcon="@Icons.Material.Filled.Login" Size="Size.Large">
+                Sign In to Get Started
+            </MudButton>
+        </NotAuthorized>
+    </AuthorizeView>
+</div>
+
+<MudDivider Style="margin: 3rem 0;" />
+
+<MudGrid>
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Style="padding: 1.5rem; text-align: center; height: 100%;">
+            <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Large" Color="Color.Primary" Style="font-size: 3rem; margin-bottom: 1rem;" />
+            <MudText Typo="Typo.h6" GutterBottom="true">Job Management</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Track all your fencing projects from quote to completion
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Style="padding: 1.5rem; text-align: center; height: 100%;">
+            <MudIcon Icon="@Icons.Material.Filled.ViewInAr" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem; margin-bottom: 1rem;" />
+            <MudText Typo="Typo.h6" GutterBottom="true">Component Library</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Maintain a detailed inventory of posts, panels, and rails
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Style="padding: 1.5rem; text-align: center; height: 100%;">
+            <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Large" Color="Color.Primary" Style="font-size: 3rem; margin-bottom: 1rem;" />
+            <MudText Typo="Typo.h6" GutterBottom="true">Fence Planning</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Design and plan fence installations with precise measurements
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" sm="6" md="3">
+        <MudPaper Elevation="2" Style="padding: 1.5rem; text-align: center; height: 100%;">
+            <MudIcon Icon="@Icons.Material.Filled.DoorFront" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem; margin-bottom: 1rem;" />
+            <MudText Typo="Typo.h6" GutterBottom="true">Gate Configuration</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Configure gates with custom dimensions and hardware
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
