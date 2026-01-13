@@ -53,8 +53,4 @@ builder.Services.AddHttpClient("fencemark.ApiService", client =>
     return handler;
 });
 
-// Register the default HttpClient for the API
-builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>()
-    .CreateClient("fencemark.ApiService"));
-
 await builder.Build().RunAsync();

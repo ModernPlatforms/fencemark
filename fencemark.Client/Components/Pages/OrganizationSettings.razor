@@ -160,7 +160,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        ApiClient = HttpClientFactory.CreateClient("API");
+        ApiClient = HttpClientFactory.CreateClient("fencemark.ApiService");
         await LoadData();
     }
 
