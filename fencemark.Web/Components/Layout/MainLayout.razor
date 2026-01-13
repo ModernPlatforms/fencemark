@@ -4,35 +4,85 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject HttpClient ApiClient
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
-<MudLayout>
-    <MudAppBar Elevation="2">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
-        <MudText Typo="Typo.h6" Class="ml-3">
-            <MudIcon Icon="@Icons.Material.Filled.Fence" /> Fencemark
-        </MudText>
-        <MudSpacer />
-        <AuthorizeView>
-            <Authorized>
-                <MudText Typo="Typo.body2" Class="mr-4">@context.User.Identity?.Name</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" Href="MicrosoftIdentity/Account/SignOut" />
-            </Authorized>
-            <NotAuthorized>
-                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="MicrosoftIdentity/Account/SignIn" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
-            </NotAuthorized>
-        </AuthorizeView>
-    </MudAppBar>
-    
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
-        <NavMenu />
-    </MudDrawer>
-    
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
+<AuthorizeView>
+    <Authorized>
+        <!-- Modern Header for Authenticated Users -->
+        <header class="modern-header">
+            <div class="modern-header-container">
+                <a href="/" class="modern-logo">
+                    <div class="modern-logo-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Medium" Color="Color.Inherit" />
+                    </div>
+                    <span>Fencemark</span>
+                </a>
+                
+                <nav class="modern-nav">
+                    <a href="/jobs" class="@(IsActive("/jobs") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Small" />
+                            Jobs
+                        </div>
+                    </a>
+                    <a href="/components" class="@(IsActive("/components") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ViewInAr" Size="Size.Small" />
+                            Components
+                        </div>
+                    </a>
+                    <a href="/fences" class="@(IsActive("/fences") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Small" />
+                            Fences
+                        </div>
+                    </a>
+                    <a href="/gates" class="@(IsActive("/gates") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.DoorFront" Size="Size.Small" />
+                            Gates
+                        </div>
+                    </a>
+                </nav>
+                
+                <div class="flex items-center gap-3 modern-nav-actions">
+                    <span class="text-sm text-muted modern-user-name">@context.User.Identity?.Name</span>
+                    <a href="MicrosoftIdentity/Account/SignOut" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                        <span>Sign Out</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <main>
             @Body
-        </MudContainer>
-    </MudMainContent>
-</MudLayout>
+        </main>
+    </Authorized>
+    <NotAuthorized>
+        <!-- Use MudBlazor layout for unauthenticated users (landing page) -->
+        <MudLayout>
+            <MudAppBar Elevation="1" Dense="true">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+                <MudText Typo="Typo.h6" Class="ml-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Fence" /> Fencemark
+                </MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="MicrosoftIdentity/Account/SignIn" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
+            </MudAppBar>
+            
+            <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
+                <NavMenu />
+            </MudDrawer>
+            
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </MudLayout>
+    </NotAuthorized>
+</AuthorizeView>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -47,6 +97,16 @@
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
+    }
+    
+    private bool IsActive(string path)
+    {
+        var currentPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        
+        // Exact match or match with trailing slash
+        return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals(path + "/", StringComparison.OrdinalIgnoreCase) ||
+               (currentPath.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase) && path != "/");
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)
