@@ -116,8 +116,5 @@ output defaultHostname string = staticWebApp.outputs.defaultHostname
 @description('The system-assigned managed identity principal ID')
 output systemAssignedMIPrincipalId string = enableManagedIdentity ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
 
-@description('The deployment token for GitHub Actions (sensitive)')
-output deploymentToken string = staticWebApp.outputs.deploymentToken
-
 @description('The Static Web App URL')
 output url string = 'https://${staticWebApp.outputs.defaultHostname}'

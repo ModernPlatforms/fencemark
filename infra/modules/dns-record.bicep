@@ -80,5 +80,9 @@ resource txtRecord 'Microsoft.Network/dnsZones/TXT@2023-07-01-preview' = if (rec
 // Outputs
 // ============================================================================
 
+var recordFqdn = recordName == '@'
+  ? dnsZoneName
+  : '${recordName}.${dnsZoneName}'
+
 @description('The FQDN of the created record')
-output fqdn string = recordType == 'CNAME' ? cnameRecord.properties.fqdn : (recordType == 'A' ? aRecord.properties.fqdn : txtRecord.properties.fqdn)
+output fqdn string = recordFqdn
