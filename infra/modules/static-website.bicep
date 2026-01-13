@@ -57,7 +57,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   tags: tags
   properties: {
     allowBlobPublicAccess: true
-    supportsHttpsTrafficOnly: true
+    enableHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     customDomain: useStorageCustomDomain ? {
       name: customDomainName
@@ -280,10 +280,10 @@ output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? '${frontDoorEndpointName}.azurefd.net' : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.uri : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? '${frontDoorEndpointName}.azurefd.net' : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.uri : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode

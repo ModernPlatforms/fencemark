@@ -792,13 +792,26 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
   }
 }
 
-// Create CNAME record for Container App custom domain (separate from static site)
+// ============================================================================
+// DNS Records for Custom Domain (Container App)
+// ============================================================================
+// Create CNAME record for Container App custom domain
+// For dev/staging: dev.fencemark.com.au -> <container-app-fqdn>
+// For prod: fencemark.com.au -> <container-app-fqdn> (using @ record)
+
+// Extract DNS record name from custom domain for Container App
+var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (
+  endsWith(computedCustomDomain, '.${baseDomainName}') ? 
+    substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : 
+    computedCustomDomain
+)
+
 module webAppDnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
   name: 'webAppDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: environmentName == 'prod' ? 'www' : '${environmentName}-www'
+    recordName: webAppDnsRecordName
     recordType: 'CNAME'
     targetValue: webFrontend.outputs.fqdn
     ttl: 3600
