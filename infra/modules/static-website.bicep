@@ -81,7 +81,9 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = if (enableC
     origins: [
       {
         name: 'storage-origin'
-        hostName: staticWebsiteHost
+        properties: {
+          hostName: staticWebsiteHost
+        }
       }
     ]
   }
