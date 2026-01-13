@@ -1,12 +1,12 @@
-# Azure Storage Static Website Setup for Blazor WASM
+# Azure Storage Static Website Setup for Blazor WebAssembly
 
-This document describes the Azure Storage static website infrastructure for hosting the Fencemark Blazor WASM client application, with an optional Azure CDN layer.
+This document describes the Azure Storage static website infrastructure for hosting the Fencemark Blazor WebAssembly client application, with an optional Azure CDN layer.
 
 ## Overview
 
 The static website infrastructure provisions:
 
-- **Storage Account (Static Website)**: Hosts the Blazor WASM build output in the `$web` container.
+- **Storage Account (Static Website)**: Hosts the Blazor WebAssembly build output in the `$web` container.
 - **Optional Azure CDN**: Fronts the storage endpoint to improve global performance and enable custom domain scenarios.
 - **Deployment Outputs**: Storage and CDN endpoints exposed as template outputs.
 
@@ -57,7 +57,7 @@ The static website infrastructure provisions:
      --parameters prod.bicepparam
    ```
 
-2. **Publish the Blazor WASM app**:
+2. **Publish the Blazor WebAssembly app**:
    ```bash
    dotnet publish -c Release -o ./publish
    ```
@@ -87,7 +87,7 @@ The deployment provides the following outputs:
 
 ### Static Website Routing
 
-Blazor WASM requires SPA fallback routing. Ensure your `staticwebapp.config.json` (or equivalent server configuration) is set to rewrite unknown routes to `/index.html`.
+Blazor WebAssembly requires SPA fallback routing. Ensure your `staticwebapp.config.json` (or equivalent server configuration) is set to rewrite unknown routes to `/index.html`.
 
 ### Custom Domains
 
