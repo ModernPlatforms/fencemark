@@ -1,0 +1,389 @@
+@page "/settings/organization"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject ISnackbar Snackbar
+@inject ILogger<OrganizationSettings> Logger
+@attribute [Authorize]
+
+<PageTitle>Organization Settings - Fencemark</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Business" /> Organization Settings
+    </MudText>
+
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (organizationInfo != null)
+    {
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Organization Details</MudText>
+                    
+                    <MudTextField @bind-Value="organizationInfo.Name" 
+                                  Label="Organization Name" 
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Class="mb-3" />
+                    
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+                        Organization ID: @organizationInfo.Id
+                    </MudText>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               OnClick="SaveOrganization"
+                               Disabled="isSaving">
+                        @if (isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ml-2">Saving...</MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Save" />
+                            <MudText Class="ml-2">Save Changes</MudText>
+                        }
+                    </MudButton>
+                </MudPaper>
+
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Sample Data</MudText>
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Seed your organization with sample Australian fence types, components, and gates to get started quickly.
+                    </MudText>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Secondary" 
+                               OnClick="SeedSampleData"
+                               Disabled="isSeeding">
+                        @if (isSeeding)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ml-2">Seeding...</MudText>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Grass" />
+                            <MudText Class="ml-2">Seed Sample Data</MudText>
+                        }
+                    </MudButton>
+                </MudPaper>
+
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Invite Team Members</MudText>
+                    
+                    @foreach (var email in invitationEmails)
+                    {
+                        <MudGrid Class="mb-2">
+                            <MudItem xs="10">
+                                <MudTextField @bind-Value="email.Email" 
+                                              Label="Email Address" 
+                                              Variant="Variant.Outlined"
+                                              Placeholder="colleague@example.com" />
+                            </MudItem>
+                            <MudItem xs="2" Class="d-flex align-center">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               OnClick="() => RemoveInviteField(email)" />
+                            </MudItem>
+                        </MudGrid>
+                    }
+                    
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddInviteField"
+                               Class="mb-3">
+                        Add Another Email
+                    </MudButton>
+                    
+                    <div>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Secondary" 
+                                   OnClick="SendInvitations"
+                                   Disabled="isSendingInvites || !invitationEmails.Any(e => !string.IsNullOrWhiteSpace(e.Email))">
+                            @if (isSendingInvites)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <MudText Class="ml-2">Sending...</MudText>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Send" />
+                                <MudText Class="ml-2">Send Invitations</MudText>
+                            }
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudItem>
+            
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Team Members</MudText>
+                    
+                    @if (members != null && members.Any())
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var member in members)
+                            {
+                                <MudPaper Class="pa-2">
+                                    <MudText Typo="Typo.body1">@member.Email</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@member.Role</MudText>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudText Color="Color.Secondary">No team members yet</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private HttpClient? ApiClient;
+    private OrganizationDto? organizationInfo;
+    private List<TeamMemberDto> members = new();
+    private List<EmailField> invitationEmails = new() { new EmailField() };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isSendingInvites = false;
+    private bool isSeeding = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ApiClient = HttpClientFactory.CreateClient("fencemark.ApiService");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (ApiClient == null) return;
+        
+        try
+        {
+            isLoading = true;
+            Logger.LogInformation("Loading organization settings");
+
+            // Get current user info to get organization ID
+            var meResponse = await ApiClient.GetAsync("/api/auth/me");
+            Logger.LogInformation("Me response: {StatusCode}", meResponse.StatusCode);
+            
+            if (!meResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Failed to get user info", Severity.Error);
+                return;
+            }
+            
+            var userInfo = await meResponse.Content.ReadFromJsonAsync<UserInfoResponse>();
+            if (userInfo?.OrganizationId == null)
+            {
+                Snackbar.Add("No organization found for user", Severity.Warning);
+                return;
+            }
+            
+            var orgId = userInfo.OrganizationId;
+            
+            // Set organization info
+            organizationInfo = new OrganizationDto
+            {
+                Id = orgId,
+                Name = "My Organization" // We could fetch this from an org endpoint if needed
+            };
+
+            // Get team members
+            var membersResponse = await ApiClient.GetAsync($"/api/organizations/{orgId}/members");
+            Logger.LogInformation("Members response: {StatusCode}", membersResponse.StatusCode);
+            
+            if (membersResponse.IsSuccessStatusCode)
+            {
+                members = await membersResponse.Content.ReadFromJsonAsync<List<TeamMemberDto>>() ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading organization settings");
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveOrganization()
+    {
+        if (ApiClient == null || organizationInfo == null || string.IsNullOrWhiteSpace(organizationInfo.Name))
+        {
+            Snackbar.Add("Organization name is required", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isSaving = true;
+            Logger.LogInformation("Saving organization: {OrgId}", organizationInfo.Id);
+
+            var response = await ApiClient.PutAsJsonAsync($"/api/organizations/{organizationInfo.Id}", organizationInfo);
+            Logger.LogInformation("Save response: {StatusCode}", response.StatusCode);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Organization updated successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to update organization", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void AddInviteField()
+    {
+        invitationEmails.Add(new EmailField());
+    }
+
+    private void RemoveInviteField(EmailField field)
+    {
+        if (invitationEmails.Count > 1)
+        {
+            invitationEmails.Remove(field);
+        }
+    }
+
+    private async Task SendInvitations()
+    {
+        if (ApiClient == null || organizationInfo == null) return;
+
+        var validEmails = invitationEmails
+            .Where(e => !string.IsNullOrWhiteSpace(e.Email))
+            .Select(e => e.Email!)
+            .ToList();
+
+        if (!validEmails.Any())
+        {
+            Snackbar.Add("Please enter at least one email address", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isSendingInvites = true;
+            Logger.LogInformation("Sending invitations to {Count} emails", validEmails.Count);
+
+            var request = new InviteRequest { Emails = validEmails };
+            var response = await ApiClient.PostAsJsonAsync($"/api/organizations/{organizationInfo.Id}/invite", request);
+            Logger.LogInformation("Invite response: {StatusCode}", response.StatusCode);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Invitations sent to {validEmails.Count} email(s)", Severity.Success);
+                invitationEmails.Clear();
+                invitationEmails.Add(new EmailField());
+                await LoadData(); // Refresh members list
+            }
+            else
+            {
+                Snackbar.Add("Failed to send invitations", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSendingInvites = false;
+        }
+    }
+
+    private async Task SeedSampleData()
+    {
+        Console.WriteLine("SeedSampleData method called!");
+        Logger.LogInformation("SeedSampleData method called");
+        
+        if (ApiClient == null)
+        {
+            Console.WriteLine("ApiClient is null!");
+            Logger.LogWarning("ApiClient is null");
+            return;
+        }
+
+        try
+        {
+            isSeeding = true;
+            Logger.LogInformation("Seeding sample data");
+            Console.WriteLine("About to POST to /api/organizations/seed-sample-data");
+
+            var response = await ApiClient.PostAsync("/api/organizations/seed-sample-data", null);
+            Logger.LogInformation("Seed response: {StatusCode}", response.StatusCode);
+            Console.WriteLine($"Seed response: {response.StatusCode}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Sample data seeded successfully! Refresh the page to see it.", Severity.Success);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error content: {errorContent}");
+                Snackbar.Add($"Failed to seed data: {errorContent}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error seeding sample data");
+            Console.WriteLine($"Exception: {ex.Message}");
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSeeding = false;
+        }
+    }
+
+    private class EmailField
+    {
+        public string? Email { get; set; }
+    }
+
+    private class OrganizationDto
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+    }
+
+    private class TeamMemberDto
+    {
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "";
+    }
+
+    private class UserInfoResponse
+    {
+        public string? UserId { get; set; }
+        public string? Email { get; set; }
+        public string? OrganizationId { get; set; }
+        public string? OrganizationName { get; set; }
+    }
+
+    private class InviteRequest
+    {
+        public List<string> Emails { get; set; } = new();
+    }
+}

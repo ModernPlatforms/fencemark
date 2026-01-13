@@ -1,22 +1,45 @@
 # Fencemark
 
-A distributed web application built with [.NET Aspire](https://learn.microsoft.com/dotnet/aspire/get-started/aspire-overview), featuring a Blazor Server frontend and an ASP.NET Core API backend.
+A modern web application built with [.NET Aspire](https://learn.microsoft.com/dotnet/aspire/get-started/aspire-overview), featuring a **Blazor WebAssembly (WASM)** frontend and an ASP.NET Core API backend.
 
 ## Overview
 
-Fencemark is a modern cloud-native application that demonstrates the power of .NET Aspire for building distributed systems. It consists of:
+Fencemark is a cloud-native application that leverages the latest .NET technologies for building distributed systems. It consists of:
 
-- **Web Frontend** - A Blazor Server application with interactive components
-- **API Service** - An ASP.NET Core minimal API with OpenAPI documentation
+- **Client (Blazor WASM)** - A Blazor WebAssembly application running entirely in the browser
+- **API Service** - An ASP.NET Core minimal API with OpenAPI documentation and JWT authentication
 - **Service Defaults** - Shared service configuration for observability and resilience
-- **App Host** - The orchestration layer that manages the distributed application
+- **App Host** - The orchestration layer for local development
+- **Legacy Web Frontend** - The original Blazor Server application (being phased out)
+
+### Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      App Host                           │
+│           Production Architecture (Azure)                │
+│                                                          │
+│  ┌──────────────────┐         ┌──────────────────┐     │
+│  │  Static Web App  │─────────│  Container App   │     │
+│  │  (Blazor WASM)   │  API    │   (API Service)  │     │
+│  │   + Azure CDN    │  Calls  │  + JWT Auth      │     │
+│  └──────────────────┘         └──────────────────┘     │
+│         │                              │                │
+│         │                              ▼                │
+│         │                     ┌──────────────────┐     │
+│         │                     │   SQL Database   │     │
+│         │                     │  (Azure SQL)     │     │
+│         │                     └──────────────────┘     │
+│         │                                               │
+│         └──────────────────────────────────────────────┘
+│                   Entra External ID (CIAM)              │
+│                   Authentication Service                │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│        Local Development (.NET Aspire)                   │
 │  ┌─────────────────────┐    ┌─────────────────────┐    │
-│  │    Web Frontend     │───▶│     API Service     │    │
-│  │   (Blazor Server)   │    │   (Minimal API)     │    │
+│  │  WASM Client        │───▶│   API Service       │    │
+│  │  (localhost:5001)   │    │  (localhost:7125)   │    │
 │  └─────────────────────┘    └─────────────────────┘    │
 │              │                        │                 │
 │              └────────┬───────────────┘                 │
@@ -81,11 +104,15 @@ The database migrations will run automatically on application startup.
 
 | Project | Description |
 |---------|-------------|
-| `fencemark.AppHost` | Aspire orchestration host that coordinates all services |
-| `fencemark.Web` | Blazor Server frontend with interactive components |
-| `fencemark.ApiService` | ASP.NET Core minimal API backend |
+| `fencemark.AppHost` | Aspire orchestration host that coordinates all services for local development |
+| **`fencemark.Client`** | **Blazor WebAssembly client application (production frontend)** |
+| `fencemark.Web` | Blazor Server frontend (legacy, being phased out) |
+| `fencemark.ApiService` | ASP.NET Core minimal API backend with JWT authentication |
 | `fencemark.ServiceDefaults` | Shared configuration for OpenTelemetry, health checks, and resilience |
 | `fencemark.Tests` | Integration tests using Aspire's distributed testing framework |
+
+> [!NOTE]
+> The **Blazor WebAssembly client** (`fencemark.Client`) is the new production frontend. It runs entirely in the browser and communicates with the API via HTTP. The Blazor Server frontend (`fencemark.Web`) is being phased out but remains for local development compatibility.
 
 ## Running Tests
 
@@ -141,11 +168,32 @@ The test suite covers all acceptance criteria:
 
 ## Deployment
 
-The application uses GitHub Actions for CI/CD with Azure Bicep for infrastructure as code.
+The application has migrated to a modern architecture with Blazor WebAssembly hosted on Azure Static Web Apps.
+
+### Production Architecture
+
+- **Frontend**: Blazor WASM on Azure Static Web Apps (with CDN)
+- **Backend**: API on Azure Container Apps
+- **Database**: Azure SQL Database
+- **Authentication**: Azure Entra External ID (CIAM)
+
+### Blazor WASM Migration
+
+The application has been successfully migrated from Blazor Server to Blazor WebAssembly for:
+- **60% cost reduction** in hosting costs
+- **Improved user experience** with instant UI interactions
+- **Better scalability** with CDN-based distribution
+- **Modern architecture** enabling PWA and offline support
+
+📚 **See [BLAZOR_WASM_MIGRATION_GUIDE.md](BLAZOR_WASM_MIGRATION_GUIDE.md) for complete migration documentation.**
 
 ### Automated Deployment (Recommended)
 
-The application automatically deploys to development on every push to `main`. For staging and production, trigger manual deployments via GitHub Actions.
+The application uses GitHub Actions for CI/CD:
+- **API & Infrastructure**: `.github/workflows/deploy.yml` - Deploys Container Apps
+- **Blazor WASM Client**: `.github/workflows/deploy-static-web-app.yml` - Deploys Static Web App
+
+The WASM client automatically deploys to development on every push to `main` that modifies the `fencemark.Client/` directory. For staging and production, trigger manual deployments via GitHub Actions.
 
 See **[CI-CD.md](CI-CD.md)** for complete CI/CD pipeline documentation, including:
 - Pipeline architecture and workflows

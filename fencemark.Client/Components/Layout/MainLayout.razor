@@ -1,0 +1,176 @@
+@inherits LayoutComponentBase
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient ApiClient
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+
+<AuthorizeView>
+    <Authorized>
+        <!-- Modern Header for Authenticated Users -->
+        <header class="modern-header">
+            <div class="modern-header-container">
+                <a href="/" class="modern-logo">
+                    <div class="modern-logo-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Medium" Color="Color.Inherit" />
+                    </div>
+                    <span>Fencemark</span>
+                </a>
+                
+                <nav class="modern-nav">
+                    <a href="/jobs" class="@(IsActive("/jobs") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Work" Size="Size.Small" />
+                            Jobs
+                        </div>
+                    </a>
+                    <a href="/components" class="@(IsActive("/components") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.ViewInAr" Size="Size.Small" />
+                            Components
+                        </div>
+                    </a>
+                    <a href="/fences" class="@(IsActive("/fences") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Fence" Size="Size.Small" />
+                            Fences
+                        </div>
+                    </a>
+                    <a href="/gates" class="@(IsActive("/gates") ? "active" : "")">
+                        <div class="flex items-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.DoorFront" Size="Size.Small" />
+                            Gates
+                        </div>
+                    </a>
+                </nav>
+                
+                <div class="flex items-center gap-3 modern-nav-actions">
+                    <span class="text-sm text-muted modern-user-name">@context.User.Identity?.Name</span>
+                    <a href="authentication/logout" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
+                        <span>Sign Out</span>
+                    </a>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            @Body
+        </main>
+    </Authorized>
+    <NotAuthorized>
+        <!-- Use MudBlazor layout for unauthenticated users (landing page) -->
+        <MudLayout>
+            <MudAppBar Elevation="1" Dense="true">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@ToggleDrawer" />
+                <MudText Typo="Typo.h6" Class="ml-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Fence" /> Fencemark
+                </MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="authentication/login" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
+            </MudAppBar>
+            
+            <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
+                <NavMenu />
+            </MudDrawer>
+            
+            <MudMainContent>
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
+                    @Body
+                </MudContainer>
+            </MudMainContent>
+        </MudLayout>
+    </NotAuthorized>
+</AuthorizeView>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _onboardingChecked = false;
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+    
+    private bool IsActive(string path)
+    {
+        var currentPath = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        
+        // Exact match or match with trailing slash
+        return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals(path + "/", StringComparison.OrdinalIgnoreCase) ||
+               (currentPath.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase) && path != "/");
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_onboardingChecked)
+        {
+            _onboardingChecked = true;
+            await CheckOnboardingStatus();
+        }
+    }
+    
+    private async Task CheckOnboardingStatus()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity?.IsAuthenticated ?? true)
+                return;
+            
+            // Get current user info from API
+            var response = await ApiClient.GetAsync("/api/auth/me");
+            if (!response.IsSuccessStatusCode)
+                return;
+                
+            var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
+            if (userInfo?.OrganizationName == null)
+                return;
+            
+            // Check if organization name looks like an email domain or common provider name
+            var commonProviders = new[] { "hotmail", "gmail", "yahoo", "outlook", "live", "msn", "icloud" };
+            var isEmailDomain = userInfo.OrganizationName.Contains(".") || 
+                               commonProviders.Any(p => userInfo.OrganizationName.Equals(p, StringComparison.OrdinalIgnoreCase));
+            
+            if (isEmailDomain)
+            {
+                // TODO: Enable this when OrganizationSetup page is migrated
+                // var parameters = new DialogParameters
+                // {
+                //     { "CurrentOrganizationName", userInfo.OrganizationName },
+                //     { "OrganizationId", userInfo.OrganizationId }
+                // };
+                // 
+                // var options = new DialogOptions 
+                // { 
+                //     CloseOnEscapeKey = false,
+                //     CloseButton = false,
+                //     MaxWidth = MaxWidth.Small,
+                //     FullWidth = true
+                // };
+                // 
+                // await DialogService.ShowAsync<Pages.OrganizationSetup>("Organization Setup", parameters, options);
+                // StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Silently fail onboarding check
+        }
+    }
+    
+    private class UserInfoResponse
+    {
+        public string? UserId { get; set; }
+        public string? Email { get; set; }
+        public string? OrganizationId { get; set; }
+        public string? OrganizationName { get; set; }
+    }
+}

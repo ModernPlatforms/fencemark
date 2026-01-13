@@ -1,0 +1,302 @@
+@page "/fences"
+@using fencemark.Client.Features.Fences
+@using Microsoft.AspNetCore.Authorization
+@using fencemark.Client.Components.Shared
+@inject FenceApiClient FenceClient
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<PageTitle>Fence Types - Fencemark</PageTitle>
+
+<PageHeader Title="Fence Types" 
+            Icon="@Icons.Material.Filled.Fence" 
+            Subtitle="Manage your fence catalog and pricing">
+    <Actions>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="ShowCreateDialog">
+            Add Fence Type
+        </MudButton>
+    </Actions>
+</PageHeader>
+
+@if (isLoading)
+{
+    <LoadingState Message="Loading fence types..." />
+}
+else if (fences == null || !fences.Any())
+{
+    <EmptyState Icon="@Icons.Material.Filled.Fence"
+                Title="No fence types found"
+                Message="Create your first fence type to get started!">
+        <Action>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="ShowCreateDialog">
+                Add Your First Fence Type
+            </MudButton>
+        </Action>
+    </EmptyState>
+}
+else
+{
+    <MudGrid>
+        @foreach (var fence in fences)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Class="h-100">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="mb-2">@fence.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">@fence.Description</MudText>
+                        
+                        <MudDivider Class="my-3" />
+                        
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Height:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@fence.HeightInFeet ft</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Material:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@fence.Material</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Style:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@fence.Style</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-2">
+                                <MudText Typo="Typo.body1">Price per ft:</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Success">$@fence.PricePerLinearFoot.ToString("F2")</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="() => EditFence(fence)">
+                            Edit
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Error" 
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="() => DeleteFence(fence)">
+                            Delete
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@if (showDialog)
+{
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Fence" Class="mr-2" />
+                @(editingFence?.Id == null ? "Create" : "Edit") Fence Type
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="form" @bind-IsValid="@formIsValid">
+                <MudTextField Label="Name" 
+                              @bind-Value="editingFence.Name" 
+                              Required="true" 
+                              RequiredError="Name is required"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Placeholder="e.g., 6ft Privacy Fence" />
+                
+                <MudTextField Label="Description" 
+                              @bind-Value="editingFence.Description" 
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Lines="3"
+                              Placeholder="Detailed description of the fence type" />
+                
+                <MudNumericField Label="Height (feet)" 
+                                 @bind-Value="editingFence.HeightInFeet" 
+                                 T="decimal"
+                                 Required="true"
+                                 RequiredError="Height is required"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0m"
+                                 Step="0.1m" />
+                
+                <MudNumericField Label="Price per Linear Foot" 
+                                 @bind-Value="editingFence.PricePerLinearFoot" 
+                                 T="decimal"
+                                 Required="true"
+                                 RequiredError="Price is required"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0m"
+                                 Step="0.01m"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                
+                <MudSelect Label="Material" 
+                           @bind-Value="editingFence.Material" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("")">Select material...</MudSelectItem>
+                    <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
+                    <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
+                    <MudSelectItem Value="@("Chain Link")">Chain Link</MudSelectItem>
+                    <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
+                    <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
+                    <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
+                </MudSelect>
+                
+                <MudSelect Label="Style" 
+                           @bind-Value="editingFence.Style" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("")">Select style...</MudSelectItem>
+                    <MudSelectItem Value="@("Privacy")">Privacy</MudSelectItem>
+                    <MudSelectItem Value="@("Picket")">Picket</MudSelectItem>
+                    <MudSelectItem Value="@("Split Rail")">Split Rail</MudSelectItem>
+                    <MudSelectItem Value="@("Shadowbox")">Shadowbox</MudSelectItem>
+                    <MudSelectItem Value="@("Lattice Top")">Lattice Top</MudSelectItem>
+                </MudSelect>
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="SaveFence" 
+                       Disabled="@(!formIsValid || isSaving)">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Save
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<FenceTypeDto>? fences;
+    private FenceTypeDto editingFence = new() { Name = "", OrganizationId = "" };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showDialog = false;
+    private bool formIsValid = false;
+    private MudForm? form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFences();
+    }
+
+    private async Task LoadFences()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await FenceClient.GetAllAsync();
+            fences = result?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading fences: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        editingFence = new FenceTypeDto { Name = "", OrganizationId = "" };
+        showDialog = true;
+    }
+
+    private void EditFence(FenceTypeDto fence)
+    {
+        editingFence = new FenceTypeDto
+        {
+            Id = fence.Id,
+            Name = fence.Name,
+            Description = fence.Description,
+            HeightInFeet = fence.HeightInFeet,
+            Material = fence.Material,
+            Style = fence.Style,
+            PricePerLinearFoot = fence.PricePerLinearFoot,
+            OrganizationId = fence.OrganizationId
+        };
+        showDialog = true;
+    }
+
+    private async Task SaveFence()
+    {
+        if (!formIsValid)
+            return;
+
+        isSaving = true;
+
+        try
+        {
+            if (string.IsNullOrEmpty(editingFence.Id))
+            {
+                await FenceClient.CreateAsync(editingFence);
+                Snackbar.Add("Fence type created successfully", Severity.Success);
+            }
+            else
+            {
+                await FenceClient.UpdateAsync(editingFence.Id, editingFence);
+                Snackbar.Add("Fence type updated successfully", Severity.Success);
+            }
+
+            await LoadFences();
+            CloseDialog();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving fence: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteFence(FenceTypeDto fence)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete '{fence.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                await FenceClient.DeleteAsync(fence.Id);
+                Snackbar.Add("Fence type deleted successfully", Severity.Success);
+                await LoadFences();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting fence: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        editingFence = new() { Name = "", OrganizationId = "" };
+    }
+}
