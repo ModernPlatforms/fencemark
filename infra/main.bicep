@@ -379,8 +379,10 @@ module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase &&
 // ============================================================================
 // Managed Certificate for Custom Domain
 // ============================================================================
+// Only provision certificate for container app when CDN is not enabled
+// When CDN is enabled, the custom domain and certificate are managed by CDN
 
-module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate) {
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate && !enableStaticSiteCdn) {
   name: 'managedCertificate'
   scope: rg
   params: {
@@ -690,7 +692,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
-    customDomains: !empty(computedCustomDomain) ? [
+    // Only configure custom domain on container app when CDN is not enabled
+    // When CDN is enabled, the custom domain points to CDN instead
+    customDomains: (!empty(computedCustomDomain) && !enableStaticSiteCdn) ? [
       {
         name: computedCustomDomain
         bindingType: bindCustomDomainCertificate ? 'SniEnabled' : 'Disabled'
@@ -743,12 +747,17 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
 // ============================================================================
 // DNS Records for Custom Domain
 // ============================================================================
-// Create CNAME record pointing the subdomain to the static site (CDN or storage)
+// Create CNAME record pointing the subdomain to:
+// - Static site CDN endpoint (when enableStaticSiteCdn is true)
+// - Static site storage endpoint (when deployStaticSite is true but CDN is disabled)
+// - Container app (when static site is not deployed or CDN is disabled)
 
 var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 var staticSiteDnsTarget = enableStaticSiteCdn ? staticSite.outputs.cdnHostname : staticSiteHostname
+// When CDN is enabled, DNS points to static site/CDN; otherwise points to container app
+var dnsTarget = enableStaticSiteCdn ? staticSiteDnsTarget : webFrontend.outputs.fqdn
 
 module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
   name: 'dnsCnameRecord'
@@ -757,7 +766,7 @@ module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDo
     dnsZoneName: baseDomainName
     recordName: environmentName == 'prod' ? '@' : environmentName
     recordType: 'CNAME'
-    targetValue: staticSiteDnsTarget
+    targetValue: dnsTarget
     ttl: 3600
   }
 }
