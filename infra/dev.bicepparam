@@ -67,7 +67,11 @@ param customDomain = 'dev.fencemark.com.au'
 
 param deployStaticSite = true
 param staticSiteStorageSku = 'Standard_LRS'
-param enableStaticSiteCdn = true
+param staticSiteCdnMode = 'none' // Use storage native custom domain for dev
+param staticSiteCustomDomain = 'dev.fencemark.com.au'
+
+// Deprecated parameters (backwards compatibility)
+param enableStaticSiteCdn = false
 param staticSiteCdnSku = 'Standard_Microsoft'
 
 // ============================================================================
