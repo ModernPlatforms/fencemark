@@ -31,6 +31,14 @@ param webFrontendMaxReplicas = 10
 param customDomain = 'fencemark.com.au'
 
 // ============================================================================
+// Static Web App Configuration
+// ============================================================================
+
+param deployStaticWebApp = true
+param staticWebAppSku = 'Standard'
+param staticWebAppCustomDomain = 'app.fencemark.com.au'
+
+// ============================================================================
 // Custom Domain Configuration
 // ============================================================================
 // Set to true after initial deployment once certificate is validated

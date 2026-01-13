@@ -62,6 +62,14 @@ param certificateName = 'dev-external-id-cert'
 param customDomain = 'dev.fencemark.com.au'
 
 // ============================================================================
+// Static Web App Configuration
+// ============================================================================
+
+param deployStaticWebApp = true
+param staticWebAppSku = 'Standard'
+param staticWebAppCustomDomain = 'app.dev.fencemark.com.au'
+
+// ============================================================================
 // Tags
 // ============================================================================
 

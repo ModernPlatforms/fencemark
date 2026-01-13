@@ -131,6 +131,23 @@ param sqlAzureAdAdminLogin string = ''
 var generatedSqlPassword = '${uniqueString(subscription().id, resourceGroupName, 'sql-admin')}!Aa1${uniqueString(resourceGroupName, environmentName, 'sql-pwd')}'
 
 // ============================================================================
+// Static Web App Parameters
+// ============================================================================
+
+@description('Deploy Static Web App for Blazor WASM client')
+param deployStaticWebApp bool = true
+
+@description('Static Web App SKU (Free or Standard)')
+@allowed([
+  'Free'
+  'Standard'
+])
+param staticWebAppSku string = 'Standard'
+
+@description('Custom domain for Static Web App (optional, computed from environment if not provided)')
+param staticWebAppCustomDomain string = ''
+
+// ============================================================================
 // Variables
 // ============================================================================
 
@@ -697,6 +714,81 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
 }
 
 // ============================================================================
+// Static Web App for Blazor WASM Client
+// ============================================================================
+
+module staticWebApp './modules/static-web-app.bicep' = if (deployStaticWebApp) {
+  name: 'staticWebApp'
+  scope: rg
+  params: {
+    name: '${abbrs.webStaticSites}fencemark-${environmentName}'
+    location: location
+    tags: union(defaultTags, {
+      'azd-service-name': 'blazor-wasm-client'
+    })
+    sku: staticWebAppSku
+    
+    // Link to API Container App backend
+    apiUrl: 'https://${apiService.outputs.fqdn}'
+    
+    // Enable managed identity for accessing App Config and Key Vault
+    enableManagedIdentity: true
+    
+    // Azure AD authentication settings (from Entra External ID)
+    aadTenantId: entraExternalIdTenantId
+    aadClientId: entraExternalIdClientId
+    aadInstance: entraExternalIdInstance
+    
+    // Application Insights for monitoring
+    appInsightsConnectionString: applicationInsights.outputs.connectionString
+  }
+}
+
+// ============================================================================
+// RBAC Role Assignments for Static Web App
+// ============================================================================
+
+// Grant Static Web App access to Central App Configuration
+module staticWebAppAppConfigRoleAssignment './modules/rbac-assignment.bicep' = if (deployStaticWebApp) {
+  name: 'swaAppCfgRole'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    principalId: staticWebApp.outputs.systemAssignedMIPrincipalId
+    roleDefinitionId: appConfigDataReaderRoleId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Grant Static Web App access to Key Vault secrets
+module staticWebAppKeyVaultRoleAssignment './keyvault-access.bicep' = if (deployStaticWebApp) {
+  name: 'staticWebAppKeyVaultRoleAssignment'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    principalId: staticWebApp.outputs.systemAssignedMIPrincipalId
+    principalType: 'ServicePrincipal'
+    roleName: 'Key Vault Secrets User'
+  }
+}
+
+// ============================================================================
+// Store Static Web App Deployment Token in Key Vault
+// ============================================================================
+
+module staticWebAppDeploymentTokenSecret './modules/keyvault-secret.bicep' = if (deployStaticWebApp) {
+  name: 'staticWebAppDeploymentTokenSecret'
+  scope: rg
+  params: {
+    keyVaultName: keyVault.outputs.name
+    secretName: 'swa-deployment-token'
+    secretValue: staticWebApp.outputs.deploymentToken
+    contentType: 'Static Web App Deployment Token for GitHub Actions'
+    tags: defaultTags
+  }
+}
+
+// ============================================================================
 // DNS Records for Custom Domain
 // ============================================================================
 // Create CNAME record pointing the subdomain to the Container Apps environment
@@ -1086,6 +1178,25 @@ output keyVaultUri string = keyVault.outputs.vaultUri
 
 @description('The Key Vault name')
 output keyVaultName string = keyVault.outputs.name
+
+// ============================================================================
+// Static Web App Outputs
+// ============================================================================
+
+@description('The name of the Static Web App (if deployed)')
+output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.name : ''
+
+@description('The URL of the Static Web App (if deployed)')
+output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.url : ''
+
+@description('The default hostname of the Static Web App (if deployed)')
+output staticWebAppHostname string = deployStaticWebApp ? staticWebApp.outputs.defaultHostname : ''
+
+@description('The principal ID of the Static Web App managed identity (if deployed)')
+output staticWebAppIdentityPrincipalId string = deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
+
+@description('The resource ID of the Static Web App (if deployed)')
+output staticWebAppResourceId string = deployStaticWebApp ? staticWebApp.outputs.resourceId : ''
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
