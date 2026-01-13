@@ -1,0 +1,286 @@
+# ============================================================================
+# Static Web App Deployment Workflow
+# ============================================================================
+# This workflow builds and deploys the Blazor WASM client to Azure Static Web Apps.
+#
+# Deployment Flow:
+#   1. Build Blazor WASM client
+#   2. Configure Azure AD settings
+#   3. Deploy to Azure Static Web App
+#
+# Environments:
+#   - dev: Auto-deploys on push to main
+#   - staging: Manual deployment with approval
+#   - prod: Manual deployment with approval
+#
+# Authentication: Uses deployment token from Azure Key Vault
+#
+# For more information, see: STATIC_WEB_APP_SETUP.md
+# ============================================================================
+
+name: Deploy Blazor WASM to Static Web App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fencemark.Client/**'
+      - '.github/workflows/deploy-static-web-app.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+# Prevent concurrent deployments to same environment
+concurrency:
+  group: deploy-swa-${{ github.ref }}-${{ github.event.inputs.environment || 'dev' }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write       # Required for OIDC authentication with Azure
+  contents: read        # Read repository contents
+  pull-requests: write  # Comment deployment status on PRs
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  CLIENT_PROJECT: 'fencemark.Client/fencemark.Client.csproj'
+
+jobs:
+  # ============================================================================
+  # Deploy to Development
+  # ============================================================================
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    environment:
+      name: dev
+      url: https://stapp-fencemark-dev.azurestaticapps.net
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Static Web App Deployment Token
+        id: swa-token
+        run: |
+          # Retrieve deployment token from Key Vault
+          TOKEN=$(az keyvault secret show \
+            --vault-name kv-fencemark-dev \
+            --name swa-deployment-token \
+            --query value -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Build Blazor WASM
+        run: |
+          # Update appsettings.json with environment-specific values
+          cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+          {
+            "AzureAd": {
+              "Authority": "https://devfencemark.ciamlogin.com/",
+              "ClientId": "5b204301-0113-4b40-bd2e-e0ef8be99f48",
+              "ValidateAuthority": true,
+              "ApiScope": "api://5b204301-0113-4b40-bd2e-e0ef8be99f48/access_as_user"
+            },
+            "ApiBaseUrl": "https://ca-fencemark-api-dev.azurecontainerapps.io"
+          }
+          EOF
+          
+          # Build and publish the Blazor WASM app
+          dotnet publish ${{ env.CLIENT_PROJECT }} \
+            -c Release \
+            -o publish/wwwroot
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: 'publish/wwwroot'
+          skip_app_build: true
+          skip_api_build: true
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ Blazor WASM deployed to Dev: https://stapp-fencemark-dev.azurestaticapps.net'
+            })
+
+  # ============================================================================
+  # Deploy to Staging
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://stapp-fencemark-staging.azurestaticapps.net
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Static Web App Deployment Token
+        id: swa-token
+        run: |
+          TOKEN=$(az keyvault secret show \
+            --vault-name kv-fencemark-staging \
+            --name swa-deployment-token \
+            --query value -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Build Blazor WASM
+        run: |
+          cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+          {
+            "AzureAd": {
+              "Authority": "https://stagingfencemark.ciamlogin.com/",
+              "ClientId": "${{ secrets.STAGING_AZURE_AD_CLIENT_ID }}",
+              "ValidateAuthority": true,
+              "ApiScope": "api://${{ secrets.STAGING_AZURE_AD_CLIENT_ID }}/access_as_user"
+            },
+            "ApiBaseUrl": "https://ca-fencemark-api-staging.azurecontainerapps.io"
+          }
+          EOF
+          
+          dotnet publish ${{ env.CLIENT_PROJECT }} \
+            -c Release \
+            -o publish/wwwroot
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: 'publish/wwwroot'
+          skip_app_build: true
+          skip_api_build: true
+
+  # ============================================================================
+  # Deploy to Production
+  # ============================================================================
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    environment:
+      name: prod
+      url: https://app.fencemark.com
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Azure Login via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Static Web App Deployment Token
+        id: swa-token
+        run: |
+          TOKEN=$(az keyvault secret show \
+            --vault-name kv-fencemark-prod \
+            --name swa-deployment-token \
+            --query value -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Build Blazor WASM
+        run: |
+          cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+          {
+            "AzureAd": {
+              "Authority": "https://fencemark.ciamlogin.com/",
+              "ClientId": "${{ secrets.PROD_AZURE_AD_CLIENT_ID }}",
+              "ValidateAuthority": true,
+              "ApiScope": "api://${{ secrets.PROD_AZURE_AD_CLIENT_ID }}/access_as_user"
+            },
+            "ApiBaseUrl": "https://api.fencemark.com"
+          }
+          EOF
+          
+          dotnet publish ${{ env.CLIENT_PROJECT }} \
+            -c Release \
+            -o publish/wwwroot
+
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: 'publish/wwwroot'
+          skip_app_build: true
+          skip_api_build: true
+
+      - name: Health Check
+        run: |
+          echo "Waiting 30s for deployment to propagate..."
+          sleep 30
+          
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://app.fencemark.com)
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed with status: $STATUS"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+      - name: Notify Deployment
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Production deployment successful!"
+          else
+            echo "❌ Production deployment failed!"
+          fi
