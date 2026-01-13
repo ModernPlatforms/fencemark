@@ -232,6 +232,7 @@ Fencemark uses .NET Aspire for comprehensive orchestration across all environmen
 - **Recommendation:** ✅ Proceed with migration
 - **Benefits:** ~60% cost reduction, better scalability, instant UI updates
 - **Timeline:** 2-3 weeks development effort
+- **Implementation:** [Migration Roadmap](BLAZOR_WASM_MIGRATION_ROADMAP.md) - 6 features split into separate PRs
 
 ## Resources
 
