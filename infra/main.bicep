@@ -756,11 +756,13 @@ var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : 
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 var staticSiteDnsTarget = enableStaticSiteCdn ? staticSite.outputs.cdnHostname : staticSiteHostname
-// DNS target logic:
+// Determine CNAME record target based on deployment configuration:
 // - When CDN is enabled: point to CDN endpoint
 // - When static site is deployed (but CDN disabled): point to static site storage endpoint
 // - Otherwise: point to container app
-var dnsTarget = enableStaticSiteCdn ? staticSiteDnsTarget : (deployStaticSite ? staticSiteHostname : webFrontend.outputs.fqdn)
+var containerAppTarget = webFrontend.outputs.fqdn
+var staticSiteOnlyTarget = deployStaticSite ? staticSiteHostname : containerAppTarget
+var cnameRecordTarget = enableStaticSiteCdn ? staticSiteDnsTarget : staticSiteOnlyTarget
 
 module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
   name: 'dnsCnameRecord'
@@ -769,7 +771,7 @@ module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDo
     dnsZoneName: baseDomainName
     recordName: environmentName == 'prod' ? '@' : environmentName
     recordType: 'CNAME'
-    targetValue: dnsTarget
+    targetValue: cnameRecordTarget
     ttl: 3600
   }
 }
