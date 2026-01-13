@@ -270,6 +270,11 @@ module frontDoor 'br/public:avm/res/cdn/profile:0.17.0' = if (effectiveCdnMode =
   }
 }
 
+// Reference to the Front Door endpoint resource to get its hostname
+resource frontDoorEndpointRef 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' existing = if (effectiveCdnMode == 'frontdoor') {
+  name: '${frontDoor.outputs.name}/${frontDoorEndpointName}'
+}
+
 @description('Storage account name')
 output storageAccountName string = storageAccount.name
 
@@ -280,10 +285,10 @@ output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.uri : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoorEndpointRef.properties.hostName : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.uri : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoorEndpointRef.properties.hostName : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode
