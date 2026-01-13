@@ -296,7 +296,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // Configure CORS for Blazor WASM client
 var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-Console.WriteLine($"[ApiService] CORS configured for {corsOrigins.Length} origins: {string.Join(", ", corsOrigins)}");
+if (builder.Environment.IsDevelopment())
+{
+    Console.WriteLine($"[ApiService] CORS configured for {corsOrigins.Length} origins: {string.Join(", ", corsOrigins)}");
+}
+else
+{
+    Console.WriteLine($"[ApiService] CORS configured for {corsOrigins.Length} origins");
+}
 
 builder.Services.AddCors(options =>
 {
