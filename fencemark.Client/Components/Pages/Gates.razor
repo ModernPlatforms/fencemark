@@ -1,0 +1,317 @@
+@page "/gates"
+@using fencemark.Client.Features.Gates
+@using Microsoft.AspNetCore.Authorization
+@using fencemark.Client.Components.Shared
+@inject GateApiClient GateClient
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<PageTitle>Gate Types - Gatemark</PageTitle>
+
+<PageHeader Title="Gate Types" 
+            Icon="@Icons.Material.Filled.DoorFront" 
+            Subtitle="Manage your gate catalog and pricing">
+    <Actions>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add" 
+                   OnClick="ShowCreateDialog">
+            Add Gate Type
+        </MudButton>
+    </Actions>
+</PageHeader>
+
+@if (isLoading)
+{
+    <LoadingState Message="Loading gate types..." />
+}
+else if (gates == null || !gates.Any())
+{
+    <EmptyState Icon="@Icons.Material.Filled.DoorFront"
+                Title="No gate types found"
+                Message="Create your first gate type to get started!">
+        <Action>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="ShowCreateDialog">
+                Add Your First Gate Type
+            </MudButton>
+        </Action>
+    </EmptyState>
+}
+else
+{
+    <MudGrid>
+        @foreach (var gate in gates)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="2" Class="h-100">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="mb-2">@gate.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">@gate.Description</MudText>
+                        
+                        <MudDivider Class="my-3" />
+                        
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Width:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.WidthInFeet ft</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Height:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.HeightInFeet ft</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Material:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.Material</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.body2">Style:</MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.Style</strong></MudText>
+                            </MudStack>
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-2">
+                                <MudText Typo="Typo.body1">Base Price:</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Success">$@gate.BasePrice.ToString("F2")</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Edit"
+                                   OnClick="() => EditGate(gate)">
+                            Edit
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Error" 
+                                   StartIcon="@Icons.Material.Filled.Delete"
+                                   OnClick="() => DeleteGate(gate)">
+                            Delete
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@if (showDialog)
+{
+    <MudDialog>
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.DoorFront" Class="mr-2" />
+                @(editingGate?.Id == null ? "Create" : "Edit") Gate Type
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="form" @bind-IsValid="@formIsValid">
+                <MudTextField Label="Name" 
+                              @bind-Value="editingGate.Name" 
+                              Required="true" 
+                              RequiredError="Name is required"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Placeholder="e.g., 6ft Privacy Gate" />
+                
+                <MudTextField Label="Description" 
+                              @bind-Value="editingGate.Description" 
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Lines="3"
+                              Placeholder="Detailed description of the gate type" />
+                
+                <MudNumericField Label="Width (feet)" 
+                                 @bind-Value="editingGate.WidthInFeet" 
+                                 T="decimal"
+                                 Required="true"
+                                 RequiredError="Width is required"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0m"
+                                 Step="0.1m" />
+                
+                <MudNumericField Label="Height (feet)" 
+                                 @bind-Value="editingGate.HeightInFeet" 
+                                 T="decimal"
+                                 Required="true"
+                                 RequiredError="Height is required"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0m"
+                                 Step="0.1m" />
+                
+                <MudNumericField Label="Base Price" 
+                                 @bind-Value="editingGate.BasePrice" 
+                                 T="decimal"
+                                 Required="true"
+                                 RequiredError="Base price is required"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Min="0m"
+                                 Step="0.01m"
+                                 Adornment="Adornment.Start"
+                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                
+                <MudSelect Label="Material" 
+                           @bind-Value="editingGate.Material" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("")">Select material...</MudSelectItem>
+                    <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
+                    <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
+                    <MudSelectItem Value="@("Metal")">Metal</MudSelectItem>
+                    <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
+                    <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
+                    <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
+                </MudSelect>
+                
+                <MudSelect Label="Style" 
+                           @bind-Value="editingGate.Style" 
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("")">Select style...</MudSelectItem>
+                    <MudSelectItem Value="@("Walk-through")">Walk-through</MudSelectItem>
+                    <MudSelectItem Value="@("Drive-through")">Drive-through</MudSelectItem>
+                    <MudSelectItem Value="@("Pedestrian")">Pedestrian</MudSelectItem>
+                    <MudSelectItem Value="@("Double")">Double</MudSelectItem>
+                    <MudSelectItem Value="@("Sliding")">Sliding</MudSelectItem>
+                </MudSelect>
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="SaveGate" 
+                       Disabled="@(!formIsValid || isSaving)">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Save
+            </MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<GateTypeDto>? gates;
+    private GateTypeDto editingGate = new() { Name = "", OrganizationId = "" };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showDialog = false;
+    private bool formIsValid = false;
+    private MudForm? form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGates();
+    }
+
+    private async Task LoadGates()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await GateClient.GetAllAsync();
+            gates = result?.ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading gates: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateDialog()
+    {
+        editingGate = new GateTypeDto { Name = "", OrganizationId = "" };
+        showDialog = true;
+    }
+
+    private void EditGate(GateTypeDto gate)
+    {
+        editingGate = new GateTypeDto
+        {
+            Id = gate.Id,
+            Name = gate.Name,
+            Description = gate.Description,
+            WidthInFeet = gate.WidthInFeet,
+            HeightInFeet = gate.HeightInFeet,
+            Material = gate.Material,
+            Style = gate.Style,
+            BasePrice = gate.BasePrice,
+            OrganizationId = gate.OrganizationId
+        };
+        showDialog = true;
+    }
+
+    private async Task SaveGate()
+    {
+        if (!formIsValid)
+            return;
+
+        isSaving = true;
+
+        try
+        {
+            if (string.IsNullOrEmpty(editingGate.Id))
+            {
+                await GateClient.CreateAsync(editingGate);
+                Snackbar.Add("Gate type created successfully", Severity.Success);
+            }
+            else
+            {
+                await GateClient.UpdateAsync(editingGate.Id, editingGate);
+                Snackbar.Add("Gate type updated successfully", Severity.Success);
+            }
+
+            await LoadGates();
+            CloseDialog();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving gate: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteGate(GateTypeDto gate)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete '{gate.Name}'?",
+            yesText: "Delete",
+            cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                await GateClient.DeleteAsync(gate.Id);
+                Snackbar.Add("Gate type deleted successfully", Severity.Success);
+                await LoadGates();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error deleting gate: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private void CloseDialog()
+    {
+        showDialog = false;
+        editingGate = new() { Name = "", OrganizationId = "" };
+    }
+}

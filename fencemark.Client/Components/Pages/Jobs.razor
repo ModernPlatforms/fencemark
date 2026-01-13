@@ -1,0 +1,399 @@
+@page "/jobs"
+@using fencemark.Client.Features.Jobs
+@using Microsoft.AspNetCore.Authorization
+@inject JobApiClient JobClient
+@inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<PageTitle>Jobs - Fencemark</PageTitle>
+
+<div class="modern-container">
+    <div class="flex flex-row flex-wrap gap-4 mb-8 items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold" style="margin-bottom: 0.25rem;">Jobs</h1>
+            <p class="text-muted">Manage all your fencing projects</p>
+        </div>
+        <button class="modern-btn modern-btn-primary gap-2" @onclick="ShowCreateModal">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" />
+            New Job
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center" style="padding: 3rem 0;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading jobs...</p>
+        </div>
+    }
+    else if (jobs == null || !jobs.Any())
+    {
+        <div class="modern-card" style="padding: 2rem; text-align: center;">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Info" Class="mb-3" />
+            <p class="text-muted">No jobs found. Create your first job to get started!</p>
+        </div>
+    }
+    else
+    {
+        <div class="modern-grid modern-grid-cols-3">
+            @foreach (var job in jobs)
+            {
+                <div class="modern-job-card">
+                    <div class="modern-job-card-header">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="modern-card-title" style="margin: 0;">@job.Name</h3>
+                            <span class="modern-badge @GetStatusBadgeClass(job.Status)">@GetStatusDisplayName(job.Status)</span>
+                        </div>
+                        <p class="modern-card-description" style="margin: 0;">@job.CustomerName</p>
+                    </div>
+                    
+                    <div class="modern-job-card-body">
+                        <div style="margin-bottom: 1rem;">
+                            @if (!string.IsNullOrEmpty(job.CustomerEmail))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" />
+                                    <span>@job.CustomerEmail</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(job.CustomerPhone))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" />
+                                    <span>@job.CustomerPhone</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(job.InstallationAddress))
+                            {
+                                <div class="modern-info-item">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                    <span>@job.InstallationAddress</span>
+                                </div>
+                            }
+                            <div class="modern-info-item" style="margin-top: 0.75rem;">
+                                <MudIcon Icon="@Icons.Material.Filled.Straighten" Size="Size.Small" />
+                                <span><strong>@job.TotalLinearFeet ft</strong> total</span>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 1rem; padding-top: 1rem;" class="border-t">
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span class="text-muted">Materials:</span>
+                                <span>$@job.MaterialsCost.ToString("F2")</span>
+                            </div>
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span class="text-muted">Labor:</span>
+                                <span>$@job.LaborCost.ToString("F2")</span>
+                            </div>
+                            <div class="flex justify-between font-bold mt-3">
+                                <span>Total:</span>
+                                <span class="text-success">$@job.TotalCost.ToString("F2")</span>
+                            </div>
+                        </div>
+                        
+                        @if (job.TotalLinearFeet > 0)
+                        {
+                            var progress = CalculateProgress(job);
+                            <div style="margin-top: 1rem;">
+                                <div class="flex justify-between mb-1 text-sm">
+                                    <span class="text-muted">Progress</span>
+                                    <span class="font-semibold">@progress%</span>
+                                </div>
+                                <div class="modern-progress">
+                                    <div class="modern-progress-bar" style="width: @(progress)%"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="modern-job-card-footer">
+                        <button class="modern-btn modern-btn-primary w-full mb-2" @onclick="() => OpenDrawing(job.Id)">
+                            <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Small" />
+                            Open Drawing
+                        </button>
+                        <div class="flex gap-2">
+                            <button class="modern-btn modern-btn-outline" style="flex: 1;" @onclick="() => EditJob(job)">
+                                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                Edit
+                            </button>
+                            <button class="modern-btn modern-btn-danger" style="flex: 1;" @onclick="() => DeleteJob(job)">
+                                <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+        <div class="modal-dialog modal-dialog-scrollable" style="max-width: min(800px, calc(100vw - 240px)); margin: 1.75rem auto;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(editingJob?.Id == null ? "Create" : "Edit") Job</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body" style="max-height: calc(100vh - 200px); overflow-y: auto;">
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">@errorMessage</div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Job Name *</label>
+                            <input type="text" class="form-control" @bind="editingJob.Name" placeholder="e.g., Smith Backyard Fence" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" @bind="editingJob.Status">
+                                @foreach (JobStatusDto status in Enum.GetValues(typeof(JobStatusDto)))
+                                {
+                                    <option value="@status">@status</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3">Customer Information</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Name *</label>
+                            <input type="text" class="form-control" @bind="editingJob.CustomerName" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Email</label>
+                            <input type="email" class="form-control" @bind="editingJob.CustomerEmail" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Phone</label>
+                            <input type="tel" class="form-control" @bind="editingJob.CustomerPhone" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Installation Address</label>
+                            <input type="text" class="form-control" @bind="editingJob.InstallationAddress" />
+                        </div>
+                    </div>
+
+                    <h6 class="mt-3">Job Details</h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Total Linear Feet</label>
+                            <input type="number" step="0.1" class="form-control" @bind="editingJob.TotalLinearFeet" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Materials Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.MaterialsCost" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Labor Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.LaborCost" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Total Cost</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editingJob.TotalCost" />
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Start Date</label>
+                            <input type="date" class="form-control" @bind="editingJob.EstimatedStartDate" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estimated Completion Date</label>
+                            <input type="date" class="form-control" @bind="editingJob.EstimatedCompletionDate" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" @bind="editingJob.Notes" rows="3" placeholder="Additional notes about the job"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveJob" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<JobDto>? jobs;
+    private JobDto editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool showModal = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJobs();
+    }
+
+    private async Task LoadJobs()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await JobClient.GetAllAsync();
+            jobs = result?.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading jobs: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingJob = new JobDto { Name = "", CustomerName = "", OrganizationId = "" };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private void EditJob(JobDto job)
+    {
+        editingJob = new JobDto
+        {
+            Id = job.Id,
+            Name = job.Name,
+            CustomerName = job.CustomerName,
+            CustomerEmail = job.CustomerEmail,
+            CustomerPhone = job.CustomerPhone,
+            InstallationAddress = job.InstallationAddress,
+            Status = job.Status,
+            TotalLinearFeet = job.TotalLinearFeet,
+            LaborCost = job.LaborCost,
+            MaterialsCost = job.MaterialsCost,
+            TotalCost = job.TotalCost,
+            Notes = job.Notes,
+            EstimatedStartDate = job.EstimatedStartDate,
+            EstimatedCompletionDate = job.EstimatedCompletionDate,
+            OrganizationId = job.OrganizationId
+        };
+        errorMessage = null;
+        showModal = true;
+    }
+
+    private async Task SaveJob()
+    {
+        if (string.IsNullOrWhiteSpace(editingJob.Name) || string.IsNullOrWhiteSpace(editingJob.CustomerName))
+        {
+            errorMessage = "Job Name and Customer Name are required";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            if (string.IsNullOrEmpty(editingJob.Id))
+            {
+                await JobClient.CreateAsync(editingJob);
+            }
+            else
+            {
+                await JobClient.UpdateAsync(editingJob.Id, editingJob);
+            }
+
+            await LoadJobs();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving job: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteJob(JobDto job)
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{job.Name}'?"))
+            return;
+
+        try
+        {
+            await JobClient.DeleteAsync(job.Id);
+            await LoadJobs();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting job: {ex.Message}";
+        }
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingJob = new() { Name = "", CustomerName = "", OrganizationId = "" };
+        errorMessage = null;
+    }
+
+    private void OpenDrawing(string jobId)
+    {
+        Navigation.NavigateTo($"/jobs/{jobId}/drawing");
+    }
+
+    private string GetStatusBadgeClass(JobStatusDto status) => status switch
+    {
+        JobStatusDto.Draft => "modern-badge-secondary",
+        JobStatusDto.Quoted => "modern-badge-info",
+        JobStatusDto.Approved => "modern-badge-info",
+        JobStatusDto.InProgress => "modern-badge-warning",
+        JobStatusDto.Completed => "modern-badge-success",
+        JobStatusDto.Cancelled => "modern-badge-error",
+        _ => "modern-badge-secondary"
+    };
+    
+    private string GetStatusDisplayName(JobStatusDto status) => status switch
+    {
+        JobStatusDto.Draft => "Draft",
+        JobStatusDto.Quoted => "Quoted",
+        JobStatusDto.Approved => "Approved",
+        JobStatusDto.InProgress => "In Progress",
+        JobStatusDto.Completed => "Completed",
+        JobStatusDto.Cancelled => "Cancelled",
+        _ => status.ToString()
+    };
+    
+    private int CalculateProgress(JobDto job)
+    {
+        return job.Status switch
+        {
+            JobStatusDto.Draft => 10,
+            JobStatusDto.Quoted => 25,
+            JobStatusDto.Approved => 40,
+            JobStatusDto.InProgress => 65,
+            JobStatusDto.Completed => 100,
+            JobStatusDto.Cancelled => 0,
+            _ => 0
+        };
+    }
+}

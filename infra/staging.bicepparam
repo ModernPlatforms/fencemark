@@ -31,6 +31,14 @@ param webFrontendMaxReplicas = 3
 param customDomain = 'stgfencemark.modernplatforms.dev'
 
 // ============================================================================
+// Static Web App Configuration
+// ============================================================================
+
+param deployStaticWebApp = true
+param staticWebAppSku = 'Standard'
+param staticWebAppCustomDomain = 'app.stgfencemark.modernplatforms.dev'
+
+// ============================================================================
 // Custom Domain Configuration
 // ============================================================================
 // Set to true after initial deployment once certificate is validated
