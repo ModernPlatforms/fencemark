@@ -775,7 +775,7 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: staticSiteCustomDomain == baseDomainName ? '@' : split(staticSiteCustomDomain, '.')[0]
+    recordName: staticSiteCustomDomain == baseDomainName ? '@' : contains(staticSiteCustomDomain, '.') ? split(staticSiteCustomDomain, '.')[0] : staticSiteCustomDomain
     recordType: 'CNAME'
     targetValue: staticSiteDnsTarget
     ttl: 3600

@@ -176,6 +176,11 @@ resource cdnCustomDomain 'Microsoft.Cdn/profiles/endpoints/customDomains@2023-05
   parent: cdnEndpoint
   properties: {
     hostName: customDomainName
+    customHttpsParameters: enableCustomDomainHttps ? {
+      certificateSource: 'Cdn'
+      protocolType: 'ServerNameIndication'
+      minimumTlsVersion: 'TLS12'
+    } : null
   }
 }
 
@@ -272,10 +277,10 @@ output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.endpoints[0].properties.hostName : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.name : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.endpoints[0].properties.hostName : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoor.outputs.name : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode
