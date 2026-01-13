@@ -14,6 +14,16 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
+// Register API clients
+builder.Services.AddScoped<fencemark.Client.Features.Auth.AuthApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.Fences.FenceApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.Gates.GateApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.Components.ComponentApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.Jobs.JobApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.Organization.OrganizationApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.FenceSegments.FenceSegmentApiClient>();
+builder.Services.AddScoped<fencemark.Client.Features.GatePositions.GatePositionApiClient>();
+
 // Configure MSAL authentication for Azure Entra External ID (CIAM)
 builder.Services.AddMsalAuthentication(options =>
 {

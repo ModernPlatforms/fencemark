@@ -1,0 +1,384 @@
+@page "/organization"
+@using fencemark.Client.Features.Auth
+@using fencemark.Client.Features.Organization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject OrganizationApiClient OrgApi
+@inject AuthApiClient AuthApi
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Organization Dashboard</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Organization Members</h2>
+                <button class="btn btn-success" @onclick="ShowInviteModal">
+                    <i class="bi bi-person-plus"></i> Invite Member
+                </button>
+            </div>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (members == null || !members.Any())
+            {
+                <div class="alert alert-info">
+                    No members found. Invite users to your organization.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var member in members)
+                            {
+                                <tr>
+                                    <td>@member.Email</td>
+                                    <td>
+                                        @if (member.Role == "Owner")
+                                        {
+                                            <span class="badge bg-primary">@member.Role</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@member.Role</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (member.IsGuest)
+                                        {
+                                            <span class="badge bg-warning">Guest</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                    </td>
+                                    <td>@member.JoinedAt.ToShortDateString()</td>
+                                    <td>
+                                        @if (member.Role != "Owner")
+                                        {
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button class="btn btn-outline-primary" @onclick="() => ShowRoleModal(member)">
+                                                    Change Role
+                                                </button>
+                                                <button class="btn btn-outline-danger" @onclick="() => RemoveMemberAsync(member.UserId)">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            @successMessage
+        </div>
+    }
+</div>
+
+<!-- Invite Member Modal -->
+@if (showInviteModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Invite Member</h5>
+                    <button type="button" class="btn-close" @onclick="HideInviteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@inviteModel" OnValidSubmit="@HandleInviteAsync">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label for="inviteEmail" class="form-label">Email</label>
+                            <InputText id="inviteEmail" @bind-Value="inviteModel.Email" class="form-control" />
+                            <ValidationMessage For="@(() => inviteModel.Email)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="inviteRole" class="form-label">Role</label>
+                            <InputSelect id="inviteRole" @bind-Value="inviteModel.Role" class="form-select">
+                                <option value="Admin">Admin</option>
+                                <option value="Member">Member</option>
+                                <option value="Billing">Billing</option>
+                                <option value="ReadOnly">Read Only</option>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => inviteModel.Role)" />
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Send Invitation
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Change Role Modal -->
+@if (showRoleModal && selectedMember != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Role for @selectedMember.Email</h5>
+                    <button type="button" class="btn-close" @onclick="HideRoleModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@roleModel" OnValidSubmit="@HandleRoleChangeAsync">
+                        <div class="mb-3">
+                            <label for="newRole" class="form-label">New Role</label>
+                            <InputSelect id="newRole" @bind-Value="roleModel.Role" class="form-select">
+                                <option value="Admin">Admin</option>
+                                <option value="Member">Member</option>
+                                <option value="Billing">Billing</option>
+                                <option value="ReadOnly">Read Only</option>
+                            </InputSelect>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="HideRoleModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Update Role
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<OrganizationMemberResponse>? members;
+    private string? organizationId;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private string? errorMessage;
+    private string? successMessage;
+    private bool showInviteModal;
+    private bool showRoleModal;
+    private OrganizationMemberResponse? selectedMember;
+    private InviteModel inviteModel = new();
+    private RoleModel roleModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMembersAsync();
+    }
+
+    private async Task LoadMembersAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            // Get current user to get organization ID
+            var currentUser = await AuthApi.GetCurrentUserAsync();
+            if (currentUser != null)
+            {
+                // Extract organizationId from the response
+                var userJson = System.Text.Json.JsonSerializer.Serialize(currentUser);
+                using var doc = System.Text.Json.JsonDocument.Parse(userJson);
+                organizationId = doc.RootElement.GetProperty("organizationId").GetString();
+
+                if (!string.IsNullOrEmpty(organizationId))
+                {
+                    members = (await OrgApi.GetMembersAsync(organizationId))?.ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load members: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowInviteModal()
+    {
+        inviteModel = new InviteModel();
+        showInviteModal = true;
+    }
+
+    private void HideInviteModal()
+    {
+        showInviteModal = false;
+        inviteModel = new InviteModel();
+    }
+
+    private void ShowRoleModal(OrganizationMemberResponse member)
+    {
+        selectedMember = member;
+        roleModel = new RoleModel { Role = member.Role };
+        showRoleModal = true;
+    }
+
+    private void HideRoleModal()
+    {
+        showRoleModal = false;
+        selectedMember = null;
+        roleModel = new RoleModel();
+    }
+
+    private async Task HandleInviteAsync()
+    {
+        if (string.IsNullOrEmpty(organizationId)) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var request = new InviteUserRequest(inviteModel.Email, inviteModel.Role);
+            var response = await OrgApi.InviteUserAsync(organizationId, request);
+
+            if (response?.Success == true)
+            {
+                successMessage = response.Message ?? "Invitation sent successfully";
+                HideInviteModal();
+                await LoadMembersAsync();
+            }
+            else
+            {
+                errorMessage = response?.Message ?? "Failed to send invitation";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleRoleChangeAsync()
+    {
+        if (string.IsNullOrEmpty(organizationId) || selectedMember == null) return;
+
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var request = new UpdateRoleRequest(selectedMember.UserId, roleModel.Role);
+            var success = await OrgApi.UpdateRoleAsync(organizationId, request);
+
+            if (success)
+            {
+                successMessage = "Role updated successfully";
+                HideRoleModal();
+                await LoadMembersAsync();
+            }
+            else
+            {
+                errorMessage = "Failed to update role";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task RemoveMemberAsync(string userId)
+    {
+        if (string.IsNullOrEmpty(organizationId)) return;
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to remove this member?"))
+            return;
+
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var success = await OrgApi.RemoveMemberAsync(organizationId, userId);
+
+            if (success)
+            {
+                successMessage = "Member removed successfully";
+                await LoadMembersAsync();
+            }
+            else
+            {
+                errorMessage = "Failed to remove member";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+
+    private class InviteModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Role { get; set; } = "Member";
+    }
+
+    private class RoleModel
+    {
+        public string Role { get; set; } = "Member";
+    }
+}

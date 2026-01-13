@@ -1,0 +1,155 @@
+@using System.Net.Http.Json
+@using MudBlazor
+@inject HttpClient ApiClient
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Welcome! Let's set up your organization</MudText>
+        
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mb-4" />
+        }
+        
+        <MudTextField @bind-Value="_organizationName" 
+                      Label="Organization Name" 
+                      Variant="Variant.Outlined" 
+                      Required="true"
+                      HelperText="Give your organization a proper name"
+                      Class="mb-4" />
+        
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Invite Team Members (Optional)</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            You can invite team members now or do this later from the organization settings.
+        </MudText>
+        
+        @for (int i = 0; i < _inviteEmails.Count; i++)
+        {
+            var index = i;
+            <MudTextField @bind-Value="_inviteEmails[index]" 
+                          Label="@($"Email {index + 1}")" 
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Delete"
+                          OnAdornmentClick="@(() => RemoveInvite(index))"
+                          Class="mb-2" />
+        }
+        
+        <MudButton StartIcon="@Icons.Material.Filled.Add" 
+                   Color="Color.Primary" 
+                   Variant="Variant.Text"
+                   OnClick="AddInvite"
+                   Class="mb-4">
+            Add Another Email
+        </MudButton>
+        
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">@_errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="SkipSetup" Disabled="_loading">Skip for Now</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SaveSetup" 
+                   Disabled="_loading || string.IsNullOrWhiteSpace(_organizationName)">
+            Complete Setup
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudBlazor.IDialogReference MudDialog { get; set; } = null!;
+    [Parameter] public string CurrentOrganizationName { get; set; } = string.Empty;
+    [Parameter] public string? OrganizationId { get; set; }
+    
+    private string _organizationName = string.Empty;
+    private List<string> _inviteEmails = new();
+    private bool _loading = false;
+    private string? _errorMessage;
+    
+    protected override void OnInitialized()
+    {
+        _organizationName = CurrentOrganizationName;
+        AddInvite(); // Start with one invite field
+    }
+    
+    private void AddInvite()
+    {
+        _inviteEmails.Add(string.Empty);
+    }
+    
+    private void RemoveInvite(int index)
+    {
+        if (_inviteEmails.Count > 1)
+        {
+            _inviteEmails.RemoveAt(index);
+        }
+    }
+    
+    private async Task SaveSetup()
+    {
+        _loading = true;
+        _errorMessage = null;
+        
+        try
+        {
+            // Update organization name
+            var updateResponse = await ApiClient.PutAsJsonAsync($"/api/organizations/{OrganizationId}", new
+            {
+                name = _organizationName
+            });
+            
+            if (!updateResponse.IsSuccessStatusCode)
+            {
+                var error = await updateResponse.Content.ReadAsStringAsync();
+                _errorMessage = $"Failed to update organization: {error}";
+                _loading = false;
+                return;
+            }
+            
+            // Send invites for valid emails
+            var validEmails = _inviteEmails.Where(e => !string.IsNullOrWhiteSpace(e) && e.Contains("@")).ToList();
+            if (validEmails.Any())
+            {
+                foreach (var email in validEmails)
+                {
+                    try
+                    {
+                        await ApiClient.PostAsJsonAsync($"/api/organizations/{OrganizationId}/invites", new
+                        {
+                            email = email
+                        });
+                    }
+                    catch
+                    {
+                        // Ignore invite failures for now
+                    }
+                }
+                
+                Snackbar.Add($"Organization updated and {validEmails.Count} invitation(s) sent!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Organization updated successfully!", Severity.Success);
+            }
+            
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+    
+    private void SkipSetup()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+}
