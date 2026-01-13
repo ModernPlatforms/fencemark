@@ -745,7 +745,9 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
 // ============================================================================
 // Create CNAME record pointing the subdomain to the static site (CDN or storage)
 
-var staticSiteHostname = deployStaticSite ? replace(replace(staticSite.outputs.staticWebsiteUrl, 'https://', ''), '/', '') : ''
+var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
+var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
+var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 var staticSiteDnsTarget = enableStaticSiteCdn ? staticSite.outputs.cdnHostname : staticSiteHostname
 
 module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
