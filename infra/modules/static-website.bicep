@@ -90,7 +90,8 @@ resource cdnEndpoint 'Microsoft.Cdn/profiles/endpoints@2023-05-01' = if (enableC
 }
 
 resource cdnCustomDomain 'Microsoft.Cdn/profiles/endpoints/customDomains@2023-05-01' = if (enableCdn && enableCustomDomain && !empty(customDomainName)) {
-  name: '${cdnProfile.name}/static-site/${replace(customDomainName, '.', '-')}'
+  name: replace(customDomainName, '.', '-')
+  parent: cdnEndpoint
   properties: {
     hostName: customDomainName
     customHttpsParameters: enableCustomDomainHttps ? {
