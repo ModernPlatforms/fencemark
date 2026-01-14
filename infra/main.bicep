@@ -131,18 +131,36 @@ param sqlAzureAdAdminLogin string = ''
 var generatedSqlPassword = '${uniqueString(subscription().id, resourceGroupName, 'sql-admin')}!Aa1${uniqueString(resourceGroupName, environmentName, 'sql-pwd')}'
 
 // ============================================================================
-// Static Web App Parameters
+// Static Site (Storage + Optional CDN) Parameters
 // ============================================================================
 
-@description('Deploy Static Web App for Blazor WASM client')
-param deployStaticWebApp bool = true
+@description('Deploy static website hosting for the Blazor WASM client')
+param deployStaticSite bool = true
 
-@description('Static Web App SKU (Free or Standard)')
+@description('Storage account SKU for the static site')
+param staticSiteStorageSku string = 'Standard_LRS'
+
+@description('CDN/Front Door mode for static site: none (storage custom domain), classic-cdn (deprecated), or frontdoor (recommended for production)')
 @allowed([
-  'Free'
-  'Standard'
+  'none'
+  'classic-cdn'
+  'frontdoor'
 ])
-param staticWebAppSku string = 'Standard'
+param staticSiteCdnMode string = 'none'
+
+@description('Enable Azure CDN in front of the static site (deprecated - use staticSiteCdnMode instead)')
+param enableStaticSiteCdn bool = false
+
+@description('Azure CDN SKU (Standard_Microsoft, Standard_Verizon, Standard_Akamai) - only for classic-cdn mode')
+@allowed([
+  'Standard_Microsoft'
+  'Standard_Verizon'
+  'Standard_Akamai'
+])
+param staticSiteCdnSku string = 'Standard_Microsoft'
+
+@description('Custom domain for the static site (optional)')
+param staticSiteCustomDomain string = ''
 
 
 // ============================================================================
@@ -372,8 +390,10 @@ module sqlAadAdmin './modules/sql-aad-admin.bicep' = if (provisionSqlDatabase &&
 // ============================================================================
 // Managed Certificate for Custom Domain
 // ============================================================================
+// Only provision certificate for container app when CDN is not enabled
+// When CDN is enabled, the custom domain and certificate are managed by CDN
 
-module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate) {
+module managedCertificate './modules/managed-certificate.bicep' = if (!empty(computedCustomDomain) && bindCustomDomainCertificate && !enableStaticSiteCdn) {
   name: 'managedCertificate'
   scope: rg
   params: {
@@ -683,7 +703,9 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
     ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
-    customDomains: !empty(computedCustomDomain) ? [
+    // Only configure custom domain on container app when CDN is not enabled
+    // When CDN is enabled, the custom domain points to CDN instead
+    customDomains: (!empty(computedCustomDomain) && !enableStaticSiteCdn) ? [
       {
         name: computedCustomDomain
         bindingType: bindCustomDomainCertificate ? 'SniEnabled' : 'Disabled'
@@ -712,94 +734,92 @@ module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
 }
 
 // ============================================================================
-// Static Web App for Blazor WASM Client
+// Static Website (Storage + Optional CDN) for Blazor WASM Client
 // ============================================================================
 
-module staticWebApp './modules/static-web-app.bicep' = if (deployStaticWebApp) {
-  name: 'staticWebApp'
+module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
+  name: 'staticSite'
   scope: rg
   params: {
-    name: '${abbrs.webStaticSites}fencemark-${environmentName}'
+    name: '${abbrs.storageStorageAccounts}${resourceToken}'
     location: location
     tags: union(defaultTags, {
       'azd-service-name': 'blazor-wasm-client'
     })
-    sku: staticWebAppSku
-    
-    // Link to API Container App backend
-    apiUrl: 'https://${apiService.outputs.fqdn}'
-    
-    // Enable managed identity for accessing App Config and Key Vault
-    enableManagedIdentity: true
-    
-    // Azure AD authentication settings (from Entra External ID)
-    aadTenantId: entraExternalIdTenantId
-    aadClientId: entraExternalIdClientId
-    aadInstance: entraExternalIdInstance
-    
-    // Application Insights for monitoring
-    appInsightsConnectionString: applicationInsights.outputs.connectionString
+    storageSku: staticSiteStorageSku
+    cdnMode: staticSiteCdnMode
+    enableCdn: enableStaticSiteCdn
+    cdnSku: staticSiteCdnSku
+    customDomainName: !empty(staticSiteCustomDomain) ? staticSiteCustomDomain : ''
+    enableCustomDomainHttps: true
   }
 }
 
 // ============================================================================
-// RBAC Role Assignments for Static Web App
+// DNS Records for Custom Domain (Static Site)
 // ============================================================================
+// Create CNAME record pointing the subdomain to the static site
+// - For 'none' mode: point to storage endpoint
+// - For 'frontdoor' mode: point to AFD endpoint
+// - For 'classic-cdn' mode: point to CDN endpoint
 
-// Grant Static Web App access to Central App Configuration
-module staticWebAppAppConfigRoleAssignment './modules/rbac-assignment.bicep' = if (deployStaticWebApp) {
-  name: 'swaAppCfgRole'
-  scope: resourceGroup(centralAppConfigResourceGroup)
-  params: {
-    appConfigName: centralAppConfigName
-    principalId: deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
-    roleDefinitionId: appConfigDataReaderRoleId
-    principalType: 'ServicePrincipal'
-  }
-}
+var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
+var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
+var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 
-// Grant Static Web App access to Key Vault secrets
-module staticWebAppKeyVaultRoleAssignment './keyvault-access.bicep' = if (deployStaticWebApp) {
-  name: 'staticWebAppKeyVaultRoleAssignment'
-  scope: rg
-  params: {
-    keyVaultName: keyVault.outputs.name
-    principalId: deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
-    principalType: 'ServicePrincipal'
-    roleName: 'Key Vault Secrets User'
-  }
-}
+// Determine the DNS target based on CDN mode
+var staticSiteDnsTarget = deployStaticSite ? (
+  staticSiteCdnMode == 'frontdoor' ? staticSite.outputs.frontDoorEndpointHostname : (
+    staticSiteCdnMode == 'classic-cdn' ? staticSite.outputs.cdnHostname : staticSiteHostname
+  )
+) : ''
 
-// ============================================================================
-// DNS Records for Custom Domain
-// ============================================================================
-// Create CNAME record pointing the subdomain to the Container Apps environment
-// Create TXT record for domain validation
+// Extract DNS record name from custom domain
+// For 'example.com' relative to 'example.com' -> '@'
+// For 'dev.example.com' relative to 'example.com' -> 'dev'
+// For 'api.staging.example.com' relative to 'example.com' -> 'api.staging'
+var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (
+  endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? 
+    substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : 
+    staticSiteCustomDomain
+)
 
-module dnsValidationRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
-  name: 'dnsValidationRecord'
+module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && !empty(staticSiteDnsTarget)) {
+  name: 'staticSiteDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: environmentName == 'prod' ? 'asuid' : 'asuid.${environmentName}'
-    recordType: 'TXT'
-    targetValue: containerAppsEnvironment.outputs.domainVerificationId
+    recordName: staticSiteDnsRecordName
+    recordType: 'CNAME'
+    targetValue: cnameRecordTarget
     ttl: 3600
   }
-  dependsOn: [webFrontend]
 }
 
-module dnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
-  name: 'dnsCnameRecord'
+// ============================================================================
+// DNS Records for Custom Domain (Container App)
+// ============================================================================
+// Create CNAME record for Container App custom domain
+// For dev/staging: dev.fencemark.com.au -> <container-app-fqdn>
+// For prod: fencemark.com.au -> <container-app-fqdn> (using @ record)
+
+// Extract DNS record name from custom domain for Container App
+var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (
+  endsWith(computedCustomDomain, '.${baseDomainName}') ? 
+    substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : 
+    computedCustomDomain
+)
+
+module webAppDnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
+  name: 'webAppDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
-    recordName: environmentName == 'prod' ? '@' : environmentName
+    recordName: webAppDnsRecordName
     recordType: 'CNAME'
     targetValue: webFrontend.outputs.fqdn
     ttl: 3600
   }
-  dependsOn: [dnsValidationRecord]
 }
 
 // ============================================================================
@@ -1162,23 +1182,26 @@ output keyVaultUri string = keyVault.outputs.vaultUri
 output keyVaultName string = keyVault.outputs.name
 
 // ============================================================================
-// Static Web App Outputs
+// Static Website Outputs
 // ============================================================================
 
-@description('The name of the Static Web App (if deployed)')
-output staticWebAppName string = deployStaticWebApp ? staticWebApp.outputs.name : ''
+@description('The name of the Storage Account hosting the static site (if deployed)')
+output staticSiteStorageAccountName string = deployStaticSite ? staticSite.outputs.storageAccountName : ''
 
-@description('The URL of the Static Web App (if deployed)')
-output staticWebAppUrl string = deployStaticWebApp ? staticWebApp.outputs.url : ''
+@description('The static website URL (if deployed)')
+output staticSiteUrl string = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
 
-@description('The default hostname of the Static Web App (if deployed)')
-output staticWebAppHostname string = deployStaticWebApp ? staticWebApp.outputs.defaultHostname : ''
+@description('The CDN endpoint hostname (if CDN enabled)')
+output staticSiteCdnHostname string = deployStaticSite ? staticSite.outputs.cdnHostname : ''
 
-@description('The principal ID of the Static Web App managed identity (if deployed)')
-output staticWebAppIdentityPrincipalId string = deployStaticWebApp ? staticWebApp.outputs.systemAssignedMIPrincipalId : ''
+@description('The Front Door endpoint hostname (if Front Door enabled)')
+output staticSiteFrontDoorHostname string = deployStaticSite ? staticSite.outputs.frontDoorEndpointHostname : ''
 
-@description('The resource ID of the Static Web App (if deployed)')
-output staticWebAppResourceId string = deployStaticWebApp ? staticWebApp.outputs.resourceId : ''
+@description('The primary hostname for the static site')
+output staticSitePrimaryHostname string = deployStaticSite ? staticSite.outputs.primaryHostname : ''
+
+@description('The CDN/Front Door mode used for static site')
+output staticSiteCdnMode string = deployStaticSite ? staticSite.outputs.cdnMode : 'none'
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity

@@ -45,6 +45,9 @@ jobs:
       - name: Install Aspire workload
         run: dotnet workload install aspire
 
+      - name: Install WASM tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Build solution
         run: dotnet build --no-restore --configuration Release
 
