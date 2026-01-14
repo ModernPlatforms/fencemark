@@ -150,8 +150,15 @@ param staticSiteCdnSku string = 'Standard_Microsoft'
 @description('Custom domain for the static site (optional)')
 param staticSiteCustomDomain string = ''
 
-@description('GitHub Actions service principal ID (for deployment permissions)')
-param githubActionsPrincipalId string = ''
+@description('Static Web App SKU (Free or Standard)')
+@allowed([
+  'Free'
+  'Standard'
+])
+param staticWebAppSku string = 'Free'
+
+@description('Location for Static Web App (must support Static Web Apps)')
+param staticWebAppLocation string = 'eastasia'
 
 
 // ============================================================================
@@ -586,39 +593,32 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
 // ============================================================================
 // Static Website (Storage + Optional CDN) for Blazor WASM Client
 // ============================================================================
+// Azure Static Web App for Blazor WASM Client
+// ============================================================================
 
-module staticSite './modules/static-website.bicep' =  {
+module staticSite './modules/static-web-app.bicep' = if (deployStaticSite) {
   name: 'staticSite'
   scope: rg
   params: {
-    name: '${abbrs.storageStorageAccounts}${resourceToken}'
-    location: location
+    name: 'swa-${resourceToken}'
+    location: staticWebAppLocation
     tags: union(defaultTags, {
       'azd-service-name': 'blazor-wasm-client'
     })
-    storageSku: staticSiteStorageSku
-    cdnMode: staticSiteCdnMode
-    enableCdn: enableStaticSiteCdn
-    cdnSku: staticSiteCdnSku
+    sku: staticWebAppSku
     customDomainName: !empty(staticSiteCustomDomain) ? staticSiteCustomDomain : ''
-    enableCustomDomainHttps: true
-    githubActionsPrincipalId: githubActionsPrincipalId
   }
-  dependsOn : [
-    staticSiteDnsCnameRecord
-    staticSiteAsverifyCnameRecord
-  ]
 }
 
-
-// For storage-only mode, construct the blob endpoint for CNAME target
-var staticSiteBlobEndpoint = deployStaticSite ? '${abbrs.storageStorageAccounts}${resourceToken}.blob.${environment().suffixes.storage}' : ''
+// ============================================================================
+// DNS Records for Custom Domain (Static Web App)
+// ============================================================================
 
 // Extract DNS record name from custom domain
-// For 'example.com' relative to 'example.com' -> '@'
-// For 'dev.example.com' relative to 'example.com' -> 'dev'
-// For 'api.staging.example.com' relative to 'example.com' -> 'api.staging'
 var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : staticSiteCustomDomain)
+
+// Static Web App default hostname for DNS CNAME
+var staticSiteDnsTarget = deployStaticSite ? staticSite!.outputs.defaultHostname : ''
 
 module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain)) {
   name: 'staticSiteDnsCnameRecord'
@@ -627,22 +627,12 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
     dnsZoneName: baseDomainName
     recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
-    targetValue: staticSiteBlobEndpoint
+    targetValue: staticSiteDnsTarget
     ttl: 3600
   }
-}
-
-// Create asverify CNAME record for custom domain verification (for storage accounts)
-module staticSiteAsverifyCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && staticSiteCdnMode == 'none') {
-  name: 'staticSiteAsverifyCnameRecord'
-  scope: resourceGroup(dnsZoneResourceGroup)
-  params: {
-    dnsZoneName: baseDomainName
-    recordName: 'asverify.${staticSiteDnsRecordName}'
-    recordType: 'CNAME'
-    targetValue: 'asverify.${staticSiteBlobEndpoint}'
-    ttl: 3600
-  }
+  dependsOn: [
+    staticSite
+  ]
 }
 
 
@@ -960,20 +950,15 @@ output keyVaultName string = keyVault.outputs.name
 // Static Website Outputs
 // ============================================================================
 
-@description('The name of the Storage Account hosting the static site (if deployed)')
-output staticSiteStorageAccountName string = deployStaticSite ? staticSite!.outputs.storageAccountName : ''
+@description('The name of the Static Web App (if deployed)')
+output staticWebAppName string = deployStaticSite ? staticSite!.outputs.name : ''
 
 @description('The static website URL (if deployed)')
-output staticSiteUrl string = deployStaticSite ? staticSite!.outputs.staticWebsiteUrl : ''
+output staticSiteUrl string = deployStaticSite ? staticSite!.outputs.defaultHostname : ''
 
-@description('The CDN endpoint hostname (if CDN enabled)')
-output staticSiteCdnHostname string = deployStaticSite ? staticSite!.outputs.cdnHostname : ''
-
-@description('The Front Door endpoint hostname (if Front Door enabled)')
-output staticSiteFrontDoorHostname string = deployStaticSite ? staticSite!.outputs.frontDoorEndpointHostname : ''
-
-@description('The primary hostname for the static site')
-output staticSitePrimaryHostname string = deployStaticSite ? staticSite!.outputs.primaryHostname : ''
+@description('The Static Web App deployment token (if deployed)')
+@secure()
+output staticWebAppDeploymentToken string = deployStaticSite ? staticSite!.outputs.deploymentToken : ''
 
 @description('The CDN/Front Door mode used for static site')
 output staticSiteCdnMode string = deployStaticSite ? staticSite!.outputs.cdnMode : 'none'
