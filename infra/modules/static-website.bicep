@@ -57,7 +57,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   tags: tags
   properties: {
     allowBlobPublicAccess: true
-    enableHttpsTrafficOnly: true
+    supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     customDomain: useStorageCustomDomain ? {
       name: customDomainName
@@ -179,11 +179,6 @@ resource cdnCustomDomain 'Microsoft.Cdn/profiles/endpoints/customDomains@2023-05
   parent: cdnEndpoint
   properties: {
     hostName: customDomainName
-    customHttpsParameters: enableCustomDomainHttps ? {
-      certificateSource: 'Cdn'
-      protocolType: 'ServerNameIndication'
-      minimumTlsVersion: 'TLS12'
-    } : null
   }
 }
 
@@ -191,88 +186,92 @@ resource cdnCustomDomain 'Microsoft.Cdn/profiles/endpoints/customDomains@2023-05
 // Azure Front Door Standard (Recommended for Production)
 // ============================================================================
 
-module frontDoor 'br/public:avm/res/cdn/profile:0.17.0' = if (effectiveCdnMode == 'frontdoor') {
-  name: 'afd-${uniqueString(name)}'
-  params: {
-    name: 'afd-${name}'
-    sku: 'Standard_AzureFrontDoor'
-    location: 'global'
-    tags: tags
-    
-    originGroups: [
-      {
-        name: 'storage-origin-group'
-        loadBalancingSettings: {
-          sampleSize: 4
-          successfulSamplesRequired: 3
-          additionalLatencyInMilliseconds: 50
-        }
-        healthProbeSettings: {
-          probePath: '/'
-          probeRequestType: 'HEAD'
-          probeProtocol: 'Https'
-          probeIntervalInSeconds: 100
-        }
-        sessionAffinityState: 'Disabled'
-      }
-    ]
-    
-    origins: [
-      {
-        name: 'storage-origin'
-        originGroupName: 'storage-origin-group'
-        hostName: staticWebsiteHost
-        httpPort: 80
-        httpsPort: 443
-        originHostHeader: staticWebsiteHost
-        priority: 1
-        weight: 1000
-        enabledState: 'Enabled'
-        enforceCertificateNameCheck: true
-      }
-    ]
-    
-    afdEndpoints: [
-      {
-        name: frontDoorEndpointName
-        enabledState: 'Enabled'
-      }
-    ]
-    
-    routes: [
-      {
-        name: 'default-route'
-        afdEndpointName: frontDoorEndpointName
-        originGroupName: 'storage-origin-group'
-        supportedProtocols: [
-          'Http'
-          'Https'
-        ]
-        patternsToMatch: [
-          '/*'
-        ]
-        forwardingProtocol: 'HttpsOnly'
-        linkToDefaultDomain: 'Enabled'
-        httpsRedirect: 'Enabled'
-        enabledState: 'Enabled'
-      }
-    ]
-    
-    customDomains: !empty(customDomainName) ? [
-      {
-        name: replace(customDomainName, '.', '-')
-        hostName: customDomainName
-        certificateType: enableCustomDomainHttps ? 'ManagedCertificate' : 'CustomerCertificate'
-        minimumTlsVersion: 'TLS12'
-        afdEndpointName: frontDoorEndpointName
-      }
-    ] : []
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2024-02-01' = if (effectiveCdnMode == 'frontdoor') {
+  name: 'afd-${name}'
+  location: 'global'
+  sku: {
+    name: 'Standard_AzureFrontDoor'
+  }
+  tags: tags
+}
+
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' = if (effectiveCdnMode == 'frontdoor') {
+  name: frontDoorEndpointName
+  parent: frontDoorProfile
+  location: 'global'
+  properties: {
+    enabledState: 'Enabled'
   }
 }
 
-// Reference to the Front Door endpoint resource to get its hostname
-resource frontDoorEndpointRef 'Microsoft.Cdn/profiles/afdEndpoints@2024-02-01' existing = if (effectiveCdnMode == 'frontdoor') {
-  name: '${frontDoor.outputs.name}/${frontDoorEndpointName}'
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2024-02-01' = if (effectiveCdnMode == 'frontdoor') {
+  name: 'storage-origin-group'
+  parent: frontDoorProfile
+  properties: {
+    loadBalancingSettings: {
+      sampleSize: 4
+      successfulSamplesRequired: 3
+      additionalLatencyInMilliseconds: 50
+    }
+    healthProbeSettings: {
+      probePath: '/'
+      probeRequestType: 'HEAD'
+      probeProtocol: 'Https'
+      probeIntervalInSeconds: 100
+    }
+    sessionAffinityState: 'Disabled'
+  }
+}
+
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2024-02-01' = if (effectiveCdnMode == 'frontdoor') {
+  name: 'storage-origin'
+  parent: frontDoorOriginGroup
+  properties: {
+    hostName: staticWebsiteHost
+    httpPort: 80
+    httpsPort: 443
+    originHostHeader: staticWebsiteHost
+    priority: 1
+    weight: 1000
+    enabledState: 'Enabled'
+    enforceCertificateNameCheck: true
+  }
+}
+
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2024-02-01' = if (effectiveCdnMode == 'frontdoor') {
+  name: 'default-route'
+  parent: frontDoorEndpoint
+  properties: {
+    originGroup: {
+      id: frontDoorOriginGroup.id
+    }
+    supportedProtocols: [
+      'Http'
+      'Https'
+    ]
+    patternsToMatch: [
+      '/*'
+    ]
+    forwardingProtocol: 'HttpsOnly'
+    linkToDefaultDomain: 'Enabled'
+    httpsRedirect: 'Enabled'
+    enabledState: 'Enabled'
+  }
+  dependsOn: [
+    frontDoorOrigin
+  ]
+}
+
+resource frontDoorCustomDomain 'Microsoft.Cdn/profiles/customDomains@2024-02-01' = if (effectiveCdnMode == 'frontdoor' && !empty(customDomainName)) {
+  name: replace(customDomainName, '.', '-')
+  parent: frontDoorProfile
+  properties: {
+    hostName: customDomainName
+    tlsSettings: enableCustomDomainHttps ? {
+      certificateType: 'ManagedCertificate'
+      minimumTlsVersion: 'TLS12'
+    } : null
+  }
 }
 
 @description('Storage account name')
@@ -282,13 +281,13 @@ output storageAccountName string = storageAccount.name
 output staticWebsiteUrl string = storageAccount.properties.primaryEndpoints.web
 
 @description('CDN endpoint hostname (empty if CDN is disabled)')
-output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : ''
+output cdnHostname string = effectiveCdnMode == 'classic-cdn' ? cdnEndpoint!.properties.hostName : ''
 
 @description('Front Door endpoint hostname (empty if Front Door is not used)')
-output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoorEndpointRef.properties.hostName : ''
+output frontDoorEndpointHostname string = effectiveCdnMode == 'frontdoor' ? frontDoorEndpoint!.properties.hostName : ''
 
 @description('Primary hostname for the static website (custom domain, AFD, CDN, or storage)')
-output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoorEndpointRef.properties.hostName : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint.properties.hostName : staticWebsiteHost
+output primaryHostname string = !empty(customDomainName) ? customDomainName : effectiveCdnMode == 'frontdoor' ? frontDoorEndpoint!.properties.hostName : effectiveCdnMode == 'classic-cdn' ? cdnEndpoint!.properties.hostName : staticWebsiteHost
 
 @description('CDN/Front Door mode used')
 output cdnMode string = effectiveCdnMode

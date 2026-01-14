@@ -763,35 +763,27 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
 // - For 'frontdoor' mode: point to AFD endpoint
 // - For 'classic-cdn' mode: point to CDN endpoint
 
-var staticWebsiteUrl = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
+var staticWebsiteUrl = deployStaticSite ? staticSite!.outputs.staticWebsiteUrl : ''
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
 
 // Determine the DNS target based on CDN mode
-var staticSiteDnsTarget = deployStaticSite ? (
-  staticSiteCdnMode == 'frontdoor' ? staticSite.outputs.frontDoorEndpointHostname : (
-    staticSiteCdnMode == 'classic-cdn' ? staticSite.outputs.cdnHostname : staticSiteHostname
-  )
-) : ''
+var staticSiteDnsTarget = deployStaticSite ? (staticSiteCdnMode == 'frontdoor' ? staticSite!.outputs.frontDoorEndpointHostname : (staticSiteCdnMode == 'classic-cdn' ? staticSite!.outputs.cdnHostname : staticSiteHostname)) : ''
 
 // Extract DNS record name from custom domain
 // For 'example.com' relative to 'example.com' -> '@'
 // For 'dev.example.com' relative to 'example.com' -> 'dev'
 // For 'api.staging.example.com' relative to 'example.com' -> 'api.staging'
-var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (
-  endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? 
-    substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : 
-    staticSiteCustomDomain
-)
+var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : staticSiteCustomDomain)
 
-module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && !empty(staticSiteDnsTarget)) {
+module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain)) {
   name: 'staticSiteDnsCnameRecord'
   scope: resourceGroup(dnsZoneResourceGroup)
   params: {
     dnsZoneName: baseDomainName
     recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
-    targetValue: cnameRecordTarget
+    targetValue: staticSiteDnsTarget
     ttl: 3600
   }
 }
@@ -804,11 +796,7 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
 // For prod: fencemark.com.au -> <container-app-fqdn> (using @ record)
 
 // Extract DNS record name from custom domain for Container App
-var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (
-  endsWith(computedCustomDomain, '.${baseDomainName}') ? 
-    substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : 
-    computedCustomDomain
-)
+var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (endsWith(computedCustomDomain, '.${baseDomainName}') ? substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : computedCustomDomain)
 
 module webAppDnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
   name: 'webAppDnsCnameRecord'
@@ -1186,22 +1174,22 @@ output keyVaultName string = keyVault.outputs.name
 // ============================================================================
 
 @description('The name of the Storage Account hosting the static site (if deployed)')
-output staticSiteStorageAccountName string = deployStaticSite ? staticSite.outputs.storageAccountName : ''
+output staticSiteStorageAccountName string = deployStaticSite ? staticSite!.outputs.storageAccountName : ''
 
 @description('The static website URL (if deployed)')
-output staticSiteUrl string = deployStaticSite ? staticSite.outputs.staticWebsiteUrl : ''
+output staticSiteUrl string = deployStaticSite ? staticSite!.outputs.staticWebsiteUrl : ''
 
 @description('The CDN endpoint hostname (if CDN enabled)')
-output staticSiteCdnHostname string = deployStaticSite ? staticSite.outputs.cdnHostname : ''
+output staticSiteCdnHostname string = deployStaticSite ? staticSite!.outputs.cdnHostname : ''
 
 @description('The Front Door endpoint hostname (if Front Door enabled)')
-output staticSiteFrontDoorHostname string = deployStaticSite ? staticSite.outputs.frontDoorEndpointHostname : ''
+output staticSiteFrontDoorHostname string = deployStaticSite ? staticSite!.outputs.frontDoorEndpointHostname : ''
 
 @description('The primary hostname for the static site')
-output staticSitePrimaryHostname string = deployStaticSite ? staticSite.outputs.primaryHostname : ''
+output staticSitePrimaryHostname string = deployStaticSite ? staticSite!.outputs.primaryHostname : ''
 
 @description('The CDN/Front Door mode used for static site')
-output staticSiteCdnMode string = deployStaticSite ? staticSite.outputs.cdnMode : 'none'
+output staticSiteCdnMode string = deployStaticSite ? staticSite!.outputs.cdnMode : 'none'
 
 // ============================================================================
 // Assign Key Vault Certificate User role to the managed identity
@@ -1212,7 +1200,7 @@ module externalKeyVaultAccessModule './keyvault-access.bicep' = if (!empty(exter
   scope: resourceGroup(externalidRg)
   params: {
     keyVaultName: externalIdKeyVault.name
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId
+    principalId: webFrontend.outputs.systemAssignedMIPrincipalId!
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Certificate User'
   }
