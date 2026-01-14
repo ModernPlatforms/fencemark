@@ -139,13 +139,7 @@ param staticSiteCdnMode string = 'none'
 @description('Enable Azure CDN in front of the static site (deprecated - use staticSiteCdnMode instead)')
 param enableStaticSiteCdn bool = false
 
-@description('Azure CDN SKU (Standard_Microsoft, Standard_Verizon, Standard_Akamai) - only for classic-cdn mode')
-@allowed([
-  'Standard_Microsoft'
-  'Standard_Verizon'
-  'Standard_Akamai'
-])
-param staticSiteCdnSku string = 'Standard_Microsoft'
+
 
 @description('Custom domain for the static site (optional)')
 param staticSiteCustomDomain string = ''
@@ -618,7 +612,7 @@ module staticSite './modules/static-web-app.bicep' = if (deployStaticSite) {
 var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : staticSiteCustomDomain)
 
 // Static Web App default hostname for DNS CNAME
-var staticSiteDnsTarget = deployStaticSite ? staticSite!.outputs.defaultHostname : ''
+var staticSiteDnsTarget = 'swa-${resourceToken}.azurestaticapps.net'
 
 module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain)) {
   name: 'staticSiteDnsCnameRecord'

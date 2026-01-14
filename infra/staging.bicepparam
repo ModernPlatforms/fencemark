@@ -37,7 +37,7 @@ param staticSiteCustomDomain = '' // Empty - static site not using custom domain
 
 // Deprecated parameters (backwards compatibility)
 param enableStaticSiteCdn = false
-param staticSiteCdnSku = 'Standard_Microsoft'
+
 
 // ============================================================================
 // Custom Domain Configuration

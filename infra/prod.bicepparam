@@ -38,7 +38,7 @@ param staticSiteCustomDomain = 'fencemark.com.au'
 param staticSiteStorageSku = 'Standard_LRS'
 param staticSiteCdnMode = 'frontdoor'
 param enableStaticSiteCdn = false
-param staticSiteCdnSku = 'Standard_Microsoft'
+
 
 // ============================================================================
 // Custom Domain Configuration

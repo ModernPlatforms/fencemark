@@ -69,7 +69,7 @@ param staticSiteCustomDomain = 'dev.fencemark.com.au'
 param staticSiteStorageSku = 'Standard_LRS'
 param staticSiteCdnMode = 'none'
 param enableStaticSiteCdn = false
-param staticSiteCdnSku = 'Standard_Microsoft'
+
 
 // ============================================================================
 // Tags
