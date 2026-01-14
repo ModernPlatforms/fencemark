@@ -640,7 +640,7 @@ module staticSiteAsverifyCnameRecord './modules/dns-record.bicep' = if (deploySt
     dnsZoneName: baseDomainName
     recordName: 'asverify.${staticSiteDnsRecordName}'
     recordType: 'CNAME'
-    targetValue: staticSiteBlobEndpoint
+    targetValue: 'asverify.${staticSiteBlobEndpoint}'
     ttl: 3600
   }
 }
