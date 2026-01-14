@@ -1,42 +1,28 @@
-# Azure Static Web Apps Setup for Blazor WASM
+# Azure Storage Static Website Setup for Blazor WebAssembly
 
-This document describes the Azure Static Web Apps infrastructure for hosting the Fencemark Blazor WASM client application.
+This document describes the Azure Storage static website infrastructure for hosting the Fencemark Blazor WebAssembly client application, with an optional Azure CDN layer.
 
 ## Overview
 
-The Static Web App (SWA) infrastructure is deployed using Azure Verified Modules (AVM) and provides:
+The static website infrastructure provisions:
 
-- **Standard SKU**: Enterprise-grade features including custom domains, enhanced performance, and CDN
-- **Managed Identity**: System-assigned managed identity for secure access to Azure resources
-- **API Backend Integration**: Linked to the existing API Container App for backend services
-- **Azure AD Authentication**: Configured with Entra External ID (CIAM) settings
-- **Application Insights**: Integrated monitoring and telemetry
-- **GitHub Actions Deployment**: Deployment token stored securely in Key Vault
+- **Storage Account (Static Website)**: Hosts the Blazor WebAssembly build output in the `$web` container.
+- **Optional Azure CDN**: Fronts the storage endpoint to improve global performance and enable custom domain scenarios.
+- **Deployment Outputs**: Storage and CDN endpoints exposed as template outputs.
 
 ## Infrastructure Components
 
-### 1. Static Web App Resource
-- **Naming Convention**: `stapp-fencemark-{environment}` (following Azure naming best practices)
-- **SKU**: Standard (configurable via parameter)
+### 1. Storage Account Static Website
+- **Naming Convention**: `st{resourceToken}` (Azure storage naming conventions)
+- **SKU**: Configurable via `staticSiteStorageSku`
 - **Location**: Australia East (follows main infrastructure)
-- **Managed Identity**: System-assigned enabled by default
+- **Static Website**: Enabled with `index.html` as the index and 404 document
 
-### 2. Networking
-- **Default Hostname**: Automatically provisioned by Azure (e.g., `{name}.azurestaticapps.net`)
-- **Custom Domains**: Configured via parameters:
-  - Dev: `app.dev.fencemark.com.au`
-  - Staging: `app.stgfencemark.modernplatforms.dev`
-  - Prod: `app.fencemark.com.au`
-
-### 3. Backend Integration
-- **API Backend URL**: Links to API Container App (`https://{apiService.fqdn}`)
-- **Configuration**: Passed as `BACKEND_API_URL` app setting
-
-### 4. Security & Access
-- **RBAC Role Assignments**:
-  - App Configuration Data Reader (for central App Config)
-  - Key Vault Secrets User (for accessing secrets)
-- **Deployment Token**: Stored in Key Vault as `swa-deployment-token`
+### 2. Azure CDN (Optional)
+- **Profile**: `cdnp-{storageAccountName}`
+- **Endpoint**: `static-site`
+- **Origin**: Storage static website endpoint
+- **Custom Domain + HTTPS**: Supports CDN-managed certificates when `bindCustomDomainCertificate = true`
 
 ## Deployment
 
@@ -71,108 +57,76 @@ The Static Web App (SWA) infrastructure is deployed using Azure Verified Modules
      --parameters prod.bicepparam
    ```
 
-2. **Retrieve the deployment token**:
+2. **Publish the Blazor WebAssembly app**:
    ```bash
-   # Get deployment token from Key Vault
-   az keyvault secret show \
-     --vault-name {keyVaultName} \
-     --name swa-deployment-token \
-     --query value -o tsv
+   dotnet publish -c Release -o ./publish
    ```
 
-3. **Configure GitHub Actions**:
-   - Add the deployment token as a GitHub secret (e.g., `AZURE_STATIC_WEB_APPS_API_TOKEN_DEV`)
-   - Configure the GitHub Actions workflow to deploy the Blazor WASM app
+3. **Upload to the static website**:
+   ```bash
+   az storage blob upload-batch \
+     --account-name <storageAccountName> \
+     --destination '$web' \
+     --source ./publish/wwwroot \
+     --overwrite
+   ```
+
+4. **(Optional) Enable CDN**:
+   - Set `enableStaticSiteCdn = true` in the environment `.bicepparam` file.
+   - Redeploy the infrastructure to create the CDN profile and endpoint.
+   - To enable HTTPS on the CDN custom domain, set `bindCustomDomainCertificate = true` once DNS is validated.
 
 ### Deployment Outputs
 
 The deployment provides the following outputs:
-- `staticWebAppName`: Name of the Static Web App resource
-- `staticWebAppUrl`: Public URL of the Static Web App
-- `staticWebAppHostname`: Default hostname
-- `staticWebAppIdentityPrincipalId`: Managed identity principal ID
-- `staticWebAppResourceId`: Azure resource ID
+- `staticSiteStorageAccountName`: Name of the storage account hosting the static site
+- `staticSiteUrl`: Static website URL
+- `staticSiteCdnHostname`: CDN endpoint hostname (when CDN is enabled)
 
 ## Configuration
 
-### App Settings
+### Static Website Routing
 
-The Static Web App includes the following app settings:
+Blazor WebAssembly requires SPA fallback routing. Ensure your `staticwebapp.config.json` (or equivalent server configuration) is set to rewrite unknown routes to `/index.html`.
 
-| Setting | Description | Source |
-|---------|-------------|--------|
-| `BACKEND_API_URL` | API backend endpoint | Container App FQDN |
-| `AzureAd__TenantId` | Azure AD tenant ID | Entra External ID config |
-| `AzureAd__ClientId` | Azure AD client ID | Entra External ID config |
-| `AzureAd__Instance` | Azure AD instance URL | Entra External ID config |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | App Insights connection | Application Insights |
+### Custom Domains
 
-### Build Configuration
+Custom domains are typically attached via Azure CDN (recommended) or Azure Front Door:
+1. Create a CDN custom domain in Azure Portal.
+2. Point DNS to the CDN endpoint hostname.
+3. Validate and enable HTTPS.
 
-The Static Web App is configured for Blazor WASM:
-- **App Location**: `/` (root of repository)
-- **Output Location**: `wwwroot` (Blazor WASM output)
-- **API Location**: Empty (API is separate Container App)
-
-## Custom Domain Setup
-
-Custom domains are configured via the parameters but need to be validated:
-
-1. **Add domain validation** (automatically created by Bicep):
-   - DNS TXT record for domain verification
-   - DNS CNAME record pointing to the Static Web App
-
-2. **Bind the custom domain** (manual step via Azure Portal or CLI):
-   ```bash
-   az staticwebapp hostname set \
-     --name stapp-fencemark-{environment} \
-     --resource-group rg-fencemark-{environment} \
-     --hostname app.{environment}.fencemark.com.au
-   ```
+This template can provision the CDN custom domain and enable CDN-managed HTTPS when:
+- `enableStaticSiteCdn = true`
+- `customDomain` is set (e.g., `dev.fencemark.com.au`)
+- `bindCustomDomainCertificate = true`
 
 ## Monitoring & Diagnostics
 
-- **Application Insights**: Integrated via connection string
-- **Metrics**: Available in Azure Portal under Static Web App resource
-- **Logs**: Accessible via Application Insights
+- **Storage Metrics**: Available in Azure Portal under the storage account.
+- **CDN Metrics**: Available under the CDN profile and endpoint.
 
 ## Cost Management
 
-- **Standard SKU**: ~$9/month base + bandwidth costs
-- **Enterprise CDN**: Included with Standard SKU
-- **Bandwidth**: Pay-as-you-go based on usage
-
-To optimize costs:
-- Use Free SKU for development (set `staticWebAppSku = 'Free'` in dev.bicepparam)
-- Monitor bandwidth usage via Azure Cost Management
-- Implement CDN caching strategies
+- **Storage Account**: Pay-as-you-go for capacity and bandwidth.
+- **CDN**: Optional; additional bandwidth and request charges.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Deployment fails with network error**:
-   - Ensure network connectivity to Azure
-   - Check firewall rules and proxy settings
+1. **Static site returns 404 for SPA routes**:
+   - Ensure `index.html` is configured as the 404 document.
+   - Verify SPA fallback configuration.
 
-2. **Managed identity access denied**:
-   - Verify RBAC role assignments are deployed
-   - Check role assignment propagation (can take up to 15 minutes)
+2. **CDN shows stale content**:
+   - Purge the CDN endpoint after uploads.
 
-3. **Custom domain not working**:
-   - Verify DNS records are correctly configured
-   - Check domain validation status in Azure Portal
-
-## Next Steps
-
-1. **Configure GitHub Actions workflow** for automated deployments
-2. **Set up custom domain** and SSL certificate
-3. **Configure routing rules** for SPA behavior
-4. **Set up staging environments** using Static Web App environments feature
-5. **Monitor performance** and optimize CDN caching
+3. **Upload fails**:
+   - Confirm storage account permissions and network access.
 
 ## References
 
-- [Azure Static Web Apps Documentation](https://docs.microsoft.com/en-us/azure/static-web-apps/)
-- [Azure Verified Modules - Static Site](https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/web/static-site)
-- [Blazor WebAssembly Deployment](https://docs.microsoft.com/en-us/aspnet/core/blazor/host-and-deploy/webassembly)
+- [Azure Storage Static Website Hosting](https://learn.microsoft.com/azure/storage/blobs/storage-blob-static-website)
+- [Azure CDN Documentation](https://learn.microsoft.com/azure/cdn/)
+- [Blazor WebAssembly Deployment](https://learn.microsoft.com/aspnet/core/blazor/host-and-deploy/webassembly)

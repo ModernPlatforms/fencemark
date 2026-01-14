@@ -74,6 +74,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Install WASM tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Azure Login via OIDC
         uses: azure/login@v2
         with:
@@ -154,6 +157,9 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Install WASM tools workload
+        run: dotnet workload install wasm-tools
+
       - name: Azure Login via OIDC
         uses: azure/login@v2
         with:
@@ -218,6 +224,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install WASM tools workload
+        run: dotnet workload install wasm-tools
 
       - name: Azure Login via OIDC
         uses: azure/login@v2

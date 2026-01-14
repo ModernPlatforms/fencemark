@@ -62,11 +62,17 @@ param certificateName = 'dev-external-id-cert'
 param customDomain = 'dev.fencemark.com.au'
 
 // ============================================================================
-// Static Web App Configuration
+// Static Site (Storage + Optional CDN) Configuration
 // ============================================================================
 
-param deployStaticWebApp = true
-param staticWebAppSku = 'Standard'
+param deployStaticSite = true
+param staticSiteStorageSku = 'Standard_LRS'
+param staticSiteCdnMode = 'none' // Use storage native custom domain for dev
+param staticSiteCustomDomain = '' // Empty - static site not using custom domain for dev
+
+// Deprecated parameters (backwards compatibility)
+param enableStaticSiteCdn = false
+param staticSiteCdnSku = 'Standard_Microsoft'
 
 // ============================================================================
 // Tags

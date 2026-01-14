@@ -31,11 +31,17 @@ param webFrontendMaxReplicas = 3
 param customDomain = 'stgfencemark.modernplatforms.dev'
 
 // ============================================================================
-// Static Web App Configuration
+// Static Site (Storage + Optional CDN) Configuration
 // ============================================================================
 
-param deployStaticWebApp = true
-param staticWebAppSku = 'Standard'
+param deployStaticSite = true
+param staticSiteStorageSku = 'Standard_LRS'
+param staticSiteCdnMode = 'none' // Use storage native custom domain for staging
+param staticSiteCustomDomain = '' // Empty - static site not using custom domain for staging
+
+// Deprecated parameters (backwards compatibility)
+param enableStaticSiteCdn = false
+param staticSiteCdnSku = 'Standard_Microsoft'
 
 // ============================================================================
 // Custom Domain Configuration
