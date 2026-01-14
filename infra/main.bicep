@@ -651,6 +651,19 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
   }
 }
 
+// Create asverify CNAME record for custom domain verification (for storage accounts)
+module staticSiteAsverifyCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain) && staticSiteCdnMode == 'none') {
+  name: 'staticSiteAsverifyCnameRecord'
+  scope: resourceGroup(dnsZoneResourceGroup)
+  params: {
+    dnsZoneName: baseDomainName
+    recordName: 'asverify.${staticSiteDnsRecordName}'
+    recordType: 'CNAME'
+    targetValue: 'asverify.${deployStaticSite ? staticSite!.outputs.storageAccountName : ''}.blob.${environment().suffixes.storage}'
+    ttl: 3600
+  }
+}
+
 
 // ============================================================================
 // Reference to External ID Key Vault resource
