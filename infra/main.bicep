@@ -612,7 +612,7 @@ module staticSite './modules/static-website.bicep' =  {
 
 
 // For storage-only mode, construct the blob endpoint for CNAME target
-var staticSiteBlobEndpoint = deployStaticSite ? '${abbrs.storageStorageAccounts}${resourceToken}!.outputs.storageAccountName}.blob.${environment().suffixes.storage}' : ''
+var staticSiteBlobEndpoint = deployStaticSite ? '${abbrs.storageStorageAccounts}${resourceToken}!.blob.${environment().suffixes.storage}' : ''
 
 // Extract DNS record name from custom domain
 // For 'example.com' relative to 'example.com' -> '@'
