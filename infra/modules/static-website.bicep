@@ -64,7 +64,7 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     minimumTlsVersion: 'TLS1_2'
     customDomain: useStorageCustomDomain ? {
       name: customDomainName
-      useSubDomainName: false
+      useSubDomainName: true  // Use asverify subdomain for validation
     } : null
   }
 }
