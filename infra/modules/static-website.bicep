@@ -37,6 +37,9 @@ param indexDocument string = 'index.html'
 @description('Static website error document (404)')
 param errorDocument404Path string = 'index.html'
 
+@description('GitHub Actions service principal ID (for deployment permissions)')
+param githubActionsPrincipalId string = ''
+
 // Backwards compatibility parameters (deprecated)
 @description('Enable Azure CDN (deprecated - use cdnMode instead)')
 param enableCdn bool = false
@@ -73,6 +76,17 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
     cors: {
       corsRules: []
     }
+  }
+}
+
+// Grant GitHub Actions service principal permissions to upload blobs
+resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(githubActionsPrincipalId)) {
+  name: guid(storageAccount.id, githubActionsPrincipalId, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  scope: storageAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
+    principalId: githubActionsPrincipalId
+    principalType: 'ServicePrincipal'
   }
 }
 

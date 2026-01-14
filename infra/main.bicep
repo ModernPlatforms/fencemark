@@ -162,6 +162,9 @@ param staticSiteCdnSku string = 'Standard_Microsoft'
 @description('Custom domain for the static site (optional)')
 param staticSiteCustomDomain string = ''
 
+@description('GitHub Actions service principal ID (for deployment permissions)')
+param githubActionsPrincipalId string = ''
+
 
 // ============================================================================
 // Variables
@@ -611,6 +614,7 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
     cdnSku: staticSiteCdnSku
     customDomainName: !empty(staticSiteCustomDomain) ? staticSiteCustomDomain : ''
     enableCustomDomainHttps: true
+    githubActionsPrincipalId: githubActionsPrincipalId
   }
 }
 
