@@ -957,8 +957,6 @@ output staticWebAppName string = deployStaticSite ? staticSite!.outputs.name : '
 output staticSiteUrl string = deployStaticSite ? staticSite!.outputs.defaultHostname : ''
 
 @description('The Static Web App deployment token (if deployed)')
-@secure()
-output staticWebAppDeploymentToken string = deployStaticSite ? staticSite!.outputs.deploymentToken : ''
+output staticWebAppDeploymentToken string = deployStaticSite ? staticSite.outputs.deploymentToken : ''
 
-@description('The CDN/Front Door mode used for static site')
-output staticSiteCdnMode string = deployStaticSite ? staticSite!.outputs.cdnMode : 'none'
+
