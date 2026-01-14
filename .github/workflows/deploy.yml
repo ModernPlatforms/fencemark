@@ -120,6 +120,9 @@ jobs:
       - name: Publish Web Frontend
         run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend --no-build
 
+      - name: Publish Blazor WASM
+        run: dotnet publish fencemark.Client/fencemark.Client.csproj -c Release -o ./publish/blazor-wasm --no-build
+
       - name: Upload API Service artifact
         uses: actions/upload-artifact@v4
         with:
@@ -127,11 +130,11 @@ jobs:
           path: ./publish/apiservice
           retention-days: 1
 
-      - name: Upload Web Frontend artifact
+      - name: Upload Blazor WASM artifact
         uses: actions/upload-artifact@v4
         with:
-          name: webfrontend-publish
-          path: ./publish/webfrontend
+          name: blazor-wasm-publish
+          path: ./publish/blazor-wasm
           retention-days: 1
 
   # ============================================================================

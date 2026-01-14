@@ -79,6 +79,15 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
   }
 }
 
+// $web container for static website hosting
+resource webContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  name: '$web'
+  parent: blobService
+  properties: {
+    publicAccess: 'Blob'
+  }
+}
+
 // Grant GitHub Actions service principal permissions to upload blobs
 resource storageBlobDataContributorRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(githubActionsPrincipalId)) {
   name: guid(storageAccount.id, githubActionsPrincipalId, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
