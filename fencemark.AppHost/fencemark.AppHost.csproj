@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\fencemark.ApiService\fencemark.ApiService.csproj" />
-    <ProjectReference Include="..\fencemark.Web\fencemark.Web.csproj" />
+    <ProjectReference Include="..\fencemark.Client\fencemark.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

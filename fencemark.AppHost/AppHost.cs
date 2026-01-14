@@ -39,7 +39,8 @@ if (!isLocal)
 // ============================================================================
 // Web Frontend Configuration
 // ============================================================================
-var webFrontend = builder.AddProject<Projects.fencemark_Web>("webfrontend")
+// For local development, run the Blazor WASM client project
+var webFrontend = builder.AddProject<Projects.fencemark_Client>("webfrontend")
     .WithExternalHttpEndpoints()
     .WaitFor(apiService)
     .WithReference(apiService)

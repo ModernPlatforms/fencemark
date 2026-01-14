@@ -2,7 +2,6 @@ using fencemark.Client.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Authentication.WebAssembly.Msal;
 using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -13,6 +12,37 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
+
+// Configure HTTP client with automatic JWT token attachment
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:62010";
+var apiScope = builder.Configuration["ApiScope"]; // Read from root level, not AzureAd section
+
+builder.Services.AddHttpClient("fencemark.ApiService", client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+})
+.AddHttpMessageHandler(sp =>
+{
+    var handler = sp.GetRequiredService<AuthorizationMessageHandler>();
+    
+    var authorizedUrls = new[] { apiBaseUrl };
+    
+    if (!string.IsNullOrEmpty(apiScope))
+    {
+        handler.ConfigureHandler(
+            authorizedUrls: authorizedUrls,
+            scopes: new[] { apiScope });
+    }
+    else
+    {
+        handler.ConfigureHandler(authorizedUrls: authorizedUrls);
+    }
+    
+    return handler;
+});
+
+// Register a scoped HttpClient for API calls
+builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("fencemark.ApiService"));
 
 // Register API clients
 builder.Services.AddScoped<fencemark.Client.Features.Auth.AuthApiClient>();
@@ -28,29 +58,11 @@ builder.Services.AddScoped<fencemark.Client.Features.GatePositions.GatePositionA
 builder.Services.AddMsalAuthentication(options =>
 {
     builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
-    
-    // Configure the default access token scope for the API
-    // This scope should match what's configured in Azure AD and expected by the API
-    options.ProviderOptions.DefaultAccessTokenScopes.Add(
-        builder.Configuration["AzureAd:ApiScope"] ?? "api://{clientId}/access_as_user");
-    
-    // Configure login mode - redirect is recommended for WASM standalone apps
+    if (!string.IsNullOrEmpty(apiScope))
+    {
+        options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
+    }
     options.ProviderOptions.LoginMode = "redirect";
-});
-
-// Configure HTTP client with automatic JWT token attachment
-builder.Services.AddHttpClient("fencemark.ApiService", client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "{API_BASE_URL}");
-})
-.AddHttpMessageHandler(sp =>
-{
-    var handler = sp.GetRequiredService<AuthorizationMessageHandler>()
-        .ConfigureHandler(
-            authorizedUrls: new[] { builder.Configuration["ApiBaseUrl"] ?? "{API_BASE_URL}" },
-            scopes: new[] { builder.Configuration["AzureAd:ApiScope"] ?? "api://{clientId}/access_as_user" });
-    
-    return handler;
 });
 
 await builder.Build().RunAsync();
