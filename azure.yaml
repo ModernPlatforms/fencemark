@@ -37,11 +37,22 @@ services:
 # ============================================================================
 # Hooks
 # ============================================================================
-# Uncomment to add custom hooks for build/deploy lifecycle events
-# hooks:
-#   preprovision:
-#     shell: pwsh
-#     run: ./scripts/preprovision.ps1
-#   postprovision:
-#     shell: pwsh
-#     run: ./scripts/postprovision.ps1
+
+hooks:
+  postprovision:
+    shell: pwsh
+    run: |
+      Write-Host "Enabling static website hosting on storage account..."
+      $storageAccountName = azd env get-value staticSiteStorageAccountName
+      if ($storageAccountName) {
+        az storage blob service-properties update `
+          --account-name $storageAccountName `
+          --static-website `
+          --index-document index.html `
+          --404-document index.html `
+          --auth-mode login
+        Write-Host "Static website hosting enabled successfully" -ForegroundColor Green
+      } else {
+        Write-Host "Static site not deployed, skipping static website configuration" -ForegroundColor Yellow
+      }
+

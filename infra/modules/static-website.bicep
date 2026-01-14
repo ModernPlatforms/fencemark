@@ -76,66 +76,12 @@ resource blobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01'
   }
 }
 
-// Deployment script to enable static website hosting
-resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: 'id-static-website-${uniqueString(name)}'
-  location: location
-  tags: tags
-}
-
-// Role assignment for the managed identity to manage storage
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storageAccount.id, managedIdentity.id, 'StorageBlobDataContributor')
-  scope: storageAccount
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
-    principalId: managedIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource staticWebsiteScript 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: 'enable-static-website-${uniqueString(name)}'
-  location: location
-  kind: 'AzureCLI'
-  tags: tags
-  properties: {
-    azCliVersion: '2.52.0'
-    timeout: 'PT10M'
-    retentionInterval: 'PT1H'
-    cleanupPreference: 'OnSuccess'
-    environmentVariables: [
-      {
-        name: 'STORAGE_ACCOUNT_NAME'
-        value: storageAccount.name
-      }
-      {
-        name: 'INDEX_DOCUMENT'
-        value: indexDocument
-      }
-      {
-        name: 'ERROR_DOCUMENT'
-        value: errorDocument404Path
-      }
-    ]
-    scriptContent: '''
-      az storage blob service-properties update \
-        --account-name "$STORAGE_ACCOUNT_NAME" \
-        --static-website \
-        --index-document "$INDEX_DOCUMENT" \
-        --404-document "$ERROR_DOCUMENT"
-    '''
-  }
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${managedIdentity.id}': {}
-    }
-  }
-  dependsOn: [
-    roleAssignment
-  ]
-}
+// Note: Static website hosting must be enabled post-deployment
+// This can be done via:
+// 1. Azure CLI: az storage blob service-properties update --account-name <name> --static-website --index-document index.html --404-document index.html
+// 2. azd hooks (in azure.yaml)
+// 3. GitHub Actions/Azure DevOps pipeline step
+// 4. Azure Portal: Storage account -> Static website -> Enabled
 
 var staticWebsiteHost = replace(replace(storageAccount.properties.primaryEndpoints.web, 'https://', ''), '/', '')
 
