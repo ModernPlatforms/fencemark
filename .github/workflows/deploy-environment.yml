@@ -92,7 +92,7 @@ jobs:
           location: ${{ inputs.azure-location }}
           template-file: ./infra/main.bicep
           parameters-file: ./infra/${{ inputs.environment }}.bicepparam
-          parameters: githubActionsPrincipalId=${{ steps.get-principal-id.outputs.principal-id }}
+          parameters: '{"githubActionsPrincipalId": "${{ steps.get-principal-id.outputs.principal-id }}"}'
 
       - name: Get deployment outputs
         id: get-outputs
