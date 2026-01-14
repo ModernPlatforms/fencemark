@@ -13,7 +13,6 @@ param resourceGroupName = 'rg-fencemark-prod'
 // ============================================================================
 
 param apiServiceImage = ''
-param webFrontendImage = ''
 
 // ============================================================================
 // Resource Scaling (Prod - production-ready resources)
@@ -24,10 +23,6 @@ param apiServiceMemory = '2Gi'
 param apiServiceMinReplicas = 2
 param apiServiceMaxReplicas = 10
 
-param webFrontendCpu = '1'
-param webFrontendMemory = '2Gi'
-param webFrontendMinReplicas = 2
-param webFrontendMaxReplicas = 10
 param customDomain = 'fencemark.com.au'
 
 // ============================================================================
