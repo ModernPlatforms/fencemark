@@ -13,33 +13,51 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
-// Configure HTTP client with automatic JWT token attachment
+// Check if we have valid Azure AD configuration (not the placeholder values)
+var azureAdClientId = builder.Configuration["AzureAd:ClientId"];
+var isValidAzureAdConfig = !string.IsNullOrEmpty(azureAdClientId) && 
+                           azureAdClientId != "00000000-0000-0000-0000-000000000000" &&
+                           !azureAdClientId.StartsWith("{");
+
+// Configure HTTP client with automatic JWT token attachment (if authentication is configured)
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:62010";
 var apiScope = builder.Configuration["ApiScope"]; // Read from root level, not AzureAd section
 
-builder.Services.AddHttpClient("fencemark.ApiService", client =>
+if (isValidAzureAdConfig)
 {
-    client.BaseAddress = new Uri(apiBaseUrl);
-})
-.AddHttpMessageHandler(sp =>
+    // With authentication - add authorization message handler
+    builder.Services.AddHttpClient("fencemark.ApiService", client =>
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+    })
+    .AddHttpMessageHandler(sp =>
+    {
+        var handler = sp.GetRequiredService<AuthorizationMessageHandler>();
+        
+        var authorizedUrls = new[] { apiBaseUrl };
+        
+        if (!string.IsNullOrEmpty(apiScope))
+        {
+            handler.ConfigureHandler(
+                authorizedUrls: authorizedUrls,
+                scopes: new[] { apiScope });
+        }
+        else
+        {
+            handler.ConfigureHandler(authorizedUrls: authorizedUrls);
+        }
+        
+        return handler;
+    });
+}
+else
 {
-    var handler = sp.GetRequiredService<AuthorizationMessageHandler>();
-    
-    var authorizedUrls = new[] { apiBaseUrl };
-    
-    if (!string.IsNullOrEmpty(apiScope))
+    // Without authentication - simple HTTP client
+    builder.Services.AddHttpClient("fencemark.ApiService", client =>
     {
-        handler.ConfigureHandler(
-            authorizedUrls: authorizedUrls,
-            scopes: new[] { apiScope });
-    }
-    else
-    {
-        handler.ConfigureHandler(authorizedUrls: authorizedUrls);
-    }
-    
-    return handler;
-});
+        client.BaseAddress = new Uri(apiBaseUrl);
+    });
+}
 
 // Register a scoped HttpClient for API calls
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("fencemark.ApiService"));
@@ -55,14 +73,24 @@ builder.Services.AddScoped<fencemark.Client.Features.FenceSegments.FenceSegmentA
 builder.Services.AddScoped<fencemark.Client.Features.GatePositions.GatePositionApiClient>();
 
 // Configure MSAL authentication for Azure Entra External ID (CIAM)
-builder.Services.AddMsalAuthentication(options =>
+if (isValidAzureAdConfig)
 {
-    builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
-    if (!string.IsNullOrEmpty(apiScope))
+    builder.Services.AddMsalAuthentication(options =>
     {
-        options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
-    }
-    options.ProviderOptions.LoginMode = "redirect";
-});
+        builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+        if (!string.IsNullOrEmpty(apiScope))
+        {
+            options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
+        }
+        options.ProviderOptions.LoginMode = "redirect";
+    });
+}
+else
+{
+    // For local development without authentication, provide a no-op authentication state provider
+    builder.Services.AddAuthorizationCore();
+    builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, 
+        fencemark.Client.Features.Auth.NoAuthenticationStateProvider>();
+}
 
 await builder.Build().RunAsync();

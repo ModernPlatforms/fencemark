@@ -5,12 +5,27 @@ This is a standalone Blazor WebAssembly client application for Fencemark that au
 ## Prerequisites
 
 - .NET 10.0 SDK
-- Azure Entra External ID (CIAM) tenant configured
-- fencemark.ApiService running and accessible
+- fencemark.ApiService running and accessible (optional for local UI development)
+- Azure Entra External ID (CIAM) tenant configured (optional - authentication can be disabled for local development)
+
+## Quick Start for Local Development
+
+To run the application locally without authentication:
+
+1. The application comes with a default `appsettings.Development.json` that has placeholder values
+2. Simply run the application:
+   ```bash
+   dotnet run
+   ```
+3. The application will start at https://localhost:7173 without authentication enabled
+
+**Note**: Authentication features will not work with the default configuration. To enable authentication, see the [Configuration](#configuration) section below.
 
 ## Configuration
 
-The application requires configuration for Azure AD authentication and API access. Update the `wwwroot/appsettings.json` file with your environment-specific values:
+### For Production or Full Authentication Testing
+
+The application requires configuration for Azure AD authentication and API access. Create or update the `wwwroot/appsettings.json` file with your environment-specific values:
 
 ```json
 {
@@ -20,7 +35,8 @@ The application requires configuration for Azure AD authentication and API acces
     "ValidateAuthority": true,
     "ApiScope": "api://{AZURE_AD_CLIENT_ID}/access_as_user"
   },
-  "ApiBaseUrl": "{API_BASE_URL}"
+  "ApiBaseUrl": "{API_BASE_URL}",
+  "ApiScope": "api://{AZURE_AD_CLIENT_ID}/access_as_user"
 }
 ```
 
@@ -28,7 +44,9 @@ The application requires configuration for Azure AD authentication and API acces
 
 - **AZURE_AD_TENANT_ID**: Your Azure Entra External ID tenant ID (e.g., `yourtenant`)
 - **AZURE_AD_CLIENT_ID**: The Client ID of the Azure AD App Registration for this WASM application
-- **API_BASE_URL**: The base URL of the fencemark.ApiService API (e.g., `https://api.fencemark.com` or `https://localhost:7001`)
+- **API_BASE_URL**: The base URL of the fencemark.ApiService API (e.g., `https://api.fencemark.com` or `https://localhost:62010`)
+
+**Important**: The `appsettings.json` file is gitignored. Use `appsettings.template.json` as a reference for required settings.
 
 ### Azure AD App Registration Setup
 
