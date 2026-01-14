@@ -124,6 +124,71 @@ jobs:
         run: sleep 30
 
       # ============================================================================
+      # Deploy Static Web App
+      # ============================================================================
+
+      - name: Setup .NET for Static Web App
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install WASM tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Build Blazor WASM
+        run: |
+          # Set environment-specific configuration
+          case "${{ inputs.environment }}" in
+            dev)
+              AUTHORITY="https://devfencemark.ciamlogin.com/"
+              API_URL="https://ca-fencemark-api-dev.azurecontainerapps.io"
+              ;;
+            staging)
+              AUTHORITY="https://stagingfencemark.ciamlogin.com/"
+              API_URL="https://ca-fencemark-api-staging.azurecontainerapps.io"
+              ;;
+            prod)
+              AUTHORITY="https://fencemark.ciamlogin.com/"
+              API_URL="https://api.fencemark.com"
+              ;;
+          esac
+
+          # Use the same AZURE_CLIENT_ID for all environments
+          CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
+
+          cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+          {
+            "AzureAd": {
+              "Authority": "$AUTHORITY",
+              "ClientId": "$CLIENT_ID",
+              "ValidateAuthority": true,
+              "ApiScope": "api://$CLIENT_ID/access_as_user"
+            },
+            "ApiBaseUrl": "$API_URL"
+          }
+          EOF
+          
+          # Build and publish the Blazor WASM app
+          dotnet publish fencemark.Client/fencemark.Client.csproj \
+            -c Release \
+            -o publish/wwwroot
+
+      - name: Deploy to Storage Account Static Website
+        run: |
+          # Get the storage account name from deployment outputs
+          STORAGE_ACCOUNT=$(az deployment sub show \
+            --name "${{ inputs.environment }}-$(date +%Y%m%d)" \
+            --query properties.outputs.staticSiteStorageAccountName.value -o tsv)
+          
+          # Upload to $web container (static website hosting)
+          az storage blob upload-batch \
+            --account-name $STORAGE_ACCOUNT \
+            --source publish/wwwroot \
+            --destination '$web' \
+            --auth-mode login \
+            --overwrite
+
+      # ============================================================================
       # Health Checks
       # ============================================================================
 

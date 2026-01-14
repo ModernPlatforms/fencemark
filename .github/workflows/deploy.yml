@@ -192,21 +192,6 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
   # ============================================================================
-  # Deploy Static Web App to Dev
-  # ============================================================================
-  deploy-static-web-app-dev:
-    name: Deploy Static Web App (Dev)
-    needs: deploy-dev
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
-    uses: ./.github/workflows/deploy-static-web-app.yml
-    with:
-      environment: dev
-    secrets:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-  # ============================================================================
   # E2E Tests with Playwright (Dev)
   # ============================================================================
   e2e-tests-dev:
@@ -323,21 +308,6 @@ jobs:
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
   # ============================================================================
-  # Deploy Static Web App to Staging
-  # ============================================================================
-  deploy-static-web-app-staging:
-    name: Deploy Static Web App (Staging)
-    needs: deploy-staging
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
-    uses: ./.github/workflows/deploy-static-web-app.yml
-    with:
-      environment: staging
-    secrets:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-  # ============================================================================
   # Deploy to Production Environment
   # ============================================================================
   deploy-prod:
@@ -349,21 +319,6 @@ jobs:
       environment: prod
       azure-location: australiaeast
       run-health-checks: true
-    secrets:
-      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-  # ============================================================================
-  # Deploy Static Web App to Production
-  # ============================================================================
-  deploy-static-web-app-prod:
-    name: Deploy Static Web App (Prod)
-    needs: deploy-prod
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
-    uses: ./.github/workflows/deploy-static-web-app.yml
-    with:
-      environment: prod
     secrets:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
