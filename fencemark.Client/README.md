@@ -10,16 +10,27 @@ This is a standalone Blazor WebAssembly client application for Fencemark that au
 
 ## Quick Start for Local Development
 
-To run the application locally without authentication:
+The application comes with `appsettings.Development.json` that includes real Azure AD development credentials. You have two options:
 
-1. The application comes with a default `appsettings.Development.json` that has placeholder values
-2. Simply run the application:
+### Option 1: Run with Authentication (Real Azure AD)
+```bash
+dotnet run
+```
+The application will start at https://localhost:7173 with Azure AD authentication enabled using the development tenant.
+
+### Option 2: Run without Authentication
+To disable authentication for local UI development without requiring Azure AD sign-in:
+
+1. Edit `appsettings.Development.json` and change the ClientId to the placeholder:
+   ```json
+   "ClientId": "00000000-0000-0000-0000-000000000000"
+   ```
+2. Run the application:
    ```bash
    dotnet run
    ```
-3. The application will start at https://localhost:7173 without authentication enabled
 
-**Note**: Authentication features will not work with the default configuration. To enable authentication, see the [Configuration](#configuration) section below.
+**Note**: When authentication is disabled (placeholder ClientId), you can view the UI but authentication-protected features won't work.
 
 ## Configuration
 
@@ -127,6 +138,36 @@ Components/
 - The application validates tokens and enforces authorization
 
 ## Deployment
+
+This standalone WASM application can be deployed to Azure Static Web Apps or other static hosting services.
+
+### Azure Deployment with Authentication
+
+The CI/CD pipeline (`.github/workflows/deploy-static-web-app.yml`) handles authentication configuration automatically:
+
+1. **During Build**: The workflow creates `appsettings.json` with environment-specific values:
+   - **Dev**: Uses real Azure AD credentials (hardcoded in workflow)
+   - **Staging/Prod**: Uses credentials from GitHub secrets
+
+2. **Build Step Example** (from workflow):
+   ```bash
+   cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+   {
+     "AzureAd": {
+       "Authority": "https://devfencemark.ciamlogin.com/",
+       "ClientId": "5b204301-0113-4b40-bd2e-e0ef8be99f48",
+       "ValidateAuthority": true
+     },
+     "ApiBaseUrl": "https://ca-fencemark-api-dev.azurecontainerapps.io"
+   }
+   EOF
+   ```
+
+3. **Published Output**: The `appsettings.json` file is included in the published wwwroot directory
+
+**Important**: The `appsettings.json` file is gitignored and never committed. It's only created during the CI/CD build process for deployment.
+
+### Deployment Targets
 
 This standalone WASM application can be deployed to:
 - Azure Static Web Apps
