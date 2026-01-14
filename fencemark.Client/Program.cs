@@ -1,4 +1,6 @@
 using fencemark.Client.Components;
+using fencemark.Client.Features.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
@@ -89,8 +91,7 @@ else
 {
     // For local development without authentication, provide a no-op authentication state provider
     builder.Services.AddAuthorizationCore();
-    builder.Services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider, 
-        fencemark.Client.Features.Auth.NoAuthenticationStateProvider>();
+    builder.Services.AddScoped<AuthenticationStateProvider, NoAuthenticationStateProvider>();
 }
 
 await builder.Build().RunAsync();
