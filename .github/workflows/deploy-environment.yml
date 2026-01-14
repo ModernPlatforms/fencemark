@@ -135,15 +135,13 @@ jobs:
       # Deploy Static Web App
       # ============================================================================
 
-      - name: Setup .NET for Static Web App
-        uses: actions/setup-dotnet@v4
+      - name: Download Blazor WASM artifact
+        uses: actions/download-artifact@v4
         with:
-          dotnet-version: '10.0.x'
+          name: blazor-wasm-publish
+          path: ./publish/blazor-wasm
 
-      - name: Install WASM tools workload
-        run: dotnet workload install wasm-tools
-
-      - name: Build Blazor WASM
+      - name: Update Blazor WASM appsettings for environment
         run: |
           # Set environment-specific configuration
           case "${{ inputs.environment }}" in
@@ -164,7 +162,7 @@ jobs:
           # Use the same AZURE_CLIENT_ID for all environments
           CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
 
-          cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+          cat > publish/blazor-wasm/wwwroot/appsettings.json <<EOF
           {
             "AzureAd": {
               "Authority": "$AUTHORITY",
@@ -175,11 +173,6 @@ jobs:
             "ApiBaseUrl": "$API_URL"
           }
           EOF
-          
-          # Build and publish the Blazor WASM app
-          dotnet publish fencemark.Client/fencemark.Client.csproj \
-            -c Release \
-            -o publish/wwwroot
 
       - name: Deploy to Storage Account Static Website
         run: |
@@ -189,7 +182,7 @@ jobs:
           # Upload to $web container (static website hosting)
           az storage blob upload-batch \
             --account-name $STORAGE_ACCOUNT \
-            --source publish/wwwroot \
+            --source publish/blazor-wasm/wwwroot \
             --destination '$web' \
             --auth-mode login \
             --overwrite
