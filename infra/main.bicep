@@ -587,7 +587,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
 // Static Website (Storage + Optional CDN) for Blazor WASM Client
 // ============================================================================
 
-module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
+module staticSite './modules/static-website.bicep' =  {
   name: 'staticSite'
   scope: rg
   params: {
@@ -604,25 +604,15 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
     enableCustomDomainHttps: true
     githubActionsPrincipalId: githubActionsPrincipalId
   }
+  dependsOn : [
+    staticSiteDnsCnameRecord
+    staticSiteDnsCnameRecord
+  ]
 }
-
-// ============================================================================
-// DNS Records for Custom Domain (Static Site)
-// ============================================================================
-// Create CNAME record pointing the subdomain to the static site
-// - For 'none' mode: point to storage endpoint
-// - For 'frontdoor' mode: point to AFD endpoint
-// - For 'classic-cdn' mode: point to CDN endpoint
-
-var staticWebsiteUrl = deployStaticSite ? staticSite!.outputs.staticWebsiteUrl : ''
-var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
 
 
 // For storage-only mode, construct the blob endpoint for CNAME target
-var staticSiteBlobEndpoint = deployStaticSite ? '${staticSite!.outputs.storageAccountName}.blob.${environment().suffixes.storage}' : ''
-
-// Determine the DNS target based on CDN mode
-var staticSiteDnsTarget = deployStaticSite ? (staticSiteCdnMode == 'frontdoor' ? staticSite!.outputs.frontDoorEndpointHostname : (staticSiteCdnMode == 'classic-cdn' ? staticSite!.outputs.cdnHostname : staticSiteBlobEndpoint)) : ''
+var staticSiteBlobEndpoint = deployStaticSite ? '${abbrs.storageStorageAccounts}${resourceToken}!.outputs.storageAccountName}.blob.${environment().suffixes.storage}' : ''
 
 // Extract DNS record name from custom domain
 // For 'example.com' relative to 'example.com' -> '@'
@@ -637,7 +627,7 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
     dnsZoneName: baseDomainName
     recordName: staticSiteDnsRecordName
     recordType: 'CNAME'
-    targetValue: staticSiteDnsTarget
+    targetValue: staticSiteBlobEndpoint
     ttl: 3600
   }
 }
@@ -650,7 +640,7 @@ module staticSiteAsverifyCnameRecord './modules/dns-record.bicep' = if (deploySt
     dnsZoneName: baseDomainName
     recordName: 'asverify.${staticSiteDnsRecordName}'
     recordType: 'CNAME'
-    targetValue: 'asverify.${deployStaticSite ? staticSite!.outputs.storageAccountName : ''}.blob.${environment().suffixes.storage}'
+    targetValue: staticSiteBlobEndpoint
     ttl: 3600
   }
 }
