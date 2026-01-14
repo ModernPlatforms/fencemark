@@ -177,27 +177,43 @@ jobs:
   # ============================================================================
   # Deploy to Dev Environment
   # ============================================================================
-  # Automatically deploys to dev on push to main (excluding doc changes).
-  # Can also be triggered manually via workflow_dispatch.
-  #
-  # Steps:
-  #   1. Authenticate with Azure using OIDC
-  #   2. Deploy infrastructure using Bicep templates
-  #   3. Download build artifacts
-  #   4. Build and push Docker images to ACR
-  #   5. Update Container Apps with new images
-  # ============================================================================
   deploy-dev:
     name: Deploy to Dev
-    runs-on: ubuntu-latest
     needs: [build, deploy-central-config]
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
-    environment: dev
-    timeout-minutes: 30
-    env:
-      RESOURCE_GROUP: rg-fencemark-dev
-      API_SERVICE_NAME: ca-apiservice
-      WEB_FRONTEND_NAME: ca-webfrontend
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: dev
+      azure-location: australiaeast
+      run-health-checks: true
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+  # ============================================================================
+  # Deploy Static Web App to Dev
+  # ============================================================================
+  deploy-static-web-app-dev:
+    name: Deploy Static Web App (Dev)
+    needs: deploy-dev
+    uses: ./.github/workflows/deploy-static-web-app.yml
+    with:
+      environment: dev
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+  # ============================================================================
+  # E2E Tests with Playwright (Dev)
+  # ============================================================================
+  e2e-tests-dev:
+    name: E2E Tests (Dev)
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -209,175 +225,11 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy Bicep infrastructure to Dev
-        uses: azure/bicep-deploy@v2
-        id: deploy-infra
-        with:
-          type: deployment
-          operation: create
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          scope: subscription
-          location: ${{ env.AZURE_LOCATION }}
-          template-file: ./infra/main.bicep
-          parameters-file: ./infra/dev.bicepparam
-
-      - name: Get deployment outputs
-        id: get-outputs
-        run: |
-          echo "acr-name=${{ steps.deploy-infra.outputs.containerRegistryName }}"      >> $GITHUB_OUTPUT
-          echo "acr-login-server=${{ steps.deploy-infra.outputs.containerRegistryLoginServer }}" >> $GITHUB_OUTPUT
-          echo "api-service-name=${{ steps.deploy-infra.outputs.apiServiceName }}"     >> $GITHUB_OUTPUT
-          echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}"   >> $GITHUB_OUTPUT
-          echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}"    >> $GITHUB_OUTPUT
-          echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}"     >> $GITHUB_OUTPUT
-
-      - name: Download API Service artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: apiservice-publish
-          path: ./publish/apiservice
-
-      - name: Download Web Frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: webfrontend-publish
-          path: ./publish/webfrontend
-
-      - name: Log in to Azure Container Registry
-        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
-
-      - name: Build and push API Service image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
-          docker push $IMAGE_TAG
-          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Build and push Web Frontend image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
-          docker push $IMAGE_TAG
-          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Deploy API Service to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.api-service-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.API_IMAGE }}
-
-      - name: Deploy Web Frontend to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.WEB_IMAGE }}
-
-      - name: Wait for deployment to stabilize
-        run: sleep 30
-
-      # Note: API Service health check skipped - it's an internal service (ingressExternal: false)
-      # and not accessible from external networks. The Web Frontend health check validates
-      # the deployment since it depends on the API service.
-
-      - name: Health Check - Web Frontend
-        id: health-check-web
-        continue-on-error: true
-        run: |
-          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
-          echo "Web URL: $WEB_URL"
-          
-          # Try health check endpoint with retries
-          MAX_RETRIES=5
-          RETRY_COUNT=0
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL/health || echo "000")
-            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
-            
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Web Frontend health check passed"
-              echo "status=success" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-              sleep 10
-            fi
-          done
-          
-          echo "❌ Web Frontend health check failed after $MAX_RETRIES attempts"
-          echo "status=failed" >> $GITHUB_OUTPUT
-          exit 1
-
-      - name: Smoke Test - Home Page Accessibility
-        id: smoke-test-home
-        if: steps.health-check-web.outputs.status == 'success'
-        continue-on-error: true
-        run: |
-          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL || echo "000")
-          
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Home page is accessible"
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "❌ Home page returned HTTP $HTTP_CODE"
-            echo "status=failed" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
-      - name: Report Health Check Status
-        if: always()
-        run: |
-          echo "## 🏥 Health Check Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.health-check-web.outputs.status }}" = "success" ]; then
-            echo "✅ **Web Frontend:** Healthy" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Web Frontend:** Unhealthy" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ steps.smoke-test-home.outputs.status }}" = "success" ]; then
-            echo "✅ **Smoke Test:** Passed" >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ steps.smoke-test-home.outputs.status }}" = "failed" ]; then
-            echo "❌ **Smoke Test:** Failed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **Smoke Test:** Skipped (health check failed)" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-      - name: Deployment summary
-        run: |
-          echo "## 🚀 Dev Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
-          echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔐 Authentication Configuration" >> $GITHUB_STEP_SUMMARY
-          echo "- **CIAM Tenant:** devfencemark.onmicrosoft.com" >> $GITHUB_STEP_SUMMARY
-          echo "- **Client ID:** 5b204301-0113-4b40-bd2e-e0ef8be99f48" >> $GITHUB_STEP_SUMMARY
-          echo "- **Key Vault:** kv-ciambfwyw65gna5lu" >> $GITHUB_STEP_SUMMARY
-
-      # ============================================================================
-      # E2E Tests with Playwright
-      # ============================================================================
-
       - name: Get Key Vault name
         id: get-keyvault
         run: |
-          KV_NAME="${{ steps.deploy-infra.outputs.keyVaultName }}"
+          # Get Key Vault name from deployment outputs or use default
+          KV_NAME="kv-ciambfwyw65gna5lu"
           echo "keyvault-name=$KV_NAME" >> $GITHUB_OUTPUT
           echo "Key Vault: $KV_NAME"
 
@@ -411,7 +263,7 @@ jobs:
         id: e2e-tests
         continue-on-error: true
         env:
-          TEST_BASE_URL: ${{ steps.get-outputs.outputs.web-frontend-url }}
+          TEST_BASE_URL: ${{ needs.deploy-dev.outputs.web-frontend-url }}
           TEST_USER_EMAIL: ${{ steps.get-test-creds.outputs.test-email }}
           TEST_USER_PASSWORD: ${{ steps.get-test-creds.outputs.test-password }}
           TEST_HEADLESS: "true"
@@ -455,216 +307,61 @@ jobs:
   # ============================================================================
   # Deploy to Staging Environment
   # ============================================================================
-  # Manual deployment only (via workflow_dispatch).
-  # Used for pre-production validation, QA, and UAT.
-  # Requires approval from designated approvers.
-  # ============================================================================
   deploy-staging:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
     needs: [build, deploy-central-config]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
-    environment: staging
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: staging
+      azure-location: australiaeast
+      run-health-checks: true
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          auth-type: FEDERATED
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy Bicep infrastructure to Staging
-        uses: azure/bicep-deploy@v2
-        id: deploy-infra
-        with:
-          type: deployment
-          operation: create
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          scope: subscription
-          location: ${{ env.AZURE_LOCATION }}
-          template-file: ./infra/main.bicep
-          parameters-file: ./infra/staging.bicepparam
-          deployment-name: main
-
-      - name: Get deployment outputs
-        id: get-outputs
-        run: |
-          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
-          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
-          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
-          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
-          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
-
-      - name: Download API Service artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: apiservice-publish
-          path: ./publish/apiservice
-
-      - name: Download Web Frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: webfrontend-publish
-          path: ./publish/webfrontend
-
-      - name: Log in to Azure Container Registry
-        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
-
-      - name: Build and push API Service image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
-          docker push $IMAGE_TAG
-          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Build and push Web Frontend image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
-          docker push $IMAGE_TAG
-          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Deploy API Service to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.api-service-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.API_IMAGE }}
-
-      - name: Deploy Web Frontend to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.WEB_IMAGE }}
-
-      - name: Deployment summary
-        run: |
-          echo "## 🚀 Staging Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** staging" >> $GITHUB_STEP_SUMMARY
-          echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
+  # ============================================================================
+  # Deploy Static Web App to Staging
+  # ============================================================================
+  deploy-static-web-app-staging:
+    name: Deploy Static Web App (Staging)
+    needs: deploy-staging
+    uses: ./.github/workflows/deploy-static-web-app.yml
+    with:
+      environment: staging
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
   # ============================================================================
   # Deploy to Production Environment
   # ============================================================================
-  # Manual deployment only (via workflow_dispatch).
-  # Used for live user-facing application.
-  # Requires approval from designated approvers.
-  # High availability configuration with minimum 2 replicas.
-  # ============================================================================
   deploy-prod:
     name: Deploy to Production
-    runs-on: ubuntu-latest
     needs: [build, deploy-central-config]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
-    environment: prod
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: prod
+      azure-location: australiaeast
+      run-health-checks: true
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Log in to Azure
-        uses: azure/login@v2
-        with:
-          auth-type: FEDERATED
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy Bicep infrastructure to Production
-        uses: azure/bicep-deploy@v2
-        id: deploy-infra
-        with:
-          type: deployment
-          operation: create
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          scope: subscription
-          location: ${{ env.AZURE_LOCATION }}
-          template-file: ./infra/main.bicep
-          parameters-file: ./infra/prod.bicepparam
-          deployment-name: main
-
-      - name: Get deployment outputs
-        id: get-outputs
-        run: |
-          OUTPUTS=$(az deployment sub show --name main --query properties.outputs -o json)
-          echo "acr-name=$(echo $OUTPUTS | jq -r '.containerRegistryName.value')" >> $GITHUB_OUTPUT
-          echo "acr-login-server=$(echo $OUTPUTS | jq -r '.containerRegistryLoginServer.value')" >> $GITHUB_OUTPUT
-          echo "api-service-name=$(echo $OUTPUTS | jq -r '.apiServiceName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-name=$(echo $OUTPUTS | jq -r '.webFrontendName.value')" >> $GITHUB_OUTPUT
-          echo "resource-group=$(echo $OUTPUTS | jq -r '.resourceGroupName.value')" >> $GITHUB_OUTPUT
-          echo "web-frontend-url=$(echo $OUTPUTS | jq -r '.webFrontendUrl.value')" >> $GITHUB_OUTPUT
-
-      - name: Download API Service artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: apiservice-publish
-          path: ./publish/apiservice
-
-      - name: Download Web Frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: webfrontend-publish
-          path: ./publish/webfrontend
-
-      - name: Log in to Azure Container Registry
-        run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
-
-      - name: Build and push API Service image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/apiservice:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.ApiService/Dockerfile ./publish/apiservice
-          docker push $IMAGE_TAG
-          echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Build and push Web Frontend image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
-          docker push $IMAGE_TAG
-          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
-      - name: Deploy API Service to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.api-service-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.API_IMAGE }}
-
-      - name: Deploy Web Frontend to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.WEB_IMAGE }}
-
-      - name: Deployment summary
-        run: |
-          echo "## 🚀 Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Environment:** prod" >> $GITHUB_STEP_SUMMARY
-          echo "**Region:** ${{ env.AZURE_LOCATION }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Resource Group:** ${{ steps.get-outputs.outputs.resource-group }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
-          echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
+  # ============================================================================
+  # Deploy Static Web App to Production
+  # ============================================================================
+  deploy-static-web-app-prod:
+    name: Deploy Static Web App (Prod)
+    needs: deploy-prod
+    uses: ./.github/workflows/deploy-static-web-app.yml
+    with:
+      environment: prod
+    secrets:
+      AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}

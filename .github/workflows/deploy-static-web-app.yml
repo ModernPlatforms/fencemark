@@ -21,12 +21,19 @@
 name: Deploy Blazor WASM to Static Web App
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'fencemark.Client/**'
-      - '.github/workflows/deploy-static-web-app.yml'
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
   workflow_dispatch:
     inputs:
       environment:
@@ -41,7 +48,7 @@ on:
 
 # Prevent concurrent deployments to same environment
 concurrency:
-  group: deploy-swa-${{ github.ref }}-${{ github.event.inputs.environment || 'dev' }}
+  group: deploy-swa-${{ github.ref }}-${{ inputs.environment }}
   cancel-in-progress: false
 
 permissions:
@@ -61,7 +68,7 @@ jobs:
     name: Deploy to Development
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
+    if: inputs.environment == 'dev'
     environment:
       name: dev
       url: https://stapp-fencemark-dev.azurestaticapps.net
@@ -144,7 +151,7 @@ jobs:
     name: Deploy to Staging
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
+    if: inputs.environment == 'staging'
     environment:
       name: staging
       url: https://stapp-fencemark-staging.azurestaticapps.net
@@ -212,7 +219,7 @@ jobs:
     name: Deploy to Production
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
+    if: inputs.environment == 'prod'
     environment:
       name: prod
       url: https://app.fencemark.com
