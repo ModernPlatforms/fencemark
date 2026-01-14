@@ -96,6 +96,7 @@ jobs:
           echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}" >> $GITHUB_OUTPUT
           echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}" >> $GITHUB_OUTPUT
           echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}" >> $GITHUB_OUTPUT
+          echo "storage-account=${{ steps.deploy-infra.outputs.staticSiteStorageAccountName }}" >> $GITHUB_OUTPUT
 
       - name: Download API Service artifact
         uses: actions/download-artifact@v4
@@ -175,10 +176,8 @@ jobs:
 
       - name: Deploy to Storage Account Static Website
         run: |
-          # Get the storage account name from deployment outputs
-          STORAGE_ACCOUNT=$(az deployment sub show \
-            --name "${{ inputs.environment }}-$(date +%Y%m%d)" \
-            --query properties.outputs.staticSiteStorageAccountName.value -o tsv)
+          # Use storage account name from Bicep outputs
+          STORAGE_ACCOUNT="${{ steps.get-outputs.outputs.storage-account }}"
           
           # Upload to $web container (static website hosting)
           az storage blob upload-batch \
