@@ -591,147 +591,6 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
   }
 }
 
-// ============================================================================
-// Web Frontend Container App
-// ============================================================================
-
-module webFrontend 'br/public:avm/res/app/container-app:0.19.0' = {
-  name: 'webFrontend'
-  scope: rg
-  params: {
-    name: '${abbrs.appContainerApps}webfrontend-${resourceToken}'
-    location: location
-    tags: union(defaultTags, {
-      'azd-service-name': 'webfrontend'
-    })
-    environmentResourceId: containerAppsEnvironment.outputs.resourceId
-    workloadProfileName: 'Consumption'
-    managedIdentities: {
-      systemAssigned: true
-    }
-    containers: [
-      {
-        name: 'webfrontend'
-        image: !empty(webFrontendImage) ? webFrontendImage : 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest'
-        resources: {
-          cpu: json(webFrontendCpu)
-          memory: webFrontendMemory
-        }
-        env: [
-          {
-            name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-            value: applicationInsights.outputs.connectionString
-          }
-          {
-            name: 'OTEL_EXPORTER_OTLP_ENDPOINT'
-            value: 'http://${abbrs.appContainerApps}aspiredash-${resourceToken}:18889'
-          }
-          {
-            name: 'OTEL_SERVICE_NAME'
-            value: 'webfrontend'
-          }
-          {
-            name: 'services__apiservice__http__0'
-            value: 'http://${apiService.outputs.fqdn}'
-          }
-          {
-            name: 'AppConfig__Endpoint'
-            value: 'https://${centralAppConfigName}.azconfig.io'
-          }
-          {
-            name: 'AppConfig__Label'
-            value: environmentName
-          }
-          // Keep essential environment variables for backwards compatibility
-          {
-            name: 'AzureMaps__ClientId'
-            value: mapsAccount.outputs.resourceId
-          }
-          {
-            name: 'AzureAd__CallbackPath'
-            value: '/signin-oidc'
-          }
-          {
-            name: 'AzureAd__SignedOutCallbackPath'
-            value: '/signout-callback-oidc'
-          }
-          {
-            name: 'ASPNETCORE_ENVIRONMENT'
-            value: environmentName == 'dev' ? 'Development' : 'Production'
-          }
-          // Configure Data Protection to use Azure Key Vault for persistent key storage
-          // This ensures CSRF tokens and other encrypted data survive container restarts
-          {
-            name: 'ASPNETCORE_DATAPROTECTION_KEYSTORE'
-            value: 'AzureKeyVault'
-          }
-          {
-            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_URI'
-            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/'
-          }
-          {
-            name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER'
-            value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/Keys/dataprotection-key'
-          }
-        ]
-        probes: [
-          {
-            type: 'Liveness'
-            httpGet: {
-              path: '/alive'
-              port: 8080
-            }
-            initialDelaySeconds: 15
-            periodSeconds: 30
-          }
-          {
-            type: 'Readiness'
-            httpGet: {
-              path: '/health'
-              port: 8080
-            }
-            initialDelaySeconds: 15
-            periodSeconds: 10
-          }
-        ]
-      }
-    ]
-    scaleSettings: {
-      minReplicas: webFrontendMinReplicas
-      maxReplicas: webFrontendMaxReplicas
-    }
-    ingressExternal: true
-    ingressTargetPort: 8080
-    ingressTransport: 'http'
-    // Only configure custom domain on container app when CDN is not enabled
-    // When CDN is enabled, the custom domain points to CDN instead
-    customDomains: (!empty(computedCustomDomain) && !enableStaticSiteCdn) ? [
-      {
-        name: computedCustomDomain
-        bindingType: bindCustomDomainCertificate ? 'SniEnabled' : 'Disabled'
-        certificateId: bindCustomDomainCertificate ? (managedCertificate.?outputs.resourceId ?? '') : null
-      }
-    ] : null
-    registries: [
-      {
-        server: containerRegistry.outputs.loginServer
-        username: containerRegistry.outputs.name
-        passwordSecretRef: 'acr-password'
-      }
-    ]
-    runtime: {
-          dotnet: {
-            autoConfigureDataProtection: false
-          }
-        }
-    secrets: [
-      {
-        name: 'acr-password'
-        value: acr.listCredentials().passwords[0].value
-      }
-    ]
-  }
-}
 
 // ============================================================================
 // Static Website (Storage + Optional CDN) for Blazor WASM Client
@@ -788,27 +647,6 @@ module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticS
   }
 }
 
-// ============================================================================
-// DNS Records for Custom Domain (Container App)
-// ============================================================================
-// Create CNAME record for Container App custom domain
-// For dev/staging: dev.fencemark.com.au -> <container-app-fqdn>
-// For prod: fencemark.com.au -> <container-app-fqdn> (using @ record)
-
-// Extract DNS record name from custom domain for Container App
-var webAppDnsRecordName = computedCustomDomain == baseDomainName ? '@' : (endsWith(computedCustomDomain, '.${baseDomainName}') ? substring(computedCustomDomain, 0, length(computedCustomDomain) - length(baseDomainName) - 1) : computedCustomDomain)
-
-module webAppDnsCnameRecord './modules/dns-record.bicep' = if (!empty(computedCustomDomain)) {
-  name: 'webAppDnsCnameRecord'
-  scope: resourceGroup(dnsZoneResourceGroup)
-  params: {
-    dnsZoneName: baseDomainName
-    recordName: webAppDnsRecordName
-    recordType: 'CNAME'
-    targetValue: webFrontend.outputs.fqdn
-    ttl: 3600
-  }
-}
 
 // ============================================================================
 // Reference to External ID Key Vault resource
@@ -887,17 +725,6 @@ module apiServiceAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
   }
 }
 
-// Grant Web Frontend access to Central App Configuration (cross-resource group)
-module webFrontendAppConfigRoleAssignment './modules/rbac-assignment.bicep' = {
-  name: 'webAppCfgRole'
-  scope: resourceGroup(centralAppConfigResourceGroup)
-  params: {
-    appConfigName: centralAppConfigName
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
-    roleDefinitionId: appConfigDataReaderRoleId
-    principalType: 'ServicePrincipal'
-  }
-}
 
 // ============================================================================
 // RBAC Role Assignments for Key Vault
@@ -922,33 +749,6 @@ module apiServiceKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
   params: {
     keyVaultName: keyVault.outputs.name
     principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
-    principalType: 'ServicePrincipal'
-    roleName: 'Key Vault Crypto Officer'
-  }
-  dependsOn: [
-    dataProtectionKey
-  ]
-}
-
-// Grant Web Frontend access to Key Vault secrets
-module webFrontendKeyVaultRoleAssignment './keyvault-access.bicep' = {
-  name: 'webFrontendKeyVaultRoleAssignment'
-  scope: rg
-  params: {
-    keyVaultName: keyVault.outputs.name
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
-    principalType: 'ServicePrincipal'
-    roleName: 'Key Vault Secrets User'
-  }
-}
-
-// Grant Web Frontend access to Key Vault key (Crypto User)
-module webFrontendKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
-  name: 'webFrontendKeyVaultCryptoRoleAssignment'
-  scope: rg
-  params: {
-    keyVaultName: keyVault.outputs.name
-    principalId: webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
     principalType: 'ServicePrincipal'
     roleName: 'Key Vault Crypto Officer'
   }
@@ -1109,20 +909,9 @@ output apiServiceFqdn string = apiService.outputs.fqdn
 @description('The principal ID of the API Service managed identity (use this for SQL user creation)')
 output apiServiceIdentityPrincipalId string = apiService.outputs.?systemAssignedMIPrincipalId ?? ''
 
-@description('The name of the Web Frontend Container App')
-output webFrontendName string = webFrontend.outputs.name
-
-@description('The FQDN of the Web Frontend Container App')
-output webFrontendFqdn string = webFrontend.outputs.fqdn
-
-@description('The URL of the Web Frontend')
-output webFrontendUrl string = 'https://${webFrontend.outputs.fqdn}'
-
 @description('The URL of the Aspire Dashboard')
 output aspireDashboardUrl string = 'https://${aspireDashboard.outputs.fqdn}'
 
-@description('The principal ID of the Web Frontend managed identity')
-output webFrontendIdentityPrincipalId string = webFrontend.outputs.?systemAssignedMIPrincipalId ?? ''
 
 @description('The resource group name')
 output resourceGroupName string = rg.name
@@ -1190,18 +979,3 @@ output staticSitePrimaryHostname string = deployStaticSite ? staticSite!.outputs
 
 @description('The CDN/Front Door mode used for static site')
 output staticSiteCdnMode string = deployStaticSite ? staticSite!.outputs.cdnMode : 'none'
-
-// ============================================================================
-// Assign Key Vault Certificate User role to the managed identity
-// ============================================================================
-
-module externalKeyVaultAccessModule './keyvault-access.bicep' = if (!empty(externalidRg)) {
-  name: 'externalKeyVaultAccessModule'
-  scope: resourceGroup(externalidRg)
-  params: {
-    keyVaultName: externalIdKeyVault.name
-    principalId: webFrontend.outputs.systemAssignedMIPrincipalId!
-    principalType: 'ServicePrincipal'
-    roleName: 'Key Vault Certificate User'
-  }
-}
