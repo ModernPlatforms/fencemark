@@ -103,7 +103,8 @@ jobs:
           echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}" >> $GITHUB_OUTPUT
           echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}" >> $GITHUB_OUTPUT
           echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}" >> $GITHUB_OUTPUT
-          echo "storage-account=${{ steps.deploy-infra.outputs.staticSiteStorageAccountName }}" >> $GITHUB_OUTPUT
+          echo "static-web-app-name=${{ steps.deploy-infra.outputs.staticWebAppName }}" >> $GITHUB_OUTPUT
+          echo "static-web-app-token=${{ steps.deploy-infra.outputs.staticWebAppDeploymentToken }}" >> $GITHUB_OUTPUT
 
       - name: Download API Service artifact
         uses: actions/download-artifact@v4
@@ -174,31 +175,14 @@ jobs:
           }
           EOF
 
-      - name: Enable Static Website Hosting
-        run: |
-          # Use storage account name from Bicep outputs
-          STORAGE_ACCOUNT="${{ steps.get-outputs.outputs.storage-account }}"
-          
-          # Enable static website hosting
-          az storage blob service-properties update \
-            --account-name $STORAGE_ACCOUNT \
-            --static-website \
-            --index-document index.html \
-            --404-document index.html \
-            --auth-mode login
-
-      - name: Deploy to Storage Account Static Website
-        run: |
-          # Use storage account name from Bicep outputs
-          STORAGE_ACCOUNT="${{ steps.get-outputs.outputs.storage-account }}"
-          
-          # Upload to $web container (static website hosting)
-          az storage blob upload-batch \
-            --account-name $STORAGE_ACCOUNT \
-            --source publish/blazor-wasm/wwwroot \
-            --destination '$web' \
-            --auth-mode login \
-            --overwrite
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.get-outputs.outputs.static-web-app-token }}
+          action: 'upload'
+          app_location: 'publish/blazor-wasm/wwwroot'
+          skip_app_build: true
+          skip_api_build: true
 
       # ============================================================================
       # Health Checks

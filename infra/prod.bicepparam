@@ -30,11 +30,13 @@ param customDomain = 'fencemark.com.au'
 // ============================================================================
 
 param deployStaticSite = true
-param staticSiteStorageSku = 'Standard_LRS'
-param staticSiteCdnMode = 'frontdoor' // Use Azure Front Door Standard for production
-param staticSiteCustomDomain = '' // Empty - static site not using custom domain for production
+param staticWebAppSku = 'Standard'
+param staticWebAppLocation = 'eastasia'
+param staticSiteCustomDomain = 'fencemark.com.au'
 
-// Deprecated parameters (backwards compatibility)
+// Deprecated parameters (kept for compatibility)
+param staticSiteStorageSku = 'Standard_LRS'
+param staticSiteCdnMode = 'frontdoor'
 param enableStaticSiteCdn = false
 param staticSiteCdnSku = 'Standard_Microsoft'
 
