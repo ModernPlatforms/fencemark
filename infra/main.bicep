@@ -606,7 +606,7 @@ module staticSite './modules/static-website.bicep' =  {
   }
   dependsOn : [
     staticSiteDnsCnameRecord
-    staticSiteDnsCnameRecord
+    staticSiteAsverifyCnameRecord
   ]
 }
 
