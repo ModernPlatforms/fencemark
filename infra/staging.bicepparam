@@ -13,7 +13,6 @@ param resourceGroupName = 'rg-fencemark-staging'
 // ============================================================================
 
 param apiServiceImage = ''
-param webFrontendImage = ''
 
 // ============================================================================
 // Resource Scaling (Staging - moderate resources)
@@ -24,11 +23,8 @@ param apiServiceMemory = '1Gi'
 param apiServiceMinReplicas = 1
 param apiServiceMaxReplicas = 3
 
-param webFrontendCpu = '0.5'
-param webFrontendMemory = '1Gi'
-param webFrontendMinReplicas = 1
-param webFrontendMaxReplicas = 3
-param customDomain = 'stgfencemark.modernplatforms.dev'
+
+param customDomain = 'stg.fencemark.com.au'
 
 // ============================================================================
 // Static Site (Storage + Optional CDN) Configuration

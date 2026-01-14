@@ -14,7 +14,6 @@ param resourceGroupName = 'rg-fencemark-dev'
 // ============================================================================
 
 param apiServiceImage = ''
-param webFrontendImage = ''
 
 // ============================================================================
 // Resource Scaling (Dev - minimal resources)
@@ -25,10 +24,6 @@ param apiServiceMemory = '0.5Gi'
 param apiServiceMinReplicas = 0
 param apiServiceMaxReplicas = 2
 
-param webFrontendCpu = '0.25'
-param webFrontendMemory = '0.5Gi'
-param webFrontendMinReplicas = 1
-param webFrontendMaxReplicas = 2
 param externalidRg = 'rg-fencemark-identity-dev'
 
 // ============================================================================

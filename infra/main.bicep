@@ -26,8 +26,6 @@ param tags object = {}
 @description('Container image for the API service')
 param apiServiceImage string = ''
 
-@description('Container image for the Web frontend')
-param webFrontendImage string = ''
 
 @description('The CPU allocation for the API service container')
 param apiServiceCpu string = '0.25'
@@ -35,11 +33,6 @@ param apiServiceCpu string = '0.25'
 @description('The memory allocation for the API service container')
 param apiServiceMemory string = '0.5Gi'
 
-@description('The CPU allocation for the Web frontend container')
-param webFrontendCpu string = '0.25'
-
-@description('The memory allocation for the Web frontend container')
-param webFrontendMemory string = '0.5Gi'
 
 @description('Minimum number of replicas for the API service')
 param apiServiceMinReplicas int = 0
@@ -47,11 +40,6 @@ param apiServiceMinReplicas int = 0
 @description('Maximum number of replicas for the API service')
 param apiServiceMaxReplicas int = 3
 
-@description('Minimum number of replicas for the Web frontend')
-param webFrontendMinReplicas int = 0
-
-@description('Maximum number of replicas for the Web frontend')
-param webFrontendMaxReplicas int = 3
 
 @description('The name of the resource group')
 param resourceGroupName string
@@ -628,10 +616,13 @@ module staticSite './modules/static-website.bicep' = if (deployStaticSite) {
 
 var staticWebsiteUrl = deployStaticSite ? staticSite!.outputs.staticWebsiteUrl : ''
 var staticWebsiteUrlNoScheme = replace(staticWebsiteUrl, 'https://', '')
-var staticSiteHostname = deployStaticSite ? replace(staticWebsiteUrlNoScheme, '/', '') : ''
+
+
+// For storage-only mode, construct the blob endpoint for CNAME target
+var staticSiteBlobEndpoint = deployStaticSite ? '${staticSite!.outputs.storageAccountName}.blob.${environment().suffixes.storage}' : ''
 
 // Determine the DNS target based on CDN mode
-var staticSiteDnsTarget = deployStaticSite ? (staticSiteCdnMode == 'frontdoor' ? staticSite!.outputs.frontDoorEndpointHostname : (staticSiteCdnMode == 'classic-cdn' ? staticSite!.outputs.cdnHostname : staticSiteHostname)) : ''
+var staticSiteDnsTarget = deployStaticSite ? (staticSiteCdnMode == 'frontdoor' ? staticSite!.outputs.frontDoorEndpointHostname : (staticSiteCdnMode == 'classic-cdn' ? staticSite!.outputs.cdnHostname : staticSiteBlobEndpoint)) : ''
 
 // Extract DNS record name from custom domain
 // For 'example.com' relative to 'example.com' -> '@'
