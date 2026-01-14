@@ -197,6 +197,7 @@ jobs:
   deploy-static-web-app-dev:
     name: Deploy Static Web App (Dev)
     needs: deploy-dev
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     uses: ./.github/workflows/deploy-static-web-app.yml
     with:
       environment: dev
@@ -327,6 +328,7 @@ jobs:
   deploy-static-web-app-staging:
     name: Deploy Static Web App (Staging)
     needs: deploy-staging
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging'
     uses: ./.github/workflows/deploy-static-web-app.yml
     with:
       environment: staging
@@ -358,6 +360,7 @@ jobs:
   deploy-static-web-app-prod:
     name: Deploy Static Web App (Prod)
     needs: deploy-prod
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     uses: ./.github/workflows/deploy-static-web-app.yml
     with:
       environment: prod

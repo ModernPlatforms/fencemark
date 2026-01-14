@@ -103,12 +103,6 @@ jobs:
           name: apiservice-publish
           path: ./publish/apiservice
 
-      - name: Download Web Frontend artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: webfrontend-publish
-          path: ./publish/webfrontend
-
       - name: Log in to Azure Container Registry
         run: az acr login --name ${{ steps.get-outputs.outputs.acr-name }}
 
@@ -119,26 +113,12 @@ jobs:
           docker push $IMAGE_TAG
           echo "API_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Build and push Web Frontend image
-        run: |
-          IMAGE_TAG="${{ steps.get-outputs.outputs.acr-login-server }}/webfrontend:${{ github.sha }}"
-          docker build -t $IMAGE_TAG -f fencemark.Web/Dockerfile ./publish/webfrontend
-          docker push $IMAGE_TAG
-          echo "WEB_IMAGE=$IMAGE_TAG" >> $GITHUB_ENV
-
       - name: Deploy API Service to Container App
         run: |
           az containerapp update \
             --name ${{ steps.get-outputs.outputs.api-service-name }} \
             --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
             --image ${{ env.API_IMAGE }}
-
-      - name: Deploy Web Frontend to Container App
-        run: |
-          az containerapp update \
-            --name ${{ steps.get-outputs.outputs.web-frontend-name }} \
-            --resource-group ${{ steps.get-outputs.outputs.resource-group }} \
-            --image ${{ env.WEB_IMAGE }}
 
       - name: Wait for deployment to stabilize
         run: sleep 30
@@ -228,7 +208,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🐳 Container Images" >> $GITHUB_STEP_SUMMARY
           echo "- **API Service:** \`${{ env.API_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web Frontend:** \`${{ env.WEB_IMAGE }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 Application URL" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.get-outputs.outputs.web-frontend-url }}" >> $GITHUB_STEP_SUMMARY
