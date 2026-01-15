@@ -22,7 +22,15 @@ var isValidAzureAdConfig = !string.IsNullOrEmpty(azureAdClientId) &&
                            !azureAdClientId.StartsWith("{");
 
 // Configure HTTP client with automatic JWT token attachment (if authentication is configured)
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:62010";
+// When running under Aspire, use service discovery to find the API service
+// Otherwise, fall back to appsettings.json configuration
+var apiBaseUrl = builder.Configuration["services:apiservice:https:0"] 
+                ?? builder.Configuration["services:apiservice:http:0"]
+                ?? builder.Configuration["ApiBaseUrl"] 
+                ?? "https://localhost:62010";
+
+Console.WriteLine($"[Client] Using API Base URL: {apiBaseUrl}");
+
 var apiScope = builder.Configuration["ApiScope"]; // Read from root level, not AzureAd section
 
 if (isValidAzureAdConfig)
@@ -80,11 +88,34 @@ if (isValidAzureAdConfig)
     builder.Services.AddMsalAuthentication(options =>
     {
         builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+        
+        // Ensure DefaultAccessTokenScopes is initialized
+        if (options.ProviderOptions.DefaultAccessTokenScopes == null)
+        {
+            options.ProviderOptions.DefaultAccessTokenScopes = new List<string>();
+        }
+        
         if (!string.IsNullOrEmpty(apiScope))
         {
-            options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
+            if (!options.ProviderOptions.DefaultAccessTokenScopes.Contains(apiScope))
+            {
+                options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
+            }
         }
+        
+        // Always add the openid and profile scopes for CIAM
+        if (!options.ProviderOptions.DefaultAccessTokenScopes.Contains("openid"))
+        {
+            options.ProviderOptions.DefaultAccessTokenScopes.Add("openid");
+        }
+        if (!options.ProviderOptions.DefaultAccessTokenScopes.Contains("profile"))
+        {
+            options.ProviderOptions.DefaultAccessTokenScopes.Add("profile");
+        }
+        
         options.ProviderOptions.LoginMode = "redirect";
+        
+        Console.WriteLine($"[Client] MSAL configured with scopes: {string.Join(", ", options.ProviderOptions.DefaultAccessTokenScopes)}");
     });
 }
 else
