@@ -5,12 +5,38 @@ This is a standalone Blazor WebAssembly client application for Fencemark that au
 ## Prerequisites
 
 - .NET 10.0 SDK
-- Azure Entra External ID (CIAM) tenant configured
-- fencemark.ApiService running and accessible
+- fencemark.ApiService running and accessible (optional for local UI development)
+- Azure Entra External ID (CIAM) tenant configured (optional - authentication can be disabled for local development)
+
+## Quick Start for Local Development
+
+The application comes with `appsettings.Development.json` that includes real Azure AD development credentials. You have two options:
+
+### Option 1: Run with Authentication (Real Azure AD)
+```bash
+dotnet run
+```
+The application will start at https://localhost:7173 with Azure AD authentication enabled using the development tenant.
+
+### Option 2: Run without Authentication
+To disable authentication for local UI development without requiring Azure AD sign-in:
+
+1. Edit `appsettings.Development.json` and change the ClientId to the placeholder:
+   ```json
+   "ClientId": "00000000-0000-0000-0000-000000000000"
+   ```
+2. Run the application:
+   ```bash
+   dotnet run
+   ```
+
+**Note**: When authentication is disabled (placeholder ClientId), you can view the UI but authentication-protected features won't work.
 
 ## Configuration
 
-The application requires configuration for Azure AD authentication and API access. Update the `wwwroot/appsettings.json` file with your environment-specific values:
+### For Production or Full Authentication Testing
+
+The application requires configuration for Azure AD authentication and API access. Create or update the `wwwroot/appsettings.json` file with your environment-specific values:
 
 ```json
 {
@@ -20,7 +46,8 @@ The application requires configuration for Azure AD authentication and API acces
     "ValidateAuthority": true,
     "ApiScope": "api://{AZURE_AD_CLIENT_ID}/access_as_user"
   },
-  "ApiBaseUrl": "{API_BASE_URL}"
+  "ApiBaseUrl": "{API_BASE_URL}",
+  "ApiScope": "api://{AZURE_AD_CLIENT_ID}/access_as_user"
 }
 ```
 
@@ -28,7 +55,9 @@ The application requires configuration for Azure AD authentication and API acces
 
 - **AZURE_AD_TENANT_ID**: Your Azure Entra External ID tenant ID (e.g., `yourtenant`)
 - **AZURE_AD_CLIENT_ID**: The Client ID of the Azure AD App Registration for this WASM application
-- **API_BASE_URL**: The base URL of the fencemark.ApiService API (e.g., `https://api.fencemark.com` or `https://localhost:7001`)
+- **API_BASE_URL**: The base URL of the fencemark.ApiService API (e.g., `https://api.fencemark.com` or `https://localhost:62010`)
+
+**Important**: The `appsettings.json` file is gitignored. Use `appsettings.template.json` as a reference for required settings.
 
 ### Azure AD App Registration Setup
 
@@ -109,6 +138,36 @@ Components/
 - The application validates tokens and enforces authorization
 
 ## Deployment
+
+This standalone WASM application can be deployed to Azure Static Web Apps or other static hosting services.
+
+### Azure Deployment with Authentication
+
+The CI/CD pipeline (`.github/workflows/deploy-static-web-app.yml`) handles authentication configuration automatically:
+
+1. **During Build**: The workflow creates `appsettings.json` with environment-specific values:
+   - **Dev**: Uses real Azure AD credentials (hardcoded in workflow)
+   - **Staging/Prod**: Uses credentials from GitHub secrets
+
+2. **Build Step Example** (from workflow):
+   ```bash
+   cat > fencemark.Client/wwwroot/appsettings.json <<EOF
+   {
+     "AzureAd": {
+       "Authority": "https://devfencemark.ciamlogin.com/",
+       "ClientId": "5b204301-0113-4b40-bd2e-e0ef8be99f48",
+       "ValidateAuthority": true
+     },
+     "ApiBaseUrl": "https://ca-fencemark-api-dev.azurecontainerapps.io"
+   }
+   EOF
+   ```
+
+3. **Published Output**: The `appsettings.json` file is included in the published wwwroot directory
+
+**Important**: The `appsettings.json` file is gitignored and never committed. It's only created during the CI/CD build process for deployment.
+
+### Deployment Targets
 
 This standalone WASM application can be deployed to:
 - Azure Static Web Apps
