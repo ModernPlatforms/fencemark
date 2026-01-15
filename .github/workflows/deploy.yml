@@ -219,7 +219,7 @@ jobs:
         id: get-keyvault
         run: |
           # Get Key Vault name from deployment outputs or use default
-          KV_NAME="kv-ciambfwyw65gna5lu"
+          KV_NAME="kv-no2n7mivfaodu"
           echo "keyvault-name=$KV_NAME" >> $GITHUB_OUTPUT
           echo "Key Vault: $KV_NAME"
 
