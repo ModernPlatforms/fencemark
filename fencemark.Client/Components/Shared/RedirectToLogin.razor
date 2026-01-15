@@ -1,0 +1,40 @@
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+@if (!_isRedirecting)
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Style="margin-top: 3rem; text-align: center;">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+        <MudText Typo="Typo.h6" Style="margin-top: 1rem;">@_message</MudText>
+    </MudContainer>
+}
+
+@code {
+    private bool _isRedirecting = false;
+    private string _message = "Checking authentication...";
+
+    protected override void OnInitialized()
+    {
+        // Check if we have valid Azure AD configuration
+        var azureAdClientId = Configuration["AzureAd:ClientId"];
+        var isValidAzureAdConfig = !string.IsNullOrEmpty(azureAdClientId) && 
+                                   azureAdClientId != "00000000-0000-0000-0000-000000000000" &&
+                                   !azureAdClientId.StartsWith("{");
+
+        if (isValidAzureAdConfig)
+        {
+            // Redirect to MSAL authentication flow
+            _message = "Redirecting to sign in...";
+            _isRedirecting = true;
+            Navigation.NavigateTo($"authentication/login?returnUrl={Uri.EscapeDataString(Navigation.Uri)}", forceLoad: true);
+        }
+        else
+        {
+            // In unauthenticated mode, redirect to home page
+            // This prevents errors when trying to access [Authorize] pages without authentication configured
+            _message = "Authentication not configured. Redirecting to home...";
+            _isRedirecting = true;
+            Navigation.NavigateTo("/", forceLoad: true);
+        }
+    }
+}

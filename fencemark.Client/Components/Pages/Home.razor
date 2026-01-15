@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IConfiguration Configuration
 
 <PageTitle>Fencemark - Professional Fencing Planning Software</PageTitle>
 
@@ -36,10 +37,13 @@
                 </Authorized>
                 <NotAuthorized>
                     <div class="flex flex-row flex-wrap gap-4 justify-center">
-                        <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg hero-btn-primary">
-                            <MudIcon Icon="@Icons.Material.Filled.Login" Size="Size.Small" />
-                            Sign In with Entra
-                        </a>
+                        @if (_isAuthConfigured)
+                        {
+                            <a href="authentication/login" class="modern-btn modern-btn-lg hero-btn-primary">
+                                <MudIcon Icon="@Icons.Material.Filled.Login" Size="Size.Small" />
+                                Sign In with Entra
+                            </a>
+                        }
                         <a href="#features" class="modern-btn modern-btn-lg modern-btn-outline hero-btn-outline">
                             Learn More
                         </a>
@@ -113,9 +117,16 @@
         </p>
         <AuthorizeView>
             <NotAuthorized>
-                <a href="MicrosoftIdentity/Account/SignIn" class="modern-btn modern-btn-lg hero-btn-primary">
-                    Start Your Free Trial Today
-                </a>
+                @if (_isAuthConfigured)
+                {
+                    <a href="authentication/login" class="modern-btn modern-btn-lg hero-btn-primary">
+                        Start Your Free Trial Today
+                    </a>
+                }
+                else
+                {
+                    <p class="text-muted">Authentication is not configured. Please contact your administrator.</p>
+                }
             </NotAuthorized>
             <Authorized>
                 <a href="/jobs" class="modern-btn modern-btn-lg hero-btn-primary">
@@ -127,5 +138,13 @@
 </div>
 
 @code {
-    
+    private bool _isAuthConfigured = false;
+
+    protected override void OnInitialized()
+    {
+        var azureAdClientId = Configuration["AzureAd:ClientId"];
+        _isAuthConfigured = !string.IsNullOrEmpty(azureAdClientId) && 
+                           azureAdClientId != "00000000-0000-0000-0000-000000000000" &&
+                           !azureAdClientId.StartsWith("{");
+    }
 }
