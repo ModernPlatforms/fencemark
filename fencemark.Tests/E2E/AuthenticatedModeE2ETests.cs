@@ -14,9 +14,23 @@ namespace fencemark.Tests.E2E;
 /// </summary>
 public class AuthenticatedModeE2ETests : PlaywrightTestBase
 {
-    [Fact(Skip = "Run manually with TEST_USER_EMAIL and TEST_USER_PASSWORD from KeyVault")]
+    private static void SkipIfEnvironmentNotConfigured()
+    {
+        var email = Environment.GetEnvironmentVariable("TEST_USER_EMAIL");
+        var password = Environment.GetEnvironmentVariable("TEST_USER_PASSWORD");
+        var baseUrl = Environment.GetEnvironmentVariable("TEST_BASE_URL");
+
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(baseUrl))
+        {
+            Assert.Skip("Skipping authenticated mode tests: TEST_USER_EMAIL, TEST_USER_PASSWORD, or TEST_BASE_URL not set");
+        }
+    }
+
+    [Fact]
     public async Task CanLoginWithCIAMCredentials()
     {
+        SkipIfEnvironmentNotConfigured();
+        
         // Arrange
         await SetupAsync();
 
@@ -61,9 +75,11 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         }
     }
 
-    [Fact(Skip = "Run manually with TEST_USER_EMAIL and TEST_USER_PASSWORD from KeyVault")]
+    [Fact]
     public async Task CanAccessProtectedPages_WhenAuthenticated()
     {
+        SkipIfEnvironmentNotConfigured();
+        
         // Arrange
         await SetupAsync();
 
@@ -105,9 +121,11 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         }
     }
 
-    [Fact(Skip = "Run manually with TEST_USER_EMAIL and TEST_USER_PASSWORD from KeyVault")]
+    [Fact]
     public async Task HomePage_ShowsLoginButton_WhenAuthConfigured()
     {
+        SkipIfEnvironmentNotConfigured();
+        
         // Arrange
         await SetupAsync();
 
@@ -132,9 +150,11 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         }
     }
 
-    [Fact(Skip = "Run manually with TEST_USER_EMAIL and TEST_USER_PASSWORD from KeyVault")]
+    [Fact]
     public async Task CanLogoutSuccessfully()
     {
+        SkipIfEnvironmentNotConfigured();
+        
         // Arrange
         await SetupAsync();
 
@@ -173,9 +193,11 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         }
     }
 
-    [Fact(Skip = "Run manually with TEST_USER_EMAIL and TEST_USER_PASSWORD from KeyVault")]
+    [Fact]
     public async Task MainLayout_ShowsUserName_WhenAuthenticated()
     {
+        SkipIfEnvironmentNotConfigured();
+        
         // Arrange
         await SetupAsync();
 
