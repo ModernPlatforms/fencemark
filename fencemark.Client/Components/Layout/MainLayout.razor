@@ -4,6 +4,7 @@
 @inject HttpClient ApiClient
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
 
 <AuthorizeView>
     <Authorized>
@@ -67,7 +68,10 @@
                     <MudIcon Icon="@Icons.Material.Filled.Fence" /> Fencemark
                 </MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="authentication/login" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
+                @if (_isAuthConfigured)
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="authentication/login" StartIcon="@Icons.Material.Filled.Login">Sign In</MudButton>
+                }
             </MudAppBar>
             
             <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
@@ -92,6 +96,15 @@
 @code {
     private bool _drawerOpen = true;
     private bool _onboardingChecked = false;
+    private bool _isAuthConfigured = false;
+
+    protected override void OnInitialized()
+    {
+        var azureAdClientId = Configuration["AzureAd:ClientId"];
+        _isAuthConfigured = !string.IsNullOrEmpty(azureAdClientId) && 
+                           azureAdClientId != "00000000-0000-0000-0000-000000000000" &&
+                           !azureAdClientId.StartsWith("{");
+    }
 
     private void ToggleDrawer()
     {
