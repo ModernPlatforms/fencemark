@@ -200,6 +200,7 @@ jobs:
   e2e-tests-dev:
     name: E2E Tests (Dev)
     needs: deploy-dev
+    environment: dev
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev')
     timeout-minutes: 15
