@@ -47,10 +47,10 @@
                 
                 <div class="flex items-center gap-3 modern-nav-actions">
                     <span class="text-sm text-muted modern-user-name">@context.User.Identity?.Name</span>
-                    <a href="authentication/logout" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
+                    <button @onclick="BeginLogout" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
                         <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
                         <span>Sign Out</span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </header>
@@ -119,6 +119,11 @@
         return currentPath.Equals(path, StringComparison.OrdinalIgnoreCase) ||
                currentPath.Equals(path + "/", StringComparison.OrdinalIgnoreCase) ||
                (currentPath.StartsWith(path + "/", StringComparison.OrdinalIgnoreCase) && path != "/");
+    }
+    
+    private void BeginLogout()
+    {
+        NavigationManager.NavigateToLogout("authentication/logout");
     }
     
     protected override async Task OnAfterRenderAsync(bool firstRender)

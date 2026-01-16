@@ -92,7 +92,6 @@ if (!string.IsNullOrEmpty(apiScope))
         }
         
         // Add required scopes
-        options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
         options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
         
         Console.WriteLine($"[Client] MSAL scopes configured: {string.Join(", ", options.ProviderOptions.DefaultAccessTokenScopes)}");
@@ -129,19 +128,6 @@ builder.Services.AddHttpClient("fencemark.ApiService", client =>
 
 // Register a scoped HttpClient for API calls
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("fencemark.ApiService"));
-
-// Register Graph HttpClient for separate Graph API calls
-builder.Services.AddScoped(sp =>
-{
-    var authorizationMessageHandler =
-        sp.GetRequiredService<AuthorizationMessageHandler>();
-    authorizationMessageHandler.InnerHandler = new HttpClientHandler();
-    authorizationMessageHandler.ConfigureHandler(
-        authorizedUrls: new[] { "https://graph.microsoft.com/v1.0" },
-        scopes: new[] { "User.Read" });
-
-    return new HttpClient(authorizationMessageHandler);
-});
 
 // Register API clients
 builder.Services.AddScoped<fencemark.Client.Features.Auth.AuthApiClient>();

@@ -44,13 +44,25 @@ if (!isLocal)
 // Publish the WASM client to get all static files in one directory
 var publishOutputPath = Path.Combine("..", "fencemark.Client", "bin", "Release", "net10.0", "publish", "wwwroot");
 var nginxConfigPath = Path.Combine(builder.AppHostDirectory, "nginx.conf");
+var nginxCertsPath = Path.Combine(builder.AppHostDirectory, "nginx-certs");
 
+// Check if certificates exist
+if (!Directory.Exists(nginxCertsPath) || 
+    !File.Exists(Path.Combine(nginxCertsPath, "aspnetapp.crt")) ||
+    !File.Exists(Path.Combine(nginxCertsPath, "aspnetapp.key")))
+{
+    Console.WriteLine("WARNING: nginx SSL certificates not found.");
+    Console.WriteLine($"Please run: .\\fencemark.AppHost\\setup-nginx-cert.ps1");
+    Console.WriteLine("Continuing without HTTPS support...");
+}
 
-// nginx container to serve the Blazor WASM static files
+// nginx container to serve the Blazor WASM static files with HTTPS support
 var webFrontend = builder.AddContainer("webfrontend", "nginx", "latest")
     .WithBindMount(publishOutputPath, "/usr/share/nginx/html", isReadOnly: false)
     .WithBindMount(nginxConfigPath, "/etc/nginx/nginx.conf", isReadOnly: true)
-    .WithHttpEndpoint(port: 7173, targetPort: 80, name: "http")
+    .WithBindMount(nginxCertsPath, "/etc/nginx/certs", isReadOnly: true)
+    .WithHttpEndpoint(port:5173, targetPort: 80, name: "http")
+    .WithHttpsEndpoint(port: 7173, targetPort: 443, name: "https")
     .WithExternalHttpEndpoints()
     .WaitFor(apiService);
 
