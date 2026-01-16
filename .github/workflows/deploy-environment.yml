@@ -188,6 +188,21 @@ jobs:
             "ApiScope": "api://${CLIENT_ID}/access_as_user"
           }
           EOF
+          
+          # Remove compressed versions so Static Web App doesn't serve stale compressed files
+          rm -f publish/blazor-wasm/wwwroot/appsettings.json.br
+          rm -f publish/blazor-wasm/wwwroot/appsettings.json.gz
+          
+          echo "Updated appsettings.json for ${{ inputs.environment }}"
+          cat publish/blazor-wasm/wwwroot/appsettings.json
+              "ResponseMode": "query",
+              "CacheLocation": "localStorage",
+              "StoreAuthStateInCookie": false
+            },
+            "ApiBaseUrl": "${API_URL}",
+            "ApiScope": "api://${CLIENT_ID}/access_as_user"
+          }
+          EOF
 
       - name: Deploy to Static Web App
         uses: Azure/static-web-apps-deploy@v1

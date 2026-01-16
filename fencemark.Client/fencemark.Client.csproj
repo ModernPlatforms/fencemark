@@ -4,7 +4,16 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Keep compression enabled but exclude appsettings files -->
+    <BlazorEnableCompression>true</BlazorEnableCompression>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Exclude appsettings files from compression so we can update them per environment -->
+    <Content Update="wwwroot/appsettings*.json">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.2" />
