@@ -44,27 +44,59 @@ if (!string.IsNullOrEmpty(apiScope))
     Console.WriteLine($"[Client] Using API Scope: {apiScope}");
     builder.Services.AddMsalAuthentication(options =>
     {
-        builder.Configuration.Bind("AzureAd", options.ProviderOptions.Authentication);
+        // Manually configure authentication options instead of using Bind()
+        // This ensures all properties are properly initialized for JavaScript interop
+        options.ProviderOptions.Authentication.Authority = azureAdAuthority;
+        options.ProviderOptions.Authentication.ClientId = azureAdClientId;
+        options.ProviderOptions.Authentication.ValidateAuthority = builder.Configuration.GetValue<bool>("AzureAd:ValidateAuthority", true);
+        
+        // Configure redirect URIs
+        var redirectUri = builder.Configuration["AzureAd:RedirectUri"];
+        if (!string.IsNullOrEmpty(redirectUri))
+        {
+            options.ProviderOptions.Authentication.RedirectUri = redirectUri;
+        }
+        
+        var postLogoutRedirectUri = builder.Configuration["AzureAd:PostLogoutRedirectUri"];
+        if (!string.IsNullOrEmpty(postLogoutRedirectUri))
+        {
+            options.ProviderOptions.Authentication.PostLogoutRedirectUri = postLogoutRedirectUri;
+        }
+        
+        var navigateToLoginRequestUrl = builder.Configuration.GetValue<bool>("AzureAd:NavigateToLoginRequestUrl", true);
+        options.ProviderOptions.Authentication.NavigateToLoginRequestUrl = navigateToLoginRequestUrl;
+        
+        // Ensure KnownAuthorities is initialized as an empty list to prevent JavaScript errors
+        // The MSAL.js library expects this to be an array, not null/undefined
+        if (options.ProviderOptions.Authentication.KnownAuthorities == null)
+        {
+            options.ProviderOptions.Authentication.KnownAuthorities = new List<string>();
+        }
+        
+        // Add known authorities from configuration if present
+        var knownAuthorities = builder.Configuration.GetSection("AzureAd:KnownAuthorities").Get<string[]>();
+        if (knownAuthorities != null && knownAuthorities.Length > 0)
+        {
+            foreach (var authority in knownAuthorities)
+            {
+                options.ProviderOptions.Authentication.KnownAuthorities.Add(authority);
+            }
+        }
+        
         options.ProviderOptions.LoginMode = "redirect";
         
-        // Initialize DefaultAccessTokenScopes AFTER binding to ensure it exists
+        // Ensure DefaultAccessTokenScopes is initialized
         if (options.ProviderOptions.DefaultAccessTokenScopes == null)
         {
             options.ProviderOptions.DefaultAccessTokenScopes = new List<string>();
         }
         
-        // Ensure list has required scopes
-        if (!options.ProviderOptions.DefaultAccessTokenScopes.Contains("https://graph.microsoft.com/User.Read"))
-        {
-            options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
-        }
-        
-        if (!options.ProviderOptions.DefaultAccessTokenScopes.Contains(apiScope))
-        {
-            options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
-        }
+        // Add required scopes
+        options.ProviderOptions.DefaultAccessTokenScopes.Add("https://graph.microsoft.com/User.Read");
+        options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
         
         Console.WriteLine($"[Client] MSAL scopes configured: {string.Join(", ", options.ProviderOptions.DefaultAccessTokenScopes)}");
+        Console.WriteLine($"[Client] Known authorities configured: {(options.ProviderOptions.Authentication.KnownAuthorities.Count > 0 ? string.Join(", ", options.ProviderOptions.Authentication.KnownAuthorities) : "none")}");
     });
 }
 else
