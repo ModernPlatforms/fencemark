@@ -258,16 +258,17 @@ jobs:
           TEST_USER_PASSWORD: ${{ steps.get-test-creds.outputs.test-password }}
           TEST_HEADLESS: "true"
         run: |
-          # Run all E2E tests for authenticated mode
-          # Tests will skip gracefully if environment is not properly configured
+          # Run all E2E tests for authenticated mode (xUnit v3 test application filters)
           dotnet test --project fencemark.Tests/fencemark.Tests.csproj \
-            --filter "FullyQualifiedName~E2E&FullyQualifiedName~AuthenticatedModeE2ETests" \
-            --report-xunit-trx --results-directory TestResults/playwright/authenticated
+            --filter-class "*AuthenticatedModeE2ETests" \
+            --report-xunit-trx --results-directory TestResults/playwright/authenticated \
+            --minimum-expected-tests 1
           
           # Also run the original Web UI E2E tests
           dotnet test --project fencemark.Tests/fencemark.Tests.csproj \
-            --filter "FullyQualifiedName~E2E.WebUIE2ETests" \
-            --report-xunit-trx --results-directory TestResults/playwright/webui
+            --filter-class "*WebUIE2ETests" \
+            --report-xunit-trx --results-directory TestResults/playwright/webui \
+            --minimum-expected-tests 1
 
       - name: Upload Playwright artifacts on failure
         if: steps.e2e-tests.outcome == 'failure'
