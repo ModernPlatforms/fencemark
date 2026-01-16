@@ -11,7 +11,9 @@ public static class TestConfiguration
     /// Can be set via TEST_BASE_URL environment variable
     /// </summary>
     public static string BaseUrl => 
-        Environment.GetEnvironmentVariable("TEST_BASE_URL") ?? "https://localhost:7074";
+        UrlHelper.NormalizeUrl(
+            Environment.GetEnvironmentVariable("TEST_BASE_URL"), 
+            "https://localhost:7074");
 
     /// <summary>
     /// Test user email
