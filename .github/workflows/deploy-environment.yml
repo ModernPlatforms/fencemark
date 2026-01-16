@@ -147,32 +147,45 @@ jobs:
           # Set environment-specific configuration
           case "${{ inputs.environment }}" in
             dev)
-              AUTHORITY="https://devfencemark.ciamlogin.com/"
+              AUTHORITY_DOMAIN="https://devfencemark.ciamlogin.com"
               API_URL="https://ca-fencemark-api-dev.azurecontainerapps.io"
+              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
+              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
               ;;
             staging)
-              AUTHORITY="https://stagingfencemark.ciamlogin.com/"
+              AUTHORITY_DOMAIN="https://stagingfencemark.ciamlogin.com"
               API_URL="https://ca-fencemark-api-staging.azurecontainerapps.io"
+              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
+              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
               ;;
             prod)
-              AUTHORITY="https://fencemark.ciamlogin.com/"
+              AUTHORITY_DOMAIN="https://fencemark.ciamlogin.com"
               API_URL="https://api.fencemark.com"
+              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
+              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
               ;;
           esac
 
-          # Use the same AZURE_CLIENT_ID for all environments
-          CLIENT_ID="${{ secrets.AZURE_CLIENT_ID }}"
+          
+          REDIRECT_URI="${{ steps.get-outputs.outputs.web-frontend-url }}/authentication/login-callback"
+          POST_LOGOUT_REDIRECT_URI="${{ steps.get-outputs.outputs.web-frontend-url }}/"
 
+          # Match appsettings.Development.json structure so MSAL is configured in deployed environments
           cat > publish/blazor-wasm/wwwroot/appsettings.json <<EOF
           {
             "AzureAd": {
-              "Authority": "$AUTHORITY",
-              "ClientId": "$CLIENT_ID",
+              "Authority": "${AUTHORITY_DOMAIN}/${TENANT_ID}",
+              "ClientId": "${CLIENT_ID}",
               "ValidateAuthority": true,
-              "ApiScope": "api://$CLIENT_ID/access_as_user"
+              "RedirectUri": "${REDIRECT_URI}",
+              "PostLogoutRedirectUri": "${POST_LOGOUT_REDIRECT_URI}",
+              "ResponseType": "code",
+              "ResponseMode": "query",
+              "CacheLocation": "localStorage",
+              "StoreAuthStateInCookie": false
             },
-            "ApiBaseUrl": "$API_URL"
-            "ApiScope": "api://5b204301-0113-4b40-bd2e-e0ef8be99f48/access_as_user"
+            "ApiBaseUrl": "${API_URL}",
+            "ApiScope": "api://${CLIENT_ID}/access_as_user"
           }
           EOF
 
