@@ -103,6 +103,7 @@ jobs:
           echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}" >> $GITHUB_OUTPUT
           echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}" >> $GITHUB_OUTPUT
           echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}" >> $GITHUB_OUTPUT
+          echo "static-web-app-custom-domain=${{ steps.deploy-infra.outputs.staticWebAppCustomDomain }}" >> $GITHUB_OUTPUT
           echo "static-web-app-name=${{ steps.deploy-infra.outputs.staticWebAppName }}" >> $GITHUB_OUTPUT
           echo "static-web-app-token=${{ steps.deploy-infra.outputs.staticWebAppDeploymentToken }}" >> $GITHUB_OUTPUT
 
@@ -166,30 +167,65 @@ jobs:
         if: inputs.run-health-checks
         continue-on-error: true
         run: |
-          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
-          echo "Web URL: $WEB_URL"
+          CUSTOM_DOMAIN="${{ steps.get-outputs.outputs.static-web-app-custom-domain }}"
+          DEFAULT_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
           
-          # Try health check endpoint with retries
+          # Prefer custom domain if available; build URL with https if needed
+          if [ -n "$CUSTOM_DOMAIN" ]; then
+            if [[ "$CUSTOM_DOMAIN" =~ ^https?:// ]]; then
+              PRIMARY_URL="$CUSTOM_DOMAIN"
+            else
+              PRIMARY_URL="https://$CUSTOM_DOMAIN"
+            fi
+            FALLBACK_URL="$DEFAULT_URL"
+            echo "Using custom domain for health check: $PRIMARY_URL (fallback: $FALLBACK_URL)"
+          else
+            PRIMARY_URL="$DEFAULT_URL"
+            FALLBACK_URL=""
+            echo "No custom domain configured; using default URL: $PRIMARY_URL"
+          fi
+
+          # Try health check on primary URL with retries
           MAX_RETRIES=5
           RETRY_COUNT=0
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL/health || echo "000")
-            echo "Health check attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
-            
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PRIMARY_URL"/health || echo "000")
+            echo "Health check (primary) attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
             if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Web Frontend health check passed"
+              echo "✅ Web Frontend health check passed (primary)"
               echo "status=success" >> $GITHUB_OUTPUT
+              echo "used-fallback=false" >> $GITHUB_OUTPUT
               exit 0
             fi
-            
             RETRY_COUNT=$((RETRY_COUNT + 1))
             if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
               sleep 10
             fi
           done
-          
-          echo "❌ Web Frontend health check failed after $MAX_RETRIES attempts"
+
+          # Fallback to default hostname if primary failed
+          if [ -n "$FALLBACK_URL" ]; then
+            echo "Primary health check failed; falling back to default hostname: $FALLBACK_URL"
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$FALLBACK_URL"/health || echo "000")
+              echo "Health check (fallback) attempt $((RETRY_COUNT + 1)): HTTP $HTTP_CODE"
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Web Frontend health check passed (fallback)"
+                echo "status=success" >> $GITHUB_OUTPUT
+                echo "used-fallback=true" >> $GITHUB_OUTPUT
+                exit 0
+              fi
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                sleep 10
+              fi
+            done
+          fi
+
+          echo "❌ Web Frontend health check failed after $MAX_RETRIES attempts (primary${FALLBACK_URL:+ and fallback})"
           echo "status=failed" >> $GITHUB_OUTPUT
+          echo "used-fallback=false" >> $GITHUB_OUTPUT
           exit 1
 
       - name: Smoke Test - Home Page Accessibility
@@ -197,12 +233,36 @@ jobs:
         if: inputs.run-health-checks && steps.health-check-web.outputs.status == 'success'
         continue-on-error: true
         run: |
-          WEB_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $WEB_URL || echo "000")
+          CUSTOM_DOMAIN="${{ steps.get-outputs.outputs.static-web-app-custom-domain }}"
+          DEFAULT_URL="${{ steps.get-outputs.outputs.web-frontend-url }}"
           
+          if [ -n "$CUSTOM_DOMAIN" ]; then
+            if [[ "$CUSTOM_DOMAIN" =~ ^https?:// ]]; then
+              PRIMARY_URL="$CUSTOM_DOMAIN"
+            else
+              PRIMARY_URL="https://$CUSTOM_DOMAIN"
+            fi
+            FALLBACK_URL="$DEFAULT_URL"
+          else
+            PRIMARY_URL="$DEFAULT_URL"
+            FALLBACK_URL=""
+          fi
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PRIMARY_URL" || echo "000")
           if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Home page is accessible"
+            echo "✅ Home page is accessible at $PRIMARY_URL"
             echo "status=success" >> $GITHUB_OUTPUT
+          elif [ -n "$FALLBACK_URL" ]; then
+            echo "Primary home page check failed (HTTP $HTTP_CODE); trying fallback $FALLBACK_URL"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$FALLBACK_URL" || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Home page is accessible at fallback $FALLBACK_URL"
+              echo "status=success" >> $GITHUB_OUTPUT
+            else
+              echo "❌ Home page returned HTTP $HTTP_CODE on fallback"
+              echo "status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            fi
           else
             echo "❌ Home page returned HTTP $HTTP_CODE"
             echo "status=failed" >> $GITHUB_OUTPUT

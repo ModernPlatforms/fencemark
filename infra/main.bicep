@@ -928,4 +928,8 @@ output staticSiteUrl string = deployStaticSite ? staticSite!.outputs.defaultHost
 @description('The Static Web App deployment token (if deployed)')
 output staticWebAppDeploymentToken string = deployStaticSite ? staticSite.outputs.deploymentToken : ''
 
+@description('The Static Web App default domain for CNAME setup (if deployed)')
+output webFrontendUrl string = deployStaticSite ? staticSite.outputs.defaultHostname : ''
 
+@description('Custom Domain Name for Static Web App (if configured)')
+output staticWebAppCustomDomain string = deployStaticSite && !empty(staticSiteCustomDomain) ? staticSiteCustomDomain : ''
