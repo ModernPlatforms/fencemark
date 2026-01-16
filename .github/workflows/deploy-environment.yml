@@ -141,64 +141,12 @@ jobs:
         with:
           name: blazor-wasm-publish
           path: ./publish/blazor-wasm
-
-      - name: Update Blazor WASM appsettings for environment
-        run: |
-          # Set environment-specific configuration
-          case "${{ inputs.environment }}" in
-            dev)
-              AUTHORITY_DOMAIN="https://devfencemark.ciamlogin.com"
-              API_URL="https://ca-fencemark-api-dev.azurecontainerapps.io"
-              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
-              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
-              REDIRECT_URI="https://dev.fencemark.com.au/authentication/login-callback"
-              POST_LOGOUT_REDIRECT_URI="https://dev.fencemark.com.au/"
-              ;;
-            staging)
-              AUTHORITY_DOMAIN="https://stagingfencemark.ciamlogin.com"
-              API_URL="https://ca-fencemark-api-staging.azurecontainerapps.io"
-              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
-              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
-              REDIRECT_URI="https://stg.fencemark.com.au/authentication/login-callback"
-              POST_LOGOUT_REDIRECT_URI="https://stg.fencemark.com.au/"
-              ;;
-            prod)
-              AUTHORITY_DOMAIN="https://fencemark.ciamlogin.com"
-              API_URL="https://api.fencemark.com"
-              CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
-              TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
-              REDIRECT_URI="https://fencemark.com.au/authentication/login-callback"
-              POST_LOGOUT_REDIRECT_URI="https://fencemark.com.au/"
-              ;;
-          esac
-
-  
-
-          # Match appsettings.Development.json structure so MSAL is configured in deployed environments
-          cat > publish/blazor-wasm/wwwroot/appsettings.json <<EOF
-          {
-            "AzureAd": {
-              "Authority": "${AUTHORITY_DOMAIN}/${TENANT_ID}",
-              "ClientId": "${CLIENT_ID}",
-              "ValidateAuthority": true,
-              "RedirectUri": "${REDIRECT_URI}",
-              "PostLogoutRedirectUri": "${POST_LOGOUT_REDIRECT_URI}",
-              "ResponseType": "code",
-              "ResponseMode": "query",
-              "CacheLocation": "localStorage",
-              "StoreAuthStateInCookie": false
-            },
-            "ApiBaseUrl": "${API_URL}",
-            "ApiScope": "api://${CLIENT_ID}/access_as_user"
-          }
-          EOF
           
-          # Remove compressed versions so Static Web App doesn't serve stale compressed files
-          rm -f publish/blazor-wasm/wwwroot/appsettings.json.br
-          rm -f publish/blazor-wasm/wwwroot/appsettings.json.gz
-          
-          echo "Updated appsettings.json for ${{ inputs.environment }}"
-          
+      - name: Combine Appsettings Files for environment
+        uses: Afterlife-Guide/AppSettings.Merge@0.1.3.4
+        with:
+          app-environment: ${{ inputs.environment }}
+          path: 'publish/blazor-wasm/wwwroot'
 
       - name: Deploy to Static Web App
         uses: Azure/static-web-apps-deploy@v1
