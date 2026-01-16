@@ -17,36 +17,9 @@ public abstract class PlaywrightTestBase : IDisposable
     /// Base URL for the application under test
     /// Can be overridden via environment variable TEST_BASE_URL
     /// </summary>
-    protected virtual string BaseUrl => NormalizeUrl(Environment.GetEnvironmentVariable("TEST_BASE_URL") ?? "http://localhost:5000");
-
-    /// <summary>
-    /// Normalizes a URL to ensure it has a protocol (https:// or http://)
-    /// </summary>
-    private static string NormalizeUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return "http://localhost:5000";
-        }
-
-        var trimmedUrl = url.Trim();
-        
-        // If URL already has a protocol, return as-is
-        if (trimmedUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            trimmedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            return trimmedUrl;
-        }
-
-        // If URL looks like localhost, use http://
-        if (trimmedUrl.StartsWith("localhost", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"http://{trimmedUrl}";
-        }
-
-        // For all other URLs (production domains), default to https://
-        return $"https://{trimmedUrl}";
-    }
+    protected virtual string BaseUrl => UrlHelper.NormalizeUrl(
+        Environment.GetEnvironmentVariable("TEST_BASE_URL"), 
+        "http://localhost:5000");
 
     /// <summary>
     /// Whether to run tests in headless mode

@@ -11,7 +11,9 @@ public static class TestConfiguration
     /// Can be set via TEST_BASE_URL environment variable
     /// </summary>
     public static string BaseUrl => 
-        NormalizeUrl(Environment.GetEnvironmentVariable("TEST_BASE_URL") ?? "https://localhost:7074");
+        UrlHelper.NormalizeUrl(
+            Environment.GetEnvironmentVariable("TEST_BASE_URL"), 
+            "https://localhost:7074");
 
     /// <summary>
     /// Test user email
@@ -44,33 +46,4 @@ public static class TestConfiguration
     /// </summary>
     public static bool CleanupAfterTest => 
         Environment.GetEnvironmentVariable("TEST_CLEANUP")?.ToLower() != "false";
-
-    /// <summary>
-    /// Normalizes a URL to ensure it has a protocol (https:// or http://)
-    /// </summary>
-    private static string NormalizeUrl(string url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-        {
-            return "https://localhost:7074";
-        }
-
-        var trimmedUrl = url.Trim();
-        
-        // If URL already has a protocol, return as-is
-        if (trimmedUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-            trimmedUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-        {
-            return trimmedUrl;
-        }
-
-        // If URL looks like localhost, use http://
-        if (trimmedUrl.StartsWith("localhost", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"http://{trimmedUrl}";
-        }
-
-        // For all other URLs (production domains), default to https://
-        return $"https://{trimmedUrl}";
-    }
 }
