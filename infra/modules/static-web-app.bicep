@@ -62,7 +62,7 @@ output name string = staticWebApp.name
 output resourceId string = staticWebApp.id
 
 @description('Static Web App default hostname')
-output defaultHostname string = staticWebApp.properties.defaultHostname
+output defaultHostname string = 'https://${staticWebApp.properties.defaultHostname}'
 
 @description('Static Web App deployment token')
 @secure()
