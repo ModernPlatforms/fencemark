@@ -21,7 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Azure.StaticWebApps" Version="*" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Azure.StaticWebApps" Version="9.5.0" />
   </ItemGroup>
 
 </Project>
