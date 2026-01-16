@@ -49,6 +49,8 @@ artifacts/
 # ASP.NET
 ScaffoldingReadMe.txt
 
+# NGINX 
+nginx-certs/
 # Windows
 Thumbs.db
 ehthumbs.db
