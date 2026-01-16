@@ -171,38 +171,15 @@ jobs:
           POST_LOGOUT_REDIRECT_URI="${{ steps.get-outputs.outputs.web-frontend-url }}/"
 
           # Match appsettings.Development.json structure so MSAL is configured in deployed environments
-          cat > publish/blazor-wasm/wwwroot/appsettings.json << 'EOF'
+          cat > publish/blazor-wasm/wwwroot/appsettings.json <<EOF
           {
             "AzureAd": {
-              "Authority": "AUTHORITY_PLACEHOLDER",
-              "ClientId": "CLIENT_ID_PLACEHOLDER",
+              "Authority": "${AUTHORITY_DOMAIN}/${TENANT_ID}",
+              "ClientId": "${CLIENT_ID}",
               "ValidateAuthority": true,
-              "RedirectUri": "REDIRECT_URI_PLACEHOLDER",
-              "PostLogoutRedirectUri": "POST_LOGOUT_REDIRECT_URI_PLACEHOLDER",
+              "RedirectUri": "${REDIRECT_URI}",
+              "PostLogoutRedirectUri": "${POST_LOGOUT_REDIRECT_URI}",
               "ResponseType": "code",
-              "ResponseMode": "query",
-              "CacheLocation": "localStorage",
-              "StoreAuthStateInCookie": false
-            },
-            "ApiBaseUrl": "API_URL_PLACEHOLDER",
-            "ApiScope": "API_SCOPE_PLACEHOLDER"
-          }
-          EOF
-          
-          # Replace placeholders with actual values
-          sed -i "s|AUTHORITY_PLACEHOLDER|${AUTHORITY_DOMAIN}/${TENANT_ID}|g" publish/blazor-wasm/wwwroot/appsettings.json
-          sed -i "s|CLIENT_ID_PLACEHOLDER|${CLIENT_ID}|g" publish/blazor-wasm/wwwroot/appsettings.json
-          sed -i "s|REDIRECT_URI_PLACEHOLDER|${REDIRECT_URI}|g" publish/blazor-wasm/wwwroot/appsettings.json
-          sed -i "s|POST_LOGOUT_REDIRECT_URI_PLACEHOLDER|${POST_LOGOUT_REDIRECT_URI}|g" publish/blazor-wasm/wwwroot/appsettings.json
-          sed -i "s|API_URL_PLACEHOLDER|${API_URL}|g" publish/blazor-wasm/wwwroot/appsettings.json
-          sed -i "s|API_SCOPE_PLACEHOLDER|api://${CLIENT_ID}/access_as_user|g" publish/blazor-wasm/wwwroot/appsettings.json
-          
-          # Remove compressed versions so Static Web App doesn't serve stale compressed files
-          rm -f publish/blazor-wasm/wwwroot/appsettings.json.br
-          rm -f publish/blazor-wasm/wwwroot/appsettings.json.gz
-          
-          echo "Updated appsettings.json for ${{ inputs.environment }}"
-          cat publish/blazor-wasm/wwwroot/appsettings.json
               "ResponseMode": "query",
               "CacheLocation": "localStorage",
               "StoreAuthStateInCookie": false
@@ -211,6 +188,13 @@ jobs:
             "ApiScope": "api://${CLIENT_ID}/access_as_user"
           }
           EOF
+          
+          # Remove compressed versions so Static Web App doesn't serve stale compressed files
+          rm -f publish/blazor-wasm/wwwroot/appsettings.json.br
+          rm -f publish/blazor-wasm/wwwroot/appsettings.json.gz
+          
+          echo "Updated appsettings.json for ${{ inputs.environment }}"
+          
 
       - name: Deploy to Static Web App
         uses: Azure/static-web-apps-deploy@v1
