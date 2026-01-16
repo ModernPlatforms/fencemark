@@ -39,24 +39,25 @@ if (!isLocal)
 // ============================================================================
 // Web Frontend Configuration
 // ============================================================================
-// For local development, run the Blazor WASM client project
-var webFrontend = builder.AddProject<Projects.fencemark_Client>("webfrontend")
-    .WithExternalHttpEndpoints()
-    .WaitFor(apiService)
-    .WithReference(apiService)
-    .WithReplicas(GetMinReplicas(environmentName, "WebFrontend"));
+// Build and publish the Blazor WASM client, then serve via nginx container
 
-// Apply environment-specific resource limits for non-local environments
-if (!isLocal)
-{
-    webFrontend = ApplyResourceLimits(webFrontend, environmentName, "WebFrontend");
-}
+// Publish the WASM client to get all static files in one directory
+var publishOutputPath = Path.Combine("..", "fencemark.Client", "bin", "Release", "net10.0", "publish", "wwwroot");
+var nginxConfigPath = Path.Combine(builder.AppHostDirectory, "nginx.conf");
+
+
+// nginx container to serve the Blazor WASM static files
+var webFrontend = builder.AddContainer("webfrontend", "nginx", "latest")
+    .WithBindMount(publishOutputPath, "/usr/share/nginx/html", isReadOnly: false)
+    .WithBindMount(nginxConfigPath, "/etc/nginx/nginx.conf", isReadOnly: true)
+    .WithHttpEndpoint(port: 7173, targetPort: 80, name: "http")
+    .WithExternalHttpEndpoints()
+    .WaitFor(apiService);
 
 var host = builder.Build();
 
 Console.WriteLine($"Aspire orchestration configured for {environmentName} environment");
 Console.WriteLine($"API Service: {GetMinReplicas(environmentName, "ApiService")} replica(s)");
-Console.WriteLine($"Web Frontend: {GetMinReplicas(environmentName, "WebFrontend")} replica(s)");
 
 host.Run();
 

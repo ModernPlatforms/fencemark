@@ -604,31 +604,6 @@ module staticSite './modules/static-web-app.bicep' = if (deployStaticSite) {
   }
 }
 
-// ============================================================================
-// DNS Records for Custom Domain (Static Web App)
-// ============================================================================
-
-// Extract DNS record name from custom domain
-var staticSiteDnsRecordName = staticSiteCustomDomain == baseDomainName ? '@' : (endsWith(staticSiteCustomDomain, '.${baseDomainName}') ? substring(staticSiteCustomDomain, 0, length(staticSiteCustomDomain) - length(baseDomainName) - 1) : staticSiteCustomDomain)
-
-// Static Web App default hostname for DNS CNAME
-var staticSiteDnsTarget = 'swa-${resourceToken}.azurestaticapps.net'
-
-module staticSiteDnsCnameRecord './modules/dns-record.bicep' = if (deployStaticSite && !empty(staticSiteCustomDomain)) {
-  name: 'staticSiteDnsCnameRecord'
-  scope: resourceGroup(dnsZoneResourceGroup)
-  params: {
-    dnsZoneName: baseDomainName
-    recordName: staticSiteDnsRecordName
-    recordType: 'CNAME'
-    targetValue: staticSiteDnsTarget
-    ttl: 3600
-  }
-  dependsOn: [
-    staticSite
-  ]
-}
-
 
 // ============================================================================
 // Reference to External ID Key Vault resource

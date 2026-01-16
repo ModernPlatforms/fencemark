@@ -15,8 +15,21 @@
             <MudText Typo="Typo.h6" Style="margin-top: 1rem;">Completing sign in...</MudText>
         </MudContainer>
     </CompletingLoggingIn>
-    
-    <LogOut>
+        <LoggingIn>
+            <MudContainer MaxWidth="MaxWidth.Small" Style="margin-top: 3rem; text-align: center;">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Style="margin-top: 1rem;">Signing you in...</MudText>
+            </MudContainer>
+        </LoggingIn>
+        
+        <CompletingLoggingIn>
+            <MudContainer MaxWidth="MaxWidth.Small" Style="margin-top: 3rem; text-align: center;">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Style="margin-top: 1rem;">Completing sign in...</MudText>
+            </MudContainer>
+        </CompletingLoggingIn>
+        
+        <LogOut>
         <MudContainer MaxWidth="MaxWidth.Small" Style="margin-top: 3rem; text-align: center;">
             <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
             <MudText Typo="Typo.h6" Style="margin-top: 1rem;">Signing you out...</MudText>
@@ -71,3 +84,4 @@
     [Parameter]
     public string? Action { get; set; }
 }
+
