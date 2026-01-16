@@ -151,24 +151,28 @@ jobs:
               API_URL="https://ca-fencemark-api-dev.azurecontainerapps.io"
               CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
               TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
+              REDIRECT_URI="https://dev.fencemark.com.au/authentication/login-callback"
+              POST_LOGOUT_REDIRECT_URI="https://dev.fencemark.com.au/"
               ;;
             staging)
               AUTHORITY_DOMAIN="https://stagingfencemark.ciamlogin.com"
               API_URL="https://ca-fencemark-api-staging.azurecontainerapps.io"
               CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
               TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
+              REDIRECT_URI="https://stg.fencemark.com.au/authentication/login-callback"
+              POST_LOGOUT_REDIRECT_URI="https://stg.fencemark.com.au/"
               ;;
             prod)
               AUTHORITY_DOMAIN="https://fencemark.ciamlogin.com"
               API_URL="https://api.fencemark.com"
               CLIENT_ID="5b204301-0113-4b40-bd2e-e0ef8be99f48"
               TENANT_ID="153c1433-2dfc-4a35-9aab-52219c3ca071"
+              REDIRECT_URI="https://fencemark.com.au/authentication/login-callback"
+              POST_LOGOUT_REDIRECT_URI="https://fencemark.com.au/"
               ;;
           esac
 
-          
-          REDIRECT_URI="${{ steps.get-outputs.outputs.web-frontend-url }}/authentication/login-callback"
-          POST_LOGOUT_REDIRECT_URI="${{ steps.get-outputs.outputs.web-frontend-url }}/"
+  
 
           # Match appsettings.Development.json structure so MSAL is configured in deployed environments
           cat > publish/blazor-wasm/wwwroot/appsettings.json <<EOF
