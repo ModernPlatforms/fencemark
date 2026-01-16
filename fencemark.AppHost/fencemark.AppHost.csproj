@@ -1,6 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.5.0" />
+<Project Sdk="Aspire.AppHost.Sdk/13.1.0">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -16,8 +14,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.1.0" />
+    <Content Include="nginx.conf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.1.0" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Azure.StaticWebApps" Version="*" />
   </ItemGroup>
 
 </Project>

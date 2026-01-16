@@ -108,12 +108,16 @@ jobs:
           cat > fencemark.Client/wwwroot/appsettings.json <<EOF
           {
             "AzureAd": {
-              "Authority": "https://devfencemark.ciamlogin.com/",
+              "Authority": "https://devfencemark.ciamlogin.com/153c1433-2dfc-4a35-9aab-52219c3ca071",
               "ClientId": "5b204301-0113-4b40-bd2e-e0ef8be99f48",
-              "ValidateAuthority": true,
-              "ApiScope": "api://5b204301-0113-4b40-bd2e-e0ef8be99f48/access_as_user"
+              "ValidateAuthority": false,
+              "RedirectUri": "https://stapp-fencemark-dev.azurestaticapps.net/authentication/login-callback",
+              "PostLogoutRedirectUri": "https://stapp-fencemark-dev.azurestaticapps.net/",
+              "ResponseType": "code",
+              "ResponseMode": "query"
             },
-            "ApiBaseUrl": "https://ca-fencemark-api-dev.azurecontainerapps.io"
+            "ApiBaseUrl": "https://ca-fencemark-api-dev.azurecontainerapps.io",
+            "ApiScope": "api://5b204301-0113-4b40-bd2e-e0ef8be99f48/access_as_user"
           }
           EOF
           
