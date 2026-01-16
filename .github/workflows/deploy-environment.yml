@@ -172,6 +172,7 @@ jobs:
               "ApiScope": "api://$CLIENT_ID/access_as_user"
             },
             "ApiBaseUrl": "$API_URL"
+            "ApiScope": "api://5b204301-0113-4b40-bd2e-e0ef8be99f48/access_as_user"
           }
           EOF
 
