@@ -271,33 +271,31 @@ jobs:
             --minimum-expected-tests 1
 
       - name: Upload Playwright artifacts on failure
-        if: steps.e2e-tests.outcome == 'failure'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-artifacts-dev
           path: |
-            fencemark.Tests/screenshots/
+            screenshots/
+            videos/
           if-no-files-found: ignore
           retention-days: 7
-
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: TestResults/playwright/*.trx
-          overwrite: true
+          name: e2e-test-results
+          path: TestResults/playwright/**/*.trx
           if-no-files-found: warn
           retention-days: 30
-
 
       - name: Annotate test failures
         if: always()
         uses: dorny/test-reporter@v1
         with:
           name: e2e-playwright-tests
-          path: TestResults/playwright/*.trx
+          path: TestResults/playwright/**/*.trx
           reporter: dotnet-trx
           fail-on-error: false
 
