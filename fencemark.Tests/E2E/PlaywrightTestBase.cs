@@ -17,7 +17,9 @@ public abstract class PlaywrightTestBase : IDisposable
     /// Base URL for the application under test
     /// Can be overridden via environment variable TEST_BASE_URL
     /// </summary>
-    protected virtual string BaseUrl => Environment.GetEnvironmentVariable("TEST_BASE_URL") ?? "http://localhost:5000";
+    protected virtual string BaseUrl => UrlHelper.NormalizeUrl(
+        Environment.GetEnvironmentVariable("TEST_BASE_URL"), 
+        "http://localhost:5000");
 
     /// <summary>
     /// Whether to run tests in headless mode
