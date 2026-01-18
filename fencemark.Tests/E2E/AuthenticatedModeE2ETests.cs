@@ -69,6 +69,12 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             await TakeScreenshotAsync("authenticated-jobs-page.png");
             Console.WriteLine("✅ Successfully logged in with CIAM credentials");
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Login test failed: {ex.Message}");
+            await TakeScreenshotAsync("login-test-error.png");
+            throw;
+        }
         finally
         {
             await TeardownAsync();
@@ -100,7 +106,14 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             foreach (var (path, name) in protectedPages)
             {
-                await Page!.GotoAsync($"{BaseUrl}{path}", new() { WaitUntil = WaitUntilState.NetworkIdle });
+                await Page!.GotoAsync($"{BaseUrl}{path}", new() { 
+                    WaitUntil = WaitUntilState.NetworkIdle,
+                    Timeout = 30000 
+                });
+                
+                // Wait for page to be fully loaded
+                await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+                await Task.Delay(500);
                 
                 var currentUrl = Page.Url;
                 
@@ -114,6 +127,12 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
                 await TakeScreenshotAsync($"authenticated-{name.ToLower()}-page.png");
                 Console.WriteLine($"✅ Successfully accessed {name} page");
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Access protected pages test failed: {ex.Message}");
+            await TakeScreenshotAsync("access-pages-test-error.png");
+            throw;
         }
         finally
         {
@@ -132,7 +151,14 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         try
         {
             // Act - Navigate to home page (before login)
-            await Page!.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+            await Page!.GotoAsync(BaseUrl, new() { 
+                WaitUntil = WaitUntilState.NetworkIdle,
+                Timeout = 30000 
+            });
+
+            // Wait for page to load
+            await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            await Task.Delay(1000);
 
             // Assert - Should show login/sign in button
             var loginButton = await Page.QuerySelectorAsync("a[href*='authentication/login']");
@@ -143,6 +169,12 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             await TakeScreenshotAsync("home-page-authenticated-mode.png");
             Console.WriteLine("✅ Home page correctly shows login button in authenticated mode");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Home page test failed: {ex.Message}");
+            await TakeScreenshotAsync("homepage-test-error.png");
+            throw;
         }
         finally
         {
@@ -163,17 +195,22 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             // Act - Login first
             await LoginIfNeededAsync();
 
-            // Find and click logout button
+            // Find logout button before clicking to avoid race condition
             var logoutLink = await Page!.QuerySelectorAsync("a[href*='authentication/logout']");
             Assert.NotNull(logoutLink);
 
-            await logoutLink.ClickAsync();
-            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            // Click logout and wait for navigation to complete
+            // Use Promise.All to handle navigation that happens during click
+            await Task.WhenAll(
+                Page.WaitForURLAsync(url => !url.StartsWith(BaseUrl + "/jobs"), new() { Timeout = 30000 }),
+                logoutLink.ClickAsync()
+            );
 
+            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
             await TakeScreenshotAsync("after-logout.png");
 
             // Try to access a protected page
-            await Page.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle });
+            await Page.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
 
             var currentUrl = Page.Url;
             
@@ -186,6 +223,12 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             await TakeScreenshotAsync("logout-redirect.png");
             Console.WriteLine("✅ Successfully logged out");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Logout test failed: {ex.Message}");
+            await TakeScreenshotAsync("logout-test-error.png");
+            throw;
         }
         finally
         {
@@ -207,9 +250,14 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             await LoginIfNeededAsync();
 
             // Navigate to a page
-            await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle });
+            await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
+            
+            // Wait for the page to be fully loaded
+            await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            await Task.Delay(1000); // Give the Blazor app time to render
 
             // Assert - Should show user name in the layout
+            // Query selectors after navigation is complete
             var userNameElement = await Page.QuerySelectorAsync(".modern-user-name, [data-testid='user-name']");
             
             if (userNameElement != null)
@@ -226,6 +274,12 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             await TakeScreenshotAsync("authenticated-layout.png");
             Console.WriteLine("✅ MainLayout correctly shows authenticated user info");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ MainLayout test failed: {ex.Message}");
+            await TakeScreenshotAsync("mainlayout-test-error.png");
+            throw;
         }
         finally
         {
@@ -253,7 +307,7 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             // Wait for email input
             await Page.WaitForSelectorAsync(
                 "input[type='email'], input[name='loginfmt'], input[name='email'], #signInName", 
-                new() { Timeout = 10000 });
+                new() { Timeout = 15000 });
 
             var emailInput = await Page.QuerySelectorAsync("input[type='email']") 
                 ?? await Page.QuerySelectorAsync("input[name='loginfmt']")
@@ -264,6 +318,7 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             {
                 await emailInput.FillAsync(email);
                 Console.WriteLine("Filled email input");
+                await Task.Delay(500); // Brief pause after filling
             }
 
             // Click Next if it exists
@@ -272,12 +327,13 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             {
                 await nextButton.ClickAsync();
                 await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+                await Task.Delay(1000); // Wait for page transition
             }
 
             // Wait for password input
             await Page.WaitForSelectorAsync(
                 "input[type='password'], input[name='passwd'], input[name='password'], #password", 
-                new() { Timeout = 10000 });
+                new() { Timeout = 15000 });
 
             var passwordInput = await Page.QuerySelectorAsync("input[type='password']")
                 ?? await Page.QuerySelectorAsync("input[name='passwd']")
@@ -288,25 +344,32 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             {
                 await passwordInput.FillAsync(password);
                 Console.WriteLine("Filled password input");
+                await Task.Delay(500); // Brief pause after filling
             }
 
             // Click sign in
             var signInButton = await Page.QuerySelectorAsync("input[type='submit'], button[type='submit'], #next");
             if (signInButton != null)
             {
+                Console.WriteLine("Clicking sign in button");
                 await signInButton.ClickAsync();
-                await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-                Console.WriteLine("Clicked sign in button");
+                Console.WriteLine("Waiting for redirect back to app...");
             }
 
-            // Wait for redirect back to app
-            await Page.WaitForURLAsync(url => url.StartsWith(BaseUrl), new() { Timeout = 30000 });
-
+            // Wait for redirect back to app with increased timeout
+            await Page.WaitForURLAsync(url => url.StartsWith(BaseUrl), new() { Timeout = 45000 });
+            
+            // Additional wait for the app to fully load after redirect
+            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await Task.Delay(2000); // Extra time for Blazor to initialize
+            
+            Console.WriteLine("Successfully redirected back to app");
             return true;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Login failed: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             await TakeScreenshotAsync("login-failed.png");
             return false;
         }
@@ -317,18 +380,25 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         if (Page == null) return;
 
         // Navigate to a protected page
-        await Page.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle });
+        await Page.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
 
         var currentUrl = Page.Url;
+        Console.WriteLine($"After navigation to /jobs, current URL: {currentUrl}");
 
         // If on login page, perform login
         if (currentUrl.Contains("ciamlogin.com") || currentUrl.Contains("authentication/login"))
         {
+            Console.WriteLine("Detected login page, performing CIAM login...");
             var loginSuccess = await PerformCIAMLoginAsync();
             if (!loginSuccess)
             {
                 throw new Exception("Failed to login before running test");
             }
+            Console.WriteLine("Login completed successfully");
+        }
+        else
+        {
+            Console.WriteLine("Already authenticated, no login needed");
         }
     }
 
