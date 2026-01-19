@@ -52,7 +52,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --report-xunit-trx --results-directory TestResults --filter-class "!*E2E*"
+        run: dotnet test --no-build --configuration Release --report-xunit-trx --results-directory TestResults --filter-not-class "*E2ETests"
 
       - name: Upload test results
         if: always()
