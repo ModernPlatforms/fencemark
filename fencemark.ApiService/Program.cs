@@ -296,6 +296,7 @@ builder.Services.AddAuthentication(options =>
                         
                         // Ensure the user has an organization membership
                         var membership = await dbContext.OrganizationMembers
+                            .Include(m => m.Organization)
                             .FirstOrDefaultAsync(m => m.UserId == user.Id);
                         
                         if (membership == null)
@@ -319,7 +320,7 @@ builder.Services.AddAuthentication(options =>
                             // Create a unique organization name: "Domain (username)" to prevent sharing
                             var domainName = domainParts[0];
                             var username = emailParts[0];
-                            var organizationName = $"{char.ToUpper(domainName[0]) + domainName.Substring(1)} ({username})";
+                            var organizationName = $"{char.ToUpper(domainName[0])}{domainName.Substring(1)} ({username})";
                             
                             // Check if organization exists - should be unique per user
                             var organization = await dbContext.Organizations
@@ -346,7 +347,8 @@ builder.Services.AddAuthentication(options =>
                                 OrganizationId = organization.Id,
                                 Role = Role.Owner,
                                 JoinedAt = DateTime.UtcNow,
-                                IsAccepted = true
+                                IsAccepted = true,
+                                Organization = organization // Set navigation property to avoid reload
                             };
                             dbContext.OrganizationMembers.Add(membership);
                             
@@ -366,11 +368,6 @@ builder.Services.AddAuthentication(options =>
                                 logger.LogInformation("[ApiService] Re-seeded sample data for organization {OrgId}", membership.OrganizationId);
                             }
                         }
-                        
-                        // Reload membership to get organization info
-                        membership = await dbContext.OrganizationMembers
-                            .Include(m => m.Organization)
-                            .FirstOrDefaultAsync(m => m.UserId == user.Id);
                         
                         // Add custom claims to the principal
                         var claims = new List<Claim>
