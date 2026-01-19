@@ -227,13 +227,15 @@ builder.Services.AddAuthentication(options =>
                 },
                 OnTokenValidated = async context =>
                 {
+                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+                    
                     // Azure AD v1.0 tokens use ClaimTypes.Name for the email
                     var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
                                ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                                ?? context.Principal?.FindFirst("preferred_username")?.Value
                                ?? context.Principal?.FindFirst("email")?.Value;
                                
-                    Console.WriteLine($"[ApiService] Token validated for user: {email}");
+                    logger.LogInformation("[ApiService] Token validated for user: {Email}", email);
                     
                     if (!string.IsNullOrEmpty(email))
                     {
@@ -250,19 +252,19 @@ builder.Services.AddAuthentication(options =>
                             var claims = new List<System.Security.Claims.Claim>
                             {
                                 // Add ApplicationUserId claim to map JWT user to ASP.NET Identity user
-                                new System.Security.Claims.Claim("ApplicationUserId", user.Id)
+                                new System.Security.Claims.Claim(CustomClaimTypes.ApplicationUserId, user.Id)
                             };
                             
                             if (membership != null)
                             {
                                 // Add OrganizationId claim to the principal
-                                claims.Add(new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
-                                Console.WriteLine($"[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={user.Id}, OrgId={membership.OrganizationId}");
+                                claims.Add(new System.Security.Claims.Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
+                                logger.LogInformation("[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={UserId}, OrgId={OrgId}", user.Id, membership.OrganizationId);
                             }
                             else
                             {
-                                Console.WriteLine($"[ApiService] Added ApplicationUserId claim: {user.Id}");
-                                Console.WriteLine($"[ApiService] Warning: User {email} has no organization membership");
+                                logger.LogInformation("[ApiService] Added ApplicationUserId claim: {UserId}", user.Id);
+                                logger.LogWarning("[ApiService] User {Email} has no organization membership", email);
                             }
                             
                             var appIdentity = new System.Security.Claims.ClaimsIdentity(claims);
@@ -270,7 +272,7 @@ builder.Services.AddAuthentication(options =>
                         }
                         else
                         {
-                            Console.WriteLine($"[ApiService] Warning: User {email} not found in database");
+                            logger.LogWarning("[ApiService] User {Email} not found in database", email);
                         }
                     }
                 }
