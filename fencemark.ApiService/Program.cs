@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
 using fencemark.ApiService.Features.Auth;
@@ -230,8 +231,8 @@ builder.Services.AddAuthentication(options =>
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
                     
                     // Azure AD v1.0 tokens use ClaimTypes.Name for the email
-                    var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
-                               ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                    var email = context.Principal?.FindFirst(ClaimTypes.Name)?.Value
+                               ?? context.Principal?.FindFirst(ClaimTypes.Email)?.Value
                                ?? context.Principal?.FindFirst("preferred_username")?.Value
                                ?? context.Principal?.FindFirst("email")?.Value;
                                
@@ -241,7 +242,7 @@ builder.Services.AddAuthentication(options =>
                     {
                         // Look up the user's organization membership
                         var dbContext = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-                        var userManager = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
+                        var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
                         
                         var user = await userManager.FindByEmailAsync(email);
                         if (user != null)
@@ -249,16 +250,16 @@ builder.Services.AddAuthentication(options =>
                             var membership = await dbContext.OrganizationMembers
                                 .FirstOrDefaultAsync(m => m.UserId == user.Id);
                             
-                            var claims = new List<System.Security.Claims.Claim>
+                            var claims = new List<Claim>
                             {
                                 // Add ApplicationUserId claim to map JWT user to ASP.NET Identity user
-                                new System.Security.Claims.Claim(CustomClaimTypes.ApplicationUserId, user.Id)
+                                new Claim(CustomClaimTypes.ApplicationUserId, user.Id)
                             };
                             
                             if (membership != null)
                             {
                                 // Add OrganizationId claim to the principal
-                                claims.Add(new System.Security.Claims.Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
+                                claims.Add(new Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
                                 logger.LogInformation("[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={UserId}, OrgId={OrgId}", user.Id, membership.OrganizationId);
                             }
                             else
@@ -267,7 +268,7 @@ builder.Services.AddAuthentication(options =>
                                 logger.LogWarning("[ApiService] User {Email} has no organization membership", email);
                             }
                             
-                            var appIdentity = new System.Security.Claims.ClaimsIdentity(claims);
+                            var appIdentity = new ClaimsIdentity(claims);
                             context.Principal?.AddIdentity(appIdentity);
                         }
                         else
