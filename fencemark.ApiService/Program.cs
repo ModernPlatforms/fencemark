@@ -247,22 +247,26 @@ builder.Services.AddAuthentication(options =>
                             var membership = await dbContext.OrganizationMembers
                                 .FirstOrDefaultAsync(m => m.UserId == user.Id);
                             
+                            var claims = new List<System.Security.Claims.Claim>
+                            {
+                                // Add ApplicationUserId claim to map JWT user to ASP.NET Identity user
+                                new System.Security.Claims.Claim("ApplicationUserId", user.Id)
+                            };
+                            
                             if (membership != null)
                             {
                                 // Add OrganizationId claim to the principal
-                                var claims = new List<System.Security.Claims.Claim>
-                                {
-                                    new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId)
-                                };
-                                var appIdentity = new System.Security.Claims.ClaimsIdentity(claims);
-                                context.Principal?.AddIdentity(appIdentity);
-                                
-                                Console.WriteLine($"[ApiService] Added OrganizationId claim: {membership.OrganizationId}");
+                                claims.Add(new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
+                                Console.WriteLine($"[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={user.Id}, OrgId={membership.OrganizationId}");
                             }
                             else
                             {
+                                Console.WriteLine($"[ApiService] Added ApplicationUserId claim: {user.Id}");
                                 Console.WriteLine($"[ApiService] Warning: User {email} has no organization membership");
                             }
+                            
+                            var appIdentity = new System.Security.Claims.ClaimsIdentity(claims);
+                            context.Principal?.AddIdentity(appIdentity);
                         }
                         else
                         {

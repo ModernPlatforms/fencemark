@@ -30,10 +30,15 @@ public class CurrentUserService : ICurrentUserService
     }
 
     public string? UserId => 
-        // Azure AD tokens use 'oid' (object id) as the primary user identifier
-        _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid")
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        // Prioritize ApplicationUserId claim (added in OnTokenValidated for JWT users)
+        // This maps Azure AD oid/sub to ASP.NET Identity ApplicationUser.Id
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue("ApplicationUserId")
+        // Fallback to ClaimTypes.NameIdentifier for cookie-based auth
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        // Legacy fallback: Azure AD tokens use 'oid' (object id) or 'sub'
+        // Note: These won't work with FindByIdAsync for ASP.NET Identity
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
 
     public string? Email => 
         // Azure AD v1.0 tokens use ClaimTypes.Name for the email
