@@ -123,6 +123,16 @@ public static class ComponentEndpoints
         if (component == null)
             return Results.NotFound();
 
+        // Check if component is used in any fence types
+        var usedInFences = await db.FenceComponents.AnyAsync(fc => fc.ComponentId == id, ct);
+        if (usedInFences)
+            return Results.BadRequest(new { success = false, message = "Cannot delete component because it is used in one or more fence types. Please remove it from those fence types first." });
+
+        // Check if component is used in any gate types
+        var usedInGates = await db.GateComponents.AnyAsync(gc => gc.ComponentId == id, ct);
+        if (usedInGates)
+            return Results.BadRequest(new { success = false, message = "Cannot delete component because it is used in one or more gate types. Please remove it from those gate types first." });
+
         db.Components.Remove(component);
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { success = true });

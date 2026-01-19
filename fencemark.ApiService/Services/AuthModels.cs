@@ -94,3 +94,13 @@ public record ExternalLoginRequest
     public string? FamilyName { get; init; }
     public required string OrganizationName { get; init; }
 }
+
+/// <summary>
+/// Request model for updating current user account
+/// </summary>
+public record UpdateUserRequest
+{
+    public string? Email { get; init; }
+    public string? CurrentPassword { get; init; }
+    public string? NewPassword { get; init; }
+}

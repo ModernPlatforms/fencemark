@@ -312,6 +312,7 @@ builder.Services.AddHttpClient("API", client =>
 .AddHttpMessageHandler<AuthenticationDelegatingHandler>();
 
 // Register API clients
+builder.Services.AddScoped<IAuthApiClient, AuthApiClient>();
 builder.Services.AddScoped<AuthApiClient>();
 builder.Services.AddScoped<OrganizationApiClient>();
 builder.Services.AddScoped<FenceApiClient>();

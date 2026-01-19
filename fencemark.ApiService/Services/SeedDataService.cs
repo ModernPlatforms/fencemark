@@ -43,6 +43,7 @@ public class SeedDataService : ISeedDataService
         // Seed Components
         var components = new List<Component>
         {
+            // Pine fence components
             new Component
             {
                 Id = Guid.NewGuid().ToString(),
@@ -77,6 +78,21 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
+                Name = "75mm x 19mm Paling",
+                Description = "Treated pine paling board",
+                Category = "Paling",
+                Sku = "PALING-75X19-PT",
+                UnitOfMeasure = "Linear Metre",
+                UnitPrice = 4.50m,
+                Material = "Treated Pine",
+                Dimensions = "75mm x 19mm x 1800mm",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Component
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
                 Name = "1800mm Privacy Panel",
                 Description = "Treated pine privacy fence panel",
                 Category = "Panel",
@@ -88,6 +104,53 @@ public class SeedDataService : ISeedDataService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
+            // Colorbond fence components
+            new Component
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "Colorbond Steel Post",
+                Description = "Galvanised steel fence post for Colorbond",
+                Category = "Post",
+                Sku = "POST-CB-STEEL",
+                UnitOfMeasure = "Each",
+                UnitPrice = 75.00m,
+                Material = "Galvanised Steel",
+                Dimensions = "50mm x 50mm x 2400mm",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Component
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "Colorbond Steel Rail",
+                Description = "Galvanised steel horizontal rail",
+                Category = "Rail",
+                Sku = "RAIL-CB-STEEL",
+                UnitOfMeasure = "Linear Metre",
+                UnitPrice = 18.00m,
+                Material = "Galvanised Steel",
+                Dimensions = "40mm x 40mm x 2400mm",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new Component
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "Colorbond Sheet Panel",
+                Description = "Colorbond corrugated steel sheet",
+                Category = "Panel",
+                Sku = "PANEL-CB-1800",
+                UnitOfMeasure = "Each",
+                UnitPrice = 95.00m,
+                Material = "Colorbond Steel",
+                Dimensions = "1800mm x 2400mm",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            // Gate hardware
             new Component
             {
                 Id = Guid.NewGuid().ToString(),
@@ -129,12 +192,25 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "1800mm Privacy Fence",
+                Name = "1800mm Pine Privacy Fence",
                 Description = "Standard 1800mm treated pine privacy fence",
                 HeightInFeet = 5.91m, // 1800mm in feet
                 Material = "Treated Pine",
                 Style = "Privacy",
                 PricePerLinearFoot = 115.00m, // per metre
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new FenceType
+            {
+                Id = Guid.NewGuid().ToString(),
+                OrganizationId = organizationId,
+                Name = "1800mm Colorbond Privacy Fence",
+                Description = "Standard 1800mm Colorbond steel privacy fence",
+                HeightInFeet = 5.91m, // 1800mm in feet
+                Material = "Colorbond Steel",
+                Style = "Privacy",
+                PricePerLinearFoot = 135.00m, // per metre
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -155,7 +231,7 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
-                Name = "2100mm Privacy Fence",
+                Name = "2100mm Pine Privacy Fence",
                 Description = "Extra tall 2100mm treated pine privacy fence",
                 HeightInFeet = 6.89m, // 2100mm in feet
                 Material = "Treated Pine",

@@ -1,7 +1,9 @@
+using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace fencemark.ApiService.Features.Auth;
 
@@ -28,6 +30,10 @@ public static class AuthEndpoints
         group.MapGet("/me", GetCurrentUser)
             .RequireAuthorization()
             .WithName("GetCurrentUser");
+
+        group.MapPut("/me", UpdateCurrentUser)
+            .RequireAuthorization()
+            .WithName("UpdateCurrentUser");
 
         group.MapDelete("/account", DeleteAccount)
             .RequireAuthorization()
@@ -69,19 +75,97 @@ public static class AuthEndpoints
         return Results.Ok(new { success = true, message = "Logged out successfully" });
     }
 
-    private static Task<IResult> GetCurrentUser(ICurrentUserService currentUser)
+    private static async Task<IResult> GetCurrentUser(
+        ICurrentUserService currentUser,
+        UserManager<ApplicationUser> userManager,
+        ApplicationDbContext db,
+        CancellationToken ct)
     {
-        if (!currentUser.IsAuthenticated)
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId))
         {
-            return Task.FromResult(Results.Unauthorized());
+            return Results.Unauthorized();
         }
 
-        return Task.FromResult(Results.Ok(new
+        var user = await userManager.FindByIdAsync(currentUser.UserId);
+        if (user == null)
         {
-            userId = currentUser.UserId,
-            email = currentUser.Email,
-            organizationId = currentUser.OrganizationId
-        }));
+            return Results.NotFound();
+        }
+
+        var membership = await db.OrganizationMembers
+            .Include(m => m.Organization)
+            .FirstOrDefaultAsync(m => m.UserId == user.Id, ct);
+
+        return Results.Ok(new
+        {
+            userId = user.Id,
+            email = user.Email,
+            userName = user.UserName,
+            organizationId = membership?.OrganizationId,
+            organizationName = membership?.Organization?.Name,
+            isEmailVerified = user.IsEmailVerified,
+            isGuest = user.IsGuest,
+            createdAt = user.CreatedAt
+        });
+    }
+
+    private static async Task<IResult> UpdateCurrentUser(
+        UpdateUserRequest request,
+        ICurrentUserService currentUser,
+        UserManager<ApplicationUser> userManager,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await userManager.FindByIdAsync(currentUser.UserId);
+        if (user == null)
+        {
+            return Results.NotFound();
+        }
+
+        // Update email if changed
+        if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
+        {
+            var emailResult = await userManager.SetEmailAsync(user, request.Email);
+            if (!emailResult.Succeeded)
+            {
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to update email",
+                    errors = emailResult.Errors.Select(e => e.Description)
+                });
+            }
+            
+            // Also update username to match email
+            await userManager.SetUserNameAsync(user, request.Email);
+        }
+
+        // Update password if provided
+        if (!string.IsNullOrEmpty(request.CurrentPassword) && !string.IsNullOrEmpty(request.NewPassword))
+        {
+            var passwordResult = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!passwordResult.Succeeded)
+            {
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to update password",
+                    errors = passwordResult.Errors.Select(e => e.Description)
+                });
+            }
+        }
+
+        return Results.Ok(new
+        {
+            success = true,
+            message = "Account updated successfully",
+            userId = user.Id,
+            email = user.Email
+        });
     }
 
     private static async Task<IResult> DeleteAccount(

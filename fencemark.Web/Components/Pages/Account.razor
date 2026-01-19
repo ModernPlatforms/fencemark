@@ -1,0 +1,219 @@
+@page "/account"
+@using fencemark.Web.Features.Auth
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthApiClient AuthClient
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5">My Account</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (_isLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+            }
+            else if (_userInfo != null)
+            {
+                <MudForm @ref="_form" Model="@_updateModel">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_userInfo.Email"
+                                          Label="Email"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Disabled="true"
+                                          HelperText="Email cannot be changed" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField Value="@_userInfo.OrganizationName"
+                                          Label="Organization"
+                                          Variant="Variant.Outlined"
+                                          ReadOnly="true"
+                                          Disabled="true"
+                                          HelperText="Organization cannot be changed here" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.body2" Color="Color.Default" Class="mb-2">
+                                Account Status: @(_userInfo.IsGuest ? "Guest (Unverified)" : "Active")
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Member Since: @_userInfo.CreatedAt.ToString("MMMM dd, yyyy")
+                            </MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudDivider Class="my-4" />
+                            <MudText Typo="Typo.h6" Class="mb-4">Change Password</MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_updateModel.CurrentPassword"
+                                          Label="Current Password"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password"
+                                          Immediate="true" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_updateModel.NewPassword"
+                                          Label="New Password"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password"
+                                          Immediate="true"
+                                          HelperText="Min. 8 characters, uppercase, lowercase, and number" />
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_confirmPassword"
+                                          Label="Confirm New Password"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password"
+                                          Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            }
+        </MudCardContent>
+        <MudCardActions>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="UpdateAccount"
+                       Disabled="_isLoading || !CanUpdate()">
+                Update Password
+            </MudButton>
+            <MudButton Variant="Variant.Text"
+                       OnClick="Cancel">
+                Cancel
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private bool _isLoading = true;
+    private UserInfoResponse? _userInfo;
+    private UpdateUserModel _updateModel = new();
+    private string _confirmPassword = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserInfo();
+    }
+
+    private async Task LoadUserInfo()
+    {
+        try
+        {
+            _isLoading = true;
+            var result = await AuthClient.GetCurrentUserAsync();
+            if (result != null)
+            {
+                _userInfo = new UserInfoResponse
+                {
+                    UserId = result.UserId,
+                    Email = result.Email,
+                    UserName = result.UserName,
+                    OrganizationId = result.OrganizationId,
+                    OrganizationName = result.OrganizationName,
+                    IsEmailVerified = result.IsEmailVerified,
+                    IsGuest = result.IsGuest,
+                    CreatedAt = result.CreatedAt
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load account information: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private bool CanUpdate()
+    {
+        return !string.IsNullOrWhiteSpace(_updateModel.CurrentPassword) &&
+               !string.IsNullOrWhiteSpace(_updateModel.NewPassword) &&
+               _updateModel.NewPassword == _confirmPassword &&
+               _updateModel.NewPassword.Length >= 8;
+    }
+
+    private async Task UpdateAccount()
+    {
+        if (!CanUpdate())
+        {
+            Snackbar.Add("Please ensure passwords match and meet requirements", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            _isLoading = true;
+            var request = new UpdateUserRequest(
+                Email: null,
+                CurrentPassword: _updateModel.CurrentPassword,
+                NewPassword: _updateModel.NewPassword
+            );
+            var result = await AuthClient.UpdateCurrentUserAsync(request);
+            
+            if (result != null && result.Success)
+            {
+                Snackbar.Add("Password updated successfully", Severity.Success);
+                _updateModel = new UpdateUserModel();
+                _confirmPassword = string.Empty;
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update password: {result?.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating account: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    private class UserInfoResponse
+    {
+        public string? UserId { get; set; }
+        public string? Email { get; set; }
+        public string? UserName { get; set; }
+        public string? OrganizationId { get; set; }
+        public string? OrganizationName { get; set; }
+        public bool IsEmailVerified { get; set; }
+        public bool IsGuest { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    private class UpdateUserModel
+    {
+        public string? Email { get; set; }
+        public string? CurrentPassword { get; set; }
+        public string? NewPassword { get; set; }
+    }
+
+    private class UpdateUserResponse
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+    }
+}
