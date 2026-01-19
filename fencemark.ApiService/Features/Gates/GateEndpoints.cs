@@ -123,6 +123,11 @@ public static class GateEndpoints
         if (gate == null)
             return Results.NotFound();
 
+        // Check if gate type is used in any job line items
+        var usedInJobs = await db.JobLineItems.AnyAsync(jli => jli.GateTypeId == id, ct);
+        if (usedInJobs)
+            return Results.BadRequest(new { success = false, message = "Cannot delete gate type because it is used in one or more jobs. Please remove it from those jobs first." });
+
         db.GateTypes.Remove(gate);
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { success = true });

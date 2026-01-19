@@ -133,6 +133,12 @@ public class AuthService(
             
             // Add the current organization ID claim
             await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
+            
+            // Check if organization needs seed data
+            if (!await seedDataService.HasSampleDataAsync(membership.OrganizationId))
+            {
+                await seedDataService.SeedSampleDataAsync(membership.OrganizationId);
+            }
         }
 
         var result = await signInManager.PasswordSignInAsync(
@@ -267,6 +273,12 @@ public class AuthService(
             
             // Add the current organization ID claim
             await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", userMembership.OrganizationId));
+            
+            // Check if organization needs seed data (may have been deleted)
+            if (!await seedDataService.HasSampleDataAsync(userMembership.OrganizationId))
+            {
+                await seedDataService.SeedSampleDataAsync(userMembership.OrganizationId);
+            }
         }
 
         return new AuthResponse

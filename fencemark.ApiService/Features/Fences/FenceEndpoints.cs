@@ -133,6 +133,11 @@ public static class FenceEndpoints
         if (fence == null)
             return Results.NotFound();
 
+        // Check if fence type is used in any job line items
+        var usedInJobs = await db.JobLineItems.AnyAsync(jli => jli.FenceTypeId == id, ct);
+        if (usedInJobs)
+            return Results.BadRequest(new { success = false, message = "Cannot delete fence type because it is used in one or more jobs. Please remove it from those jobs first." });
+
         db.FenceTypes.Remove(fence);
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { success = true });
