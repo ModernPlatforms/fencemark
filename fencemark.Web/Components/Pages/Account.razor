@@ -1,5 +1,6 @@
 @page "/account"
 @using fencemark.Web.Features.Auth
+@using Microsoft.AspNetCore.Authorization
 @inject IAuthApiClient AuthClient
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
@@ -113,7 +114,21 @@
         try
         {
             _isLoading = true;
-            _userInfo = await AuthClient.GetCurrentUserAsync();
+            var result = await AuthClient.GetCurrentUserAsync();
+            if (result != null)
+            {
+                _userInfo = new UserInfoResponse
+                {
+                    UserId = result.UserId,
+                    Email = result.Email,
+                    UserName = result.UserName,
+                    OrganizationId = result.OrganizationId,
+                    OrganizationName = result.OrganizationName,
+                    IsEmailVerified = result.IsEmailVerified,
+                    IsGuest = result.IsGuest,
+                    CreatedAt = result.CreatedAt
+                };
+            }
         }
         catch (Exception ex)
         {
@@ -144,9 +159,14 @@
         try
         {
             _isLoading = true;
-            var result = await AuthClient.UpdateCurrentUserAsync(_updateModel);
+            var request = new UpdateUserRequest(
+                Email: null,
+                CurrentPassword: _updateModel.CurrentPassword,
+                NewPassword: _updateModel.NewPassword
+            );
+            var result = await AuthClient.UpdateCurrentUserAsync(request);
             
-            if (result.Success)
+            if (result != null && result.Success)
             {
                 Snackbar.Add("Password updated successfully", Severity.Success);
                 _updateModel = new UpdateUserModel();
@@ -154,7 +174,7 @@
             }
             else
             {
-                Snackbar.Add($"Failed to update password: {result.Message}", Severity.Error);
+                Snackbar.Add($"Failed to update password: {result?.Message}", Severity.Error);
             }
         }
         catch (Exception ex)
