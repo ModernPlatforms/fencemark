@@ -286,6 +286,8 @@ builder.Services.AddAuthentication(options =>
                                 if (!result.Succeeded)
                                 {
                                     logger.LogError("[ApiService] Failed to create user {Email}: {Errors}", email, string.Join(", ", result.Errors.Select(e => e.Description)));
+                                    // Don't add claims if user creation failed
+                                    // This will result in authentication failure downstream
                                     return;
                                 }
                                 logger.LogInformation("[ApiService] Created new user {Email} with external identity {ExternalId}", email, externalId);
@@ -298,10 +300,28 @@ builder.Services.AddAuthentication(options =>
                         
                         if (membership == null)
                         {
-                            // Create organization for the user (use email domain as organization name)
-                            var organizationName = email.Split('@')[1].Split('.')[0];
-                            organizationName = char.ToUpper(organizationName[0]) + organizationName.Substring(1);
+                            // Create organization for the user
+                            // Use a unique organization name to avoid data sharing between unrelated users
+                            var emailParts = email.Split('@');
+                            if (emailParts.Length != 2)
+                            {
+                                logger.LogError("[ApiService] Invalid email format: {Email}", email);
+                                return;
+                            }
                             
+                            var domainParts = emailParts[1].Split('.');
+                            if (domainParts.Length < 2 || string.IsNullOrWhiteSpace(domainParts[0]))
+                            {
+                                logger.LogError("[ApiService] Invalid email domain: {Email}", email);
+                                return;
+                            }
+                            
+                            // Create a unique organization name: "Domain (username)" to prevent sharing
+                            var domainName = domainParts[0];
+                            var username = emailParts[0];
+                            var organizationName = $"{char.ToUpper(domainName[0]) + domainName.Substring(1)} ({username})";
+                            
+                            // Check if organization exists - should be unique per user
                             var organization = await dbContext.Organizations
                                 .FirstOrDefaultAsync(o => o.Name == organizationName);
                             
@@ -313,6 +333,10 @@ builder.Services.AddAuthentication(options =>
                                     CreatedAt = DateTime.UtcNow
                                 };
                                 dbContext.Organizations.Add(organization);
+                                
+                                // Save to generate the organization ID
+                                await dbContext.SaveChangesAsync();
+                                logger.LogInformation("[ApiService] Created organization {OrgName} with ID {OrgId}", organizationName, organization.Id);
                             }
                             
                             // Add user as owner of the organization
@@ -327,7 +351,7 @@ builder.Services.AddAuthentication(options =>
                             dbContext.OrganizationMembers.Add(membership);
                             
                             await dbContext.SaveChangesAsync();
-                            logger.LogInformation("[ApiService] Created organization {OrgName} for user {Email}", organizationName, email);
+                            logger.LogInformation("[ApiService] Added user {Email} as owner of organization {OrgId}", email, organization.Id);
                             
                             // Seed standard data for new organization
                             await seedDataService.SeedSampleDataAsync(organization.Id);
