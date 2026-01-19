@@ -46,6 +46,9 @@ on:
       web-frontend-url:
         description: 'Web frontend URL'
         value: ${{ jobs.deploy.outputs.web-frontend-url }}
+      api-url:
+        description: 'API Service URL'
+        value: ${{ jobs.deploy.outputs.api-url }}
       api-image:
         description: 'API Service image tag'
         value: ${{ jobs.deploy.outputs.api-image }}
@@ -63,6 +66,7 @@ jobs:
     outputs:
       resource-group: ${{ steps.get-outputs.outputs.resource-group }}
       web-frontend-url: ${{ steps.get-outputs.outputs.web-frontend-url }}
+      api-url: ${{ steps.get-outputs.outputs.api-url }}
       api-image: ${{ env.API_IMAGE }}
     steps:
       - name: Checkout repository
@@ -103,6 +107,7 @@ jobs:
           echo "web-frontend-name=${{ steps.deploy-infra.outputs.webFrontendName }}" >> $GITHUB_OUTPUT
           echo "resource-group=${{ steps.deploy-infra.outputs.resourceGroupName }}" >> $GITHUB_OUTPUT
           echo "web-frontend-url=${{ steps.deploy-infra.outputs.webFrontendUrl }}" >> $GITHUB_OUTPUT
+          echo "api-url=${{ steps.deploy-infra.outputs.apiServiceUrl }}" >> $GITHUB_OUTPUT
           echo "static-web-app-custom-domain=${{ steps.deploy-infra.outputs.staticWebAppCustomDomain }}" >> $GITHUB_OUTPUT
           echo "static-web-app-name=${{ steps.deploy-infra.outputs.staticWebAppName }}" >> $GITHUB_OUTPUT
           echo "static-web-app-token=${{ steps.deploy-infra.outputs.staticWebAppDeploymentToken }}" >> $GITHUB_OUTPUT

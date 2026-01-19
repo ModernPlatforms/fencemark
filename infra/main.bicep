@@ -861,7 +861,7 @@ output applicationInsightsName string = applicationInsights.outputs.name
 output apiServiceName string = apiService.outputs.name
 
 @description('The FQDN of the API Service Container App')
-output apiServiceFqdn string = apiService.outputs.fqdn
+output apiServiceUrl string = apiService.outputs.fqdn
 
 @description('The principal ID of the API Service managed identity (use this for SQL user creation)')
 output apiServiceIdentityPrincipalId string = apiService.outputs.?systemAssignedMIPrincipalId ?? ''

@@ -254,10 +254,17 @@ jobs:
         continue-on-error: true
         env:
           TEST_BASE_URL: ${{ needs.deploy-dev.outputs.web-frontend-url }}
+          TEST_API_URL: ${{ needs.deploy-dev.outputs.api-url }}
           TEST_USER_EMAIL: ${{ steps.get-test-creds.outputs.test-email }}
           TEST_USER_PASSWORD: ${{ steps.get-test-creds.outputs.test-password }}
           TEST_HEADLESS: "true"
         run: |
+          # Run unauthenticated mode tests (verify auth enforcement)
+          dotnet test --project fencemark.Tests/fencemark.Tests.csproj \
+            --filter-class "*UnauthenticatedModeE2ETests" \
+            --report-xunit-trx --results-directory TestResults/playwright/unauthenticated \
+            || echo "Warning: Unauthenticated mode tests may require special environment configuration"
+          
           # Run all E2E tests for authenticated mode (xUnit v3 test application filters)
           dotnet test --project fencemark.Tests/fencemark.Tests.csproj \
             --filter-class "*AuthenticatedModeE2ETests" \
