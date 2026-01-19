@@ -24,7 +24,7 @@ public abstract class PlaywrightTestBase : IDisposable
     /// <summary>
     /// Whether to run tests in headless mode
     /// </summary>
-    protected virtual bool Headless => true;
+    protected virtual bool Headless => false;
 
     protected async Task SetupAsync()
     {

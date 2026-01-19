@@ -7,13 +7,22 @@ namespace fencemark.Tests.E2E;
 public static class TestConfiguration
 {
     /// <summary>
-    /// Base URL for the application under test
+    /// Base URL for the Web application under test
     /// Can be set via TEST_BASE_URL environment variable
     /// </summary>
     public static string BaseUrl => 
         UrlHelper.NormalizeUrl(
             Environment.GetEnvironmentVariable("TEST_BASE_URL"), 
-            "https://localhost:7074");
+            "https://localhost:7173");
+
+    /// <summary>
+    /// API Service Base URL for direct API calls
+    /// Can be set via TEST_API_URL environment variable
+    /// </summary>
+    public static string ApiUrl =>
+        UrlHelper.NormalizeUrl(
+            Environment.GetEnvironmentVariable("TEST_API_URL"),
+            "https://localhost:58267");
 
     /// <summary>
     /// Test user email

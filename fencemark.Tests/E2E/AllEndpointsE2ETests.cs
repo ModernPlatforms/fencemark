@@ -5,7 +5,7 @@ namespace fencemark.Tests.E2E;
 
 /// <summary>
 /// Comprehensive E2E tests that test all major endpoints
-/// Uses a persistent test user and cleans up test data after each test
+/// Tests unauthenticated access, login flow, authenticated operations, and logout
 /// </summary>
 public class AllEndpointsE2ETests : PlaywrightTestBase, IAsyncLifetime
 {
@@ -19,18 +19,10 @@ public class AllEndpointsE2ETests : PlaywrightTestBase, IAsyncLifetime
     {
         await SetupAsync();
         _authHelper = new PlaywrightAuthHelper(Page!, BaseUrl);
-        
-        // Login with persistent test user
-        var loginSuccess = await _authHelper.LoginAsync(
-            TestConfiguration.TestUserEmail,
-            TestConfiguration.TestUserPassword);
-        
-        Assert.True(loginSuccess, "Test user login failed - ensure TEST_USER_EMAIL and TEST_USER_PASSWORD are set correctly");
     }
 
     public async ValueTask DisposeAsync()
     {
-        // Cleanup all created test data
         await CleanupTestDataAsync();
         await TeardownAsync();
     }
@@ -57,7 +49,7 @@ public class AllEndpointsE2ETests : PlaywrightTestBase, IAsyncLifetime
                     return await response.json();
                 }
                 return { ok: response.ok, status: response.status };
-            }", new { method, url = $"{BaseUrl}{endpoint}", body = payload });
+            }", new { method, url = $"{TestConfiguration.ApiUrl}{endpoint}", body = payload });
     }
 
     /// <summary>
@@ -65,64 +57,186 @@ public class AllEndpointsE2ETests : PlaywrightTestBase, IAsyncLifetime
     /// </summary>
     private async Task CleanupTestDataAsync()
     {
-        // Delete components
-        foreach (var componentId in _createdComponentIds)
+        if (!TestConfiguration.CleanupAfterTest)
+            return;
+
+        try
         {
-            try
+            foreach (var componentId in _createdComponentIds)
             {
-                await ApiCallAsync("DELETE", $"/api/components/{componentId}");
+                try { await ApiCallAsync("DELETE", $"/api/components/{componentId}"); }
+                catch { /* Ignore cleanup errors */ }
             }
-            catch
+
+            foreach (var jobId in _createdJobIds)
             {
-                // Ignore cleanup errors
+                try { await ApiCallAsync("DELETE", $"/api/jobs/{jobId}"); }
+                catch { /* Ignore cleanup errors */ }
+            }
+
+            foreach (var fenceId in _createdFenceIds)
+            {
+                try { await ApiCallAsync("DELETE", $"/api/fences/{fenceId}"); }
+                catch { /* Ignore cleanup errors */ }
+            }
+
+            foreach (var gateId in _createdGateIds)
+            {
+                try { await ApiCallAsync("DELETE", $"/api/gates/{gateId}"); }
+                catch { /* Ignore cleanup errors */ }
             }
         }
-
-        // Delete jobs
-        foreach (var jobId in _createdJobIds)
+        catch
         {
-            try
-            {
-                await ApiCallAsync("DELETE", $"/api/jobs/{jobId}");
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-
-        // Delete fences
-        foreach (var fenceId in _createdFenceIds)
-        {
-            try
-            {
-                await ApiCallAsync("DELETE", $"/api/fences/{fenceId}");
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-
-        // Delete gates
-        foreach (var gateId in _createdGateIds)
-        {
-            try
-            {
-                await ApiCallAsync("DELETE", $"/api/gates/{gateId}");
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
+            // Suppress all cleanup errors
         }
     }
 
-    [Fact(Skip = "E2E tests require running application - run manually with dotnet test --filter AllEndpointsE2ETests")]
-    public async Task CanCreateAndDeleteComponent()
+    [Fact]
+    public async Task Test_01_UnauthenticatedUser_CanAccessHomePage()
     {
-        // Act - Create component
-        var response = await ApiCallAsync("POST", "/api/components", new
+        // Act - Navigate to home page
+        await NavigateToAsync("/");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000); // Wait for Blazor WASM to initialize
+
+        await TakeScreenshotAsync("01_home_page_unauthenticated.png");
+
+        // Assert - Page loaded successfully
+        var title = await Page!.TitleAsync();
+        Assert.NotNull(title);
+    }
+
+    [Fact]
+    public async Task Test_02_UnauthenticatedUser_CannotAccessProtectedRoutes()
+    {
+        // Act - Try to access components page without authentication
+        await NavigateToAsync("/components");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("02_protected_route_unauthenticated.png");
+
+        // Assert - Should be redirected away from /components
+        var currentUrl = Page!.Url;
+        Assert.DoesNotContain("/components", currentUrl);
+    }
+
+    [Fact]
+    public async Task Test_03_User_CanLogin()
+    {
+        // Arrange - Navigate to home page first
+        await NavigateToAsync("/");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("03a_before_login.png");
+
+        // Act - Login via CIAM interactive flow
+        var loginSuccess = await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        await TakeScreenshotAsync("03b_login_complete.png");
+
+        // Assert - Login succeeded
+        Assert.True(loginSuccess, "Login should succeed with valid credentials via CIAM");
+
+        // Verify user is authenticated (logout button should be visible)
+        var (userId, email, organizationId) = await _authHelper!.GetCurrentUserAsync();
+        Assert.NotNull(userId); // Should return "authenticated" placeholder
+    }
+
+    [Fact]
+    public async Task Test_04_AuthenticatedUser_CanAccessComponentsPage()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Navigate to components page
+        await NavigateToAsync("/components");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("04_components_page_authenticated.png");
+
+        // Assert - On components page
+        var currentUrl = Page!.Url;
+        Assert.Contains("/components", currentUrl);
+    }
+
+    [Fact]
+    public async Task Test_05_AuthenticatedUser_CanAccessJobsPage()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Navigate to jobs page
+        await NavigateToAsync("/jobs");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("05_jobs_page_authenticated.png");
+
+        // Assert - On jobs page
+        var currentUrl = Page!.Url;
+        Assert.Contains("/jobs", currentUrl);
+    }
+
+    [Fact]
+    public async Task Test_06_AuthenticatedUser_CanAccessFencesPage()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Navigate to fences page
+        await NavigateToAsync("/fences");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("06_fences_page_authenticated.png");
+
+        // Assert - On fences page
+        var currentUrl = Page!.Url;
+        Assert.Contains("/fences", currentUrl);
+    }
+
+    [Fact]
+    public async Task Test_07_AuthenticatedUser_CanAccessGatesPage()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Navigate to gates page
+        await NavigateToAsync("/gates");
+        await Page!.WaitForLoadStateAsync(LoadState.NetworkIdle);
+        await Task.Delay(1000);
+
+        await TakeScreenshotAsync("07_gates_page_authenticated.png");
+
+        // Assert - On gates page
+        var currentUrl = Page!.Url;
+        Assert.Contains("/gates", currentUrl);
+    }
+
+    [Fact]
+    public async Task Test_08_CanCreateAndReadComponent()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Create component via API
+        var createResponse = await ApiCallAsync("POST", "/api/components", new
         {
             name = "E2E Test Component",
             sku = "E2E-TEST-001",
@@ -132,156 +246,144 @@ public class AllEndpointsE2ETests : PlaywrightTestBase, IAsyncLifetime
             description = "Created by E2E test"
         });
 
+        await TakeScreenshotAsync("08_component_created.png");
+
         // Assert - Component created
-        var componentId = response.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+        var componentId = createResponse.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
         Assert.NotNull(componentId);
         _createdComponentIds.Add(componentId!);
 
-        await TakeScreenshotAsync("component-created.png");
-
-        // Act - Get component
+        // Act - Read component
         var getResponse = await ApiCallAsync("GET", $"/api/components/{componentId}");
+
+        // Assert - Component retrieved with correct data
         Assert.True(getResponse.TryGetProperty("name", out var nameProp));
         Assert.Equal("E2E Test Component", nameProp.GetString());
-
-        // Act - Delete component
-        await ApiCallAsync("DELETE", $"/api/components/{componentId}");
-        _createdComponentIds.Remove(componentId!);
-
-        await TakeScreenshotAsync("component-deleted.png");
     }
 
-    [Fact(Skip = "E2E tests require running application - run manually with dotnet test --filter AllEndpointsE2ETests")]
-    public async Task CanCreateAndDeleteJob()
+    [Fact]
+    public async Task Test_09_CanCreateAndReadJob()
     {
-        // Act - Create job
-        var response = await ApiCallAsync("POST", "/api/jobs", new
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - Create job via API
+        var createResponse = await ApiCallAsync("POST", "/api/jobs", new
         {
             name = "E2E Test Job",
             customerName = "Test Customer",
             customerEmail = "test@example.com",
             customerPhone = "555-1234",
             installationAddress = "123 Test St",
-            status = "Draft"
+            status = 0 // Draft
         });
 
+        await TakeScreenshotAsync("09_job_created.png");
+
         // Assert - Job created
-        var jobId = response.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
+        var jobId = createResponse.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
         Assert.NotNull(jobId);
         _createdJobIds.Add(jobId!);
 
-        await TakeScreenshotAsync("job-created.png");
-
-        // Act - Get job
+        // Act - Read job
         var getResponse = await ApiCallAsync("GET", $"/api/jobs/{jobId}");
+
+        // Assert - Job retrieved with correct data
         Assert.True(getResponse.TryGetProperty("name", out var nameProp));
         Assert.Equal("E2E Test Job", nameProp.GetString());
-
-        // Act - Update job
-        await ApiCallAsync("PUT", $"/api/jobs/{jobId}", new
-        {
-            name = "E2E Test Job Updated",
-            customerName = "Test Customer Updated",
-            status = "Active"
-        });
-
-        await TakeScreenshotAsync("job-updated.png");
-
-        // Act - Delete job
-        await ApiCallAsync("DELETE", $"/api/jobs/{jobId}");
-        _createdJobIds.Remove(jobId!);
-
-        await TakeScreenshotAsync("job-deleted.png");
     }
 
-    [Fact(Skip = "E2E tests require running application - run manually with dotnet test --filter AllEndpointsE2ETests")]
-    public async Task CanCreateAndDeleteFence()
+    [Fact]
+    public async Task Test_10_CanListComponents()
     {
-        // Act - Create fence
-        var response = await ApiCallAsync("POST", "/api/fences", new
-        {
-            name = "E2E Test Fence",
-            style = "Privacy",
-            height = 6,
-            material = "Cedar",
-            color = "Natural",
-            pricePerLinearFoot = 45.00m
-        });
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
 
-        // Assert - Fence created
-        var fenceId = response.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-        Assert.NotNull(fenceId);
-        _createdFenceIds.Add(fenceId!);
+        // Act - List components
+        var response = await ApiCallAsync("GET", "/api/components");
 
-        await TakeScreenshotAsync("fence-created.png");
+        await TakeScreenshotAsync("10_components_list.png");
 
-        // Act - Get fence
-        var getResponse = await ApiCallAsync("GET", $"/api/fences/{fenceId}");
-        Assert.True(getResponse.TryGetProperty("name", out var nameProp));
-        Assert.Equal("E2E Test Fence", nameProp.GetString());
-
-        // Act - Delete fence
-        await ApiCallAsync("DELETE", $"/api/fences/{fenceId}");
-        _createdFenceIds.Remove(fenceId!);
-
-        await TakeScreenshotAsync("fence-deleted.png");
+        // Assert - Response is valid array or object
+        Assert.True(response.ValueKind == JsonValueKind.Array || response.ValueKind == JsonValueKind.Object);
     }
 
-    [Fact(Skip = "E2E tests require running application - run manually with dotnet test --filter AllEndpointsE2ETests")]
-    public async Task CanCreateAndDeleteGate()
+    [Fact]
+    public async Task Test_11_CanListJobs()
     {
-        // Act - Create gate
-        var response = await ApiCallAsync("POST", "/api/gates", new
-        {
-            name = "E2E Test Gate",
-            style = "Single Swing",
-            width = 4,
-            height = 6,
-            material = "Cedar",
-            price = 350.00m
-        });
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
 
-        // Assert - Gate created
-        var gateId = response.TryGetProperty("id", out var idProp) ? idProp.GetString() : null;
-        Assert.NotNull(gateId);
-        _createdGateIds.Add(gateId!);
+        // Act - List jobs
+        var response = await ApiCallAsync("GET", "/api/jobs");
 
-        await TakeScreenshotAsync("gate-created.png");
+        await TakeScreenshotAsync("11_jobs_list.png");
 
-        // Act - Get gate
-        var getResponse = await ApiCallAsync("GET", $"/api/gates/{gateId}");
-        Assert.True(getResponse.TryGetProperty("name", out var nameProp));
-        Assert.Equal("E2E Test Gate", nameProp.GetString());
-
-        // Act - Delete gate
-        await ApiCallAsync("DELETE", $"/api/gates/{gateId}");
-        _createdGateIds.Remove(gateId!);
-
-        await TakeScreenshotAsync("gate-deleted.png");
+        // Assert - Response is valid array or object
+        Assert.True(response.ValueKind == JsonValueKind.Array || response.ValueKind == JsonValueKind.Object);
     }
 
-    [Fact(Skip = "E2E tests require running application - run manually with dotnet test --filter AllEndpointsE2ETests")]
-    public async Task CanListAllEndpoints()
+    [Fact]
+    public async Task Test_12_CanListFences()
     {
-        // Test all list endpoints
-        
-        // Components
-        var components = await ApiCallAsync("GET", "/api/components");
-        Assert.True(components.ValueKind == JsonValueKind.Array || components.ValueKind == JsonValueKind.Object);
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
 
-        // Jobs
-        var jobs = await ApiCallAsync("GET", "/api/jobs");
-        Assert.True(jobs.ValueKind == JsonValueKind.Array || jobs.ValueKind == JsonValueKind.Object);
+        // Act - List fences
+        var response = await ApiCallAsync("GET", "/api/fences");
 
-        // Fences
-        var fences = await ApiCallAsync("GET", "/api/fences");
-        Assert.True(fences.ValueKind == JsonValueKind.Array || fences.ValueKind == JsonValueKind.Object);
+        await TakeScreenshotAsync("12_fences_list.png");
 
-        // Gates
-        var gates = await ApiCallAsync("GET", "/api/gates");
-        Assert.True(gates.ValueKind == JsonValueKind.Array || gates.ValueKind == JsonValueKind.Object);
+        // Assert - Response is valid array or object
+        Assert.True(response.ValueKind == JsonValueKind.Array || response.ValueKind == JsonValueKind.Object);
+    }
 
-        await TakeScreenshotAsync("all-endpoints-tested.png");
+    [Fact]
+    public async Task Test_13_CanListGates()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        // Act - List gates
+        var response = await ApiCallAsync("GET", "/api/gates");
+
+        await TakeScreenshotAsync("13_gates_list.png");
+
+        // Assert - Response is valid array or object
+        Assert.True(response.ValueKind == JsonValueKind.Array || response.ValueKind == JsonValueKind.Object);
+    }
+
+    [Fact]
+    public async Task Test_14_User_CanLogout()
+    {
+        // Arrange - Login first
+        await _authHelper!.LoginAsync(
+            TestConfiguration.TestUserEmail,
+            TestConfiguration.TestUserPassword);
+
+        await TakeScreenshotAsync("14a_before_logout.png");
+
+        // Act - Logout
+        var logoutSuccess = await _authHelper!.LogoutAsync();
+
+        await TakeScreenshotAsync("14b_logout_complete.png");
+
+        // Assert - Logout succeeded
+        Assert.True(logoutSuccess, "Logout should succeed");
+
+        // Verify user is logged out (login button should be visible)
+        var (userId, email, organizationId) = await _authHelper!.GetCurrentUserAsync();
+        Assert.Null(userId); // Should return null when logged out
     }
 
     protected override string BaseUrl => TestConfiguration.BaseUrl;
