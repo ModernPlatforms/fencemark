@@ -26,6 +26,8 @@ public class OrganizationService(
     UserManager<ApplicationUser> userManager,
     ISeedDataService seedDataService) : IOrganizationService
 {
+    private const int MinimumOrganizationNameLength = 2;
+
     public async Task<CreateOrganizationResponse> CreateOrganizationAsync(
         string userId,
         CreateOrganizationRequest request,
@@ -59,18 +61,18 @@ public class OrganizationService(
         }
 
         // Validate organization name
-        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length < 2)
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length < MinimumOrganizationNameLength)
         {
             return new CreateOrganizationResponse
             {
                 Success = false,
-                Message = "Organization name must be at least 2 characters"
+                Message = $"Organization name must be at least {MinimumOrganizationNameLength} characters"
             };
         }
 
-        // Check if organization name already exists
+        // Check if organization name already exists (case-insensitive)
         var existingOrg = await context.Organizations
-            .FirstOrDefaultAsync(o => o.Name == request.Name, cancellationToken);
+            .FirstOrDefaultAsync(o => o.Name.ToLower() == request.Name.ToLower(), cancellationToken);
 
         if (existingOrg is not null)
         {
