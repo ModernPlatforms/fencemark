@@ -299,67 +299,7 @@ builder.Services.AddAuthentication(options =>
                             .Include(m => m.Organization)
                             .FirstOrDefaultAsync(m => m.UserId == user.Id);
                         
-                        if (membership == null)
-                        {
-                            // Create organization for the user
-                            // Use a unique organization name to avoid data sharing between unrelated users
-                            var emailParts = email.Split('@');
-                            if (emailParts.Length != 2)
-                            {
-                                logger.LogError("[ApiService] Invalid email format: {Email}", email);
-                                return;
-                            }
-                            
-                            var domainParts = emailParts[1].Split('.');
-                            if (domainParts.Length < 2 || string.IsNullOrWhiteSpace(domainParts[0]))
-                            {
-                                logger.LogError("[ApiService] Invalid email domain: {Email}", email);
-                                return;
-                            }
-                            
-                            // Create a unique organization name: "Domain (username)" to prevent sharing
-                            var domainName = domainParts[0];
-                            var username = emailParts[0];
-                            var organizationName = $"{char.ToUpper(domainName[0])}{domainName.Substring(1)} ({username})";
-                            
-                            // Check if organization exists - should be unique per user
-                            var organization = await dbContext.Organizations
-                                .FirstOrDefaultAsync(o => o.Name == organizationName);
-                            
-                            if (organization == null)
-                            {
-                                organization = new Organization
-                                {
-                                    Name = organizationName,
-                                    CreatedAt = DateTime.UtcNow
-                                };
-                                dbContext.Organizations.Add(organization);
-                                
-                                // Save to generate the organization ID
-                                await dbContext.SaveChangesAsync();
-                                logger.LogInformation("[ApiService] Created organization {OrgName} with ID {OrgId}", organizationName, organization.Id);
-                            }
-                            
-                            // Add user as owner of the organization
-                            membership = new OrganizationMember
-                            {
-                                UserId = user.Id,
-                                OrganizationId = organization.Id,
-                                Role = Role.Owner,
-                                JoinedAt = DateTime.UtcNow,
-                                IsAccepted = true,
-                                Organization = organization // Set navigation property to avoid reload
-                            };
-                            dbContext.OrganizationMembers.Add(membership);
-                            
-                            await dbContext.SaveChangesAsync();
-                            logger.LogInformation("[ApiService] Added user {Email} as owner of organization {OrgId}", email, organization.Id);
-                            
-                            // Seed standard data for new organization
-                            await seedDataService.SeedSampleDataAsync(organization.Id);
-                            logger.LogInformation("[ApiService] Seeded sample data for organization {OrgId}", organization.Id);
-                        }
-                        else
+                        if (membership != null)
                         {
                             // Check if organization needs seed data (may have been deleted)
                             if (!await seedDataService.HasSampleDataAsync(membership.OrganizationId))
@@ -367,6 +307,11 @@ builder.Services.AddAuthentication(options =>
                                 await seedDataService.SeedSampleDataAsync(membership.OrganizationId);
                                 logger.LogInformation("[ApiService] Re-seeded sample data for organization {OrgId}", membership.OrganizationId);
                             }
+                        }
+                        else
+                        {
+                            // User has no organization - they need to go through onboarding
+                            logger.LogInformation("[ApiService] User {Email} has no organization - onboarding required", email);
                         }
                         
                         // Add custom claims to the principal
