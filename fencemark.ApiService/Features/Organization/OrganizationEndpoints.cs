@@ -10,6 +10,14 @@ public static class OrganizationEndpoints
         var group = app.MapGroup("/api/organizations")
             .WithTags("Organization");
 
+        group.MapPost("/create", CreateOrganization)
+            .RequireAuthorization()
+            .WithName("CreateOrganization");
+
+        group.MapPut("/{organizationId}", UpdateOrganization)
+            .RequireAuthorization()
+            .WithName("UpdateOrganization");
+
         group.MapGet("/{organizationId}/members", GetMembers)
             .RequireAuthorization()
             .WithName("GetOrganizationMembers");
@@ -34,6 +42,37 @@ public static class OrganizationEndpoints
             .WithName("SeedSampleData");
 
         return app;
+    }
+
+    private static async Task<IResult> CreateOrganization(
+        CreateOrganizationRequest request,
+        IOrganizationService orgService,
+        ICurrentUserService currentUser,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId))
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await orgService.CreateOrganizationAsync(currentUser.UserId, request, ct);
+        return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+    }
+
+    private static async Task<IResult> UpdateOrganization(
+        string organizationId,
+        UpdateOrganizationRequest request,
+        IOrganizationService orgService,
+        ICurrentUserService currentUser,
+        CancellationToken ct)
+    {
+        if (currentUser.OrganizationId != organizationId)
+        {
+            return Results.Forbid();
+        }
+
+        var result = await orgService.UpdateOrganizationAsync(organizationId, request, ct);
+        return result.Success ? Results.Ok(result) : Results.BadRequest(result);
     }
 
     private static async Task<IResult> GetMembers(
