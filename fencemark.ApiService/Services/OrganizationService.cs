@@ -10,6 +10,7 @@ namespace fencemark.ApiService.Services;
 /// </summary>
 public interface IOrganizationService
 {
+    Task<CreateOrganizationResponse> CreateOrganizationAsync(string userId, CreateOrganizationRequest request, CancellationToken cancellationToken = default);
     Task<IEnumerable<OrganizationMemberResponse>> GetMembersAsync(string organizationId, CancellationToken cancellationToken = default);
     Task<InviteUserResponse> InviteUserAsync(string organizationId, InviteUserRequest request, CancellationToken cancellationToken = default);
     Task<AuthResponse> AcceptInvitationAsync(AcceptInvitationRequest request, CancellationToken cancellationToken = default);
@@ -22,8 +23,102 @@ public interface IOrganizationService
 /// </summary>
 public class OrganizationService(
     ApplicationDbContext context,
-    UserManager<ApplicationUser> userManager) : IOrganizationService
+    UserManager<ApplicationUser> userManager,
+    ISeedDataService seedDataService) : IOrganizationService
 {
+    private const int MinimumOrganizationNameLength = 2;
+
+    public async Task<CreateOrganizationResponse> CreateOrganizationAsync(
+        string userId,
+        CreateOrganizationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Check if user exists
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null)
+        {
+            return new CreateOrganizationResponse
+            {
+                Success = false,
+                Message = "User not found"
+            };
+        }
+
+        // Check if user already has an organization
+        var existingMembership = await context.OrganizationMembers
+            .FirstOrDefaultAsync(m => m.UserId == userId, cancellationToken);
+
+        if (existingMembership is not null)
+        {
+            return new CreateOrganizationResponse
+            {
+                Success = false,
+                Message = "User already belongs to an organization"
+            };
+        }
+
+        // Validate organization name
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length < MinimumOrganizationNameLength)
+        {
+            return new CreateOrganizationResponse
+            {
+                Success = false,
+                Message = $"Organization name must be at least {MinimumOrganizationNameLength} characters"
+            };
+        }
+
+        // Check if organization name already exists (case-insensitive)
+        var existingOrg = await context.Organizations
+            .FirstOrDefaultAsync(o => o.Name.ToLower() == request.Name.ToLower(), cancellationToken);
+
+        if (existingOrg is not null)
+        {
+            return new CreateOrganizationResponse
+            {
+                Success = false,
+                Message = "An organization with this name already exists"
+            };
+        }
+
+        // Create the organization
+        var organization = new Organization
+        {
+            Name = request.Name,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Organizations.Add(organization);
+        await context.SaveChangesAsync(cancellationToken);
+
+        // Add user as owner of the organization
+        var membership = new OrganizationMember
+        {
+            UserId = userId,
+            OrganizationId = organization.Id,
+            Role = Role.Owner,
+            JoinedAt = DateTime.UtcNow,
+            IsAccepted = true
+        };
+        context.OrganizationMembers.Add(membership);
+        await context.SaveChangesAsync(cancellationToken);
+
+        // Add organization ID as a claim
+        await userManager.AddClaimAsync(user, new System.Security.Claims.Claim(Infrastructure.CustomClaimTypes.OrganizationId, organization.Id));
+
+        // Seed sample data for the new organization
+        await seedDataService.SeedSampleDataAsync(organization.Id);
+
+        return new CreateOrganizationResponse
+        {
+            Success = true,
+            Message = "Organization created successfully",
+            OrganizationId = organization.Id,
+            OrganizationName = organization.Name
+        };
+    }
+
     public async Task<IEnumerable<OrganizationMemberResponse>> GetMembersAsync(
         string organizationId,
         CancellationToken cancellationToken = default)
