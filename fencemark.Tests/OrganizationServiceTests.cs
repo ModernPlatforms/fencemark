@@ -54,23 +54,11 @@ public class OrganizationServiceTests
         return userManager;
     }
 
-    private static ISeedDataService CreateMockSeedDataService()
-    {
-        return new MockSeedDataService();
-    }
-
-    private class MockSeedDataService : ISeedDataService
-    {
-        public Task SeedSampleDataAsync(string organizationId) => Task.CompletedTask;
-        public Task<bool> HasSampleDataAsync(string organizationId) => Task.FromResult(false);
-    }
-
     private async Task<(Organization org, ApplicationUser owner, ApplicationDbContext context, OrganizationService service)> SetupTestOrganizationAsync()
     {
         var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var seedDataService = CreateMockSeedDataService();
-        var service = new OrganizationService(context, userManager, seedDataService);
+        var service = new OrganizationService(context, userManager);
 
         var owner = new ApplicationUser
         {
@@ -182,8 +170,7 @@ public class OrganizationServiceTests
         // Arrange
         var context = CreateDbContext();
         var userManager = CreateUserManager(context);
-        var seedDataService = CreateMockSeedDataService();
-        var service = new OrganizationService(context, userManager, seedDataService);
+        var service = new OrganizationService(context, userManager);
 
         // Create two separate organizations
         var org1 = new Organization { Name = "Org 1" };

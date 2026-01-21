@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using fencemark.ApiService.Infrastructure;
 
 namespace fencemark.ApiService.Middleware;
 
@@ -31,15 +30,10 @@ public class CurrentUserService : ICurrentUserService
     }
 
     public string? UserId => 
-        // Prioritize ApplicationUserId claim (added in OnTokenValidated for JWT users)
-        // This maps Azure AD oid/sub to ASP.NET Identity ApplicationUser.Id
-        _httpContextAccessor.HttpContext?.User?.FindFirstValue(CustomClaimTypes.ApplicationUserId)
-        // Fallback to ClaimTypes.NameIdentifier for cookie-based auth
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier)
-        // Legacy fallback: Azure AD tokens use 'oid' (object id) or 'sub'
-        // Note: These won't work with FindByIdAsync for ASP.NET Identity
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid")
-        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub");
+        // Azure AD tokens use 'oid' (object id) as the primary user identifier
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue("oid")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("sub")
+        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
     public string? Email => 
         // Azure AD v1.0 tokens use ClaimTypes.Name for the email
@@ -56,7 +50,7 @@ public class CurrentUserService : ICurrentUserService
         {
             // Get OrganizationId from claims (no DB query, prevents deadlocks)
             // The OrganizationId claim is added during login/registration
-            var orgId = _httpContextAccessor.HttpContext?.User?.FindFirstValue(CustomClaimTypes.OrganizationId);
+            var orgId = _httpContextAccessor.HttpContext?.User?.FindFirstValue("OrganizationId");
             
             if (string.IsNullOrEmpty(orgId))
             {
