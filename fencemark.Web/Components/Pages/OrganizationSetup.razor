@@ -2,6 +2,7 @@
 @using MudBlazor
 @inject HttpClient ApiClient
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 
 <MudDialog>
     <DialogContent>
@@ -96,29 +97,49 @@
         
         try
         {
-            // Update organization name
-            var updateResponse = await ApiClient.PutAsJsonAsync($"/api/organizations/{OrganizationId}", new
-            {
-                name = _organizationName
-            });
+            HttpResponseMessage response;
             
-            if (!updateResponse.IsSuccessStatusCode)
+            if (string.IsNullOrEmpty(OrganizationId))
             {
-                var error = await updateResponse.Content.ReadAsStringAsync();
-                _errorMessage = $"Failed to update organization: {error}";
+                // Create new organization
+                response = await ApiClient.PostAsJsonAsync("/api/organizations/create", new
+                {
+                    name = _organizationName
+                });
+            }
+            else
+            {
+                // Update existing organization name
+                response = await ApiClient.PutAsJsonAsync($"/api/organizations/{OrganizationId}", new
+                {
+                    name = _organizationName
+                });
+            }
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _errorMessage = $"Failed to save organization: {error}";
                 _loading = false;
                 return;
             }
             
+            // Get organization ID from response if creating new
+            if (string.IsNullOrEmpty(OrganizationId))
+            {
+                var createResult = await response.Content.ReadFromJsonAsync<CreateOrganizationResult>();
+                OrganizationId = createResult?.OrganizationId;
+            }
+            
             // Send invites for valid emails
             var validEmails = _inviteEmails.Where(e => !string.IsNullOrWhiteSpace(e) && e.Contains("@")).ToList();
-            if (validEmails.Any())
+            if (validEmails.Any() && !string.IsNullOrEmpty(OrganizationId))
             {
                 foreach (var email in validEmails)
                 {
                     try
                     {
-                        await ApiClient.PostAsJsonAsync($"/api/organizations/{OrganizationId}/invites", new
+                        await ApiClient.PostAsJsonAsync($"/api/organizations/{OrganizationId}/invite", new
                         {
                             email = email
                         });
@@ -129,12 +150,15 @@
                     }
                 }
                 
-                Snackbar.Add($"Organization updated and {validEmails.Count} invitation(s) sent!", Severity.Success);
+                Snackbar.Add($"Organization saved and {validEmails.Count} invitation(s) sent!", Severity.Success);
             }
             else
             {
-                Snackbar.Add("Organization updated successfully!", Severity.Success);
+                Snackbar.Add("Organization saved successfully!", Severity.Success);
             }
+            
+            // Reload the page to refresh auth state and claims
+            NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
             
             MudDialog.Close(DialogResult.Ok(true));
         }
@@ -151,5 +175,12 @@
     private void SkipSetup()
     {
         MudDialog.Close(DialogResult.Cancel());
+    }
+    
+    private class CreateOrganizationResult
+    {
+        public bool Success { get; set; }
+        public string? OrganizationId { get; set; }
+        public string? Message { get; set; }
     }
 }

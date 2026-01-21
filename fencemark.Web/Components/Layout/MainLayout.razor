@@ -46,12 +46,12 @@
                 </nav>
                 
                 <div class="flex items-center gap-3 modern-nav-actions">
-                    <a href="/account" class="text-sm text-muted modern-user-name hover:underline">@context.User.Identity?.Name</a>
-                    <a href="/settings/organization" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
+                    <a href="/account" class="text-sm text-muted modern-user-name hover:underline" data-testid="user-name">@context.User.Identity?.Name</a>
+                    <a href="/organization" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
                         <MudIcon Icon="@Icons.Material.Filled.Business" Size="Size.Small" />
                         <span>Organization</span>
                     </a>
-                    <a href="MicrosoftIdentity/Account/SignOut" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
+                    <a href="MicrosoftIdentity/Account/SignOut" class="modern-btn modern-btn-ghost modern-btn-sm gap-2" data-testid="logout">
                         <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
                         <span>Sign Out</span>
                     </a>
@@ -136,20 +136,30 @@
                 return;
                 
             var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
-            if (userInfo?.OrganizationName == null)
-                return;
             
-            // Check if organization name looks like an email domain or common provider name
-            var commonProviders = new[] { "hotmail", "gmail", "yahoo", "outlook", "live", "msn", "icloud" };
-            var isEmailDomain = userInfo.OrganizationName.Contains(".") || 
-                               commonProviders.Any(p => userInfo.OrganizationName.Equals(p, StringComparison.OrdinalIgnoreCase));
+            // Check if user has no organization OR if organization name looks like an email domain
+            var needsOrganizationSetup = false;
             
-            if (isEmailDomain)
+            if (string.IsNullOrEmpty(userInfo?.OrganizationId))
+            {
+                // User has no organization at all
+                needsOrganizationSetup = true;
+            }
+            else if (!string.IsNullOrEmpty(userInfo.OrganizationName))
+            {
+                // User has organization but name looks like email domain
+                var commonProviders = new[] { "hotmail", "gmail", "yahoo", "outlook", "live", "msn", "icloud", "bigpond" };
+                var isEmailDomain = userInfo.OrganizationName.Contains(".") || 
+                                   commonProviders.Any(p => userInfo.OrganizationName.Equals(p, StringComparison.OrdinalIgnoreCase));
+                needsOrganizationSetup = isEmailDomain;
+            }
+            
+            if (needsOrganizationSetup)
             {
                 var parameters = new DialogParameters
                 {
-                    { "CurrentOrganizationName", userInfo.OrganizationName },
-                    { "OrganizationId", userInfo.OrganizationId }
+                    { "CurrentOrganizationName", userInfo?.OrganizationName ?? string.Empty },
+                    { "OrganizationId", userInfo?.OrganizationId }
                 };
                 
                 var options = new DialogOptions 

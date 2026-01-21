@@ -11,6 +11,7 @@ namespace fencemark.ApiService.Services;
 public interface IOrganizationService
 {
     Task<CreateOrganizationResponse> CreateOrganizationAsync(string userId, CreateOrganizationRequest request, CancellationToken cancellationToken = default);
+    Task<UpdateOrganizationResponse> UpdateOrganizationAsync(string organizationId, UpdateOrganizationRequest request, CancellationToken cancellationToken = default);
     Task<IEnumerable<OrganizationMemberResponse>> GetMembersAsync(string organizationId, CancellationToken cancellationToken = default);
     Task<InviteUserResponse> InviteUserAsync(string organizationId, InviteUserRequest request, CancellationToken cancellationToken = default);
     Task<AuthResponse> AcceptInvitationAsync(AcceptInvitationRequest request, CancellationToken cancellationToken = default);
@@ -116,6 +117,61 @@ public class OrganizationService(
             Message = "Organization created successfully",
             OrganizationId = organization.Id,
             OrganizationName = organization.Name
+        };
+    }
+
+    public async Task<UpdateOrganizationResponse> UpdateOrganizationAsync(
+        string organizationId,
+        UpdateOrganizationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Validate organization name
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length < MinimumOrganizationNameLength)
+        {
+            return new UpdateOrganizationResponse
+            {
+                Success = false,
+                Message = $"Organization name must be at least {MinimumOrganizationNameLength} characters"
+            };
+        }
+
+        // Get the organization
+        var organization = await context.Organizations
+            .FirstOrDefaultAsync(o => o.Id == organizationId, cancellationToken);
+
+        if (organization is null)
+        {
+            return new UpdateOrganizationResponse
+            {
+                Success = false,
+                Message = "Organization not found"
+            };
+        }
+
+        // Check if another organization already has this name
+        var existingOrg = await context.Organizations
+            .FirstOrDefaultAsync(o => o.Name == request.Name && o.Id != organizationId, cancellationToken);
+
+        if (existingOrg is not null)
+        {
+            return new UpdateOrganizationResponse
+            {
+                Success = false,
+                Message = "An organization with this name already exists"
+            };
+        }
+
+        // Update the organization
+        organization.Name = request.Name;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new UpdateOrganizationResponse
+        {
+            Success = true,
+            Message = "Organization updated successfully"
         };
     }
 

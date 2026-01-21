@@ -123,3 +123,14 @@ public record CreateOrganizationResponse
     public string? OrganizationId { get; init; }
     public string? OrganizationName { get; init; }
 }
+
+public record UpdateOrganizationRequest
+{
+    public required string Name { get; init; }
+}
+
+public record UpdateOrganizationResponse
+{
+    public bool Success { get; init; }
+    public string? Message { get; init; }
+}
