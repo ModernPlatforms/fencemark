@@ -316,7 +316,7 @@ builder.Services.AddAuthentication(options =>
                             }
                             
                             // Create organization
-                            var organization = new Data.Models.Organization
+                            var organization = new Organization
                             {
                                 Id = Guid.NewGuid().ToString(),
                                 Name = orgName,
@@ -325,12 +325,12 @@ builder.Services.AddAuthentication(options =>
                             dbContext.Organizations.Add(organization);
                             
                             // Add user as owner of the organization
-                            membership = new Data.Models.OrganizationMember
+                            membership = new OrganizationMember
                             {
                                 Id = Guid.NewGuid().ToString(),
                                 UserId = user.Id,
                                 OrganizationId = organization.Id,
-                                Role = Data.Models.Role.Owner,
+                                Role = Role.Owner,
                                 JoinedAt = DateTime.UtcNow,
                                 IsAccepted = true
                             };
