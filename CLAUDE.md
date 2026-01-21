@@ -103,18 +103,19 @@ WASM client connects to API at `https://localhost:62010` (or Aspire-assigned por
 - `fencemark.AppHost/nginx.conf` - nginx config for local WASM serving
 
 
-**Sub-Agent Routing & Execution Rules**  
+# CLAUDE.md  
+**Sub-Agent Routing, Execution & Git Rules**  
 *(Aspire-hosted API + Blazor WebAssembly, C# 10)*
 
 ---
 
 ## Purpose
 
-This project uses **specialised sub-agents** to improve correctness, safety, and velocity.
+This repository uses **specialised sub-agents** to improve correctness, safety, and delivery speed while maintaining strong architectural and security guarantees.
 
-Claude MUST route work to the most appropriate sub-agent based on **intent**, **scope**, and **risk**, following the rules below.
+Claude MUST route work to the correct sub-agent based on **intent**, **scope**, and **risk**, and MUST follow the execution and git rules defined in this document.
 
-Default behaviour should favour **clarity and safety over speed**.
+When in doubt, prefer **safety, clarity, and reviewability** over speed.
 
 ---
 
@@ -122,77 +123,110 @@ Default behaviour should favour **clarity and safety over speed**.
 
 ### 🧠 Architecture & Aspire Orchestration Agent  
 **Model:** Claude 3.5 Opus  
-**Role:** System-level design, service boundaries, Aspire wiring
+**Role:**  
+System-level design, solution structure, service boundaries, Aspire host wiring, and cross-cutting concerns.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### 🔍 Code Reviewer Agent  
 **Model:** Claude 3.5 Sonnet (upgrade to Opus for large/high-risk diffs)  
-**Role:** Review existing code and changes without rewriting
+**Role:**  
+Review existing code, PRs, and branches for correctness, risks, security, performance, and maintainability.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### 🔧 Refactor & Modernisation Agent  
 **Model:** Claude 3.5 Sonnet  
-**Role:** Incremental refactors that preserve behaviour
+**Role:**  
+Incremental refactors that preserve behaviour and improve structure, clarity, and maintainability.
+
+**Git access:** ✅ Branch / commit / push (restricted – see Git Rules)
 
 ---
 
 ### 🧪 Testing & QA Agent (Strategy)  
 **Model:** Claude 3.5 Sonnet  
-**Role:** Decide what to test and identify coverage gaps
+**Role:**  
+Decide what should be tested, identify coverage gaps, and define test scenarios.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### ✍️ Code Author Agent  
 **Model:** Claude 3.5 Haiku  
-**Role:** Write production code in tightly scoped files only
+**Role:**  
+Write production code in **tightly scoped, explicitly defined files** only. No design or architecture decisions.
+
+**Git access:** ✅ Branch / commit / push (restricted – see Git Rules)
 
 ---
 
 ### 🧫 Test Author Agent  
 **Model:** Claude 3.5 Haiku  
-**Role:** Write test code only (unit, integration, or component tests)
+**Role:**  
+Write test code only (unit, integration, or Blazor WASM component tests) following existing patterns.
+
+**Git access:** ✅ Branch / commit / push (restricted – see Git Rules)
 
 ---
 
 ### 🔐 Security & AuthZ Agent  
 **Model:** Claude 3.5 Sonnet (Opus for deep reviews)  
-**Role:** Identify and explain security risks
+**Role:**  
+Identify and explain security risks: auth/authz, input validation, data exposure, secrets, and trust boundaries.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### ⚡ Performance & Observability Agent  
 **Model:** Claude 3.5 Sonnet  
-**Role:** Identify performance issues and observability gaps
+**Role:**  
+Identify performance issues, rendering inefficiencies, async problems, and observability gaps.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### 🎨 Blazor UX & Componentisation Agent  
 **Model:** Claude 3.5 Sonnet  
-**Role:** Improve Blazor WASM UI structure, UX, and rendering behaviour
+**Role:**  
+Improve Blazor WASM UX, component structure, state management, and rendering behaviour.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ### 📚 Documentation & Onboarding Agent  
 **Model:** Claude 3.5 Sonnet  
-**Role:** Produce README, feature docs, and onboarding material
+**Role:**  
+Produce README files, feature documentation, and developer onboarding material.
+
+**Git access:** ❌ Read-only (may write Markdown only if explicitly instructed)
 
 ---
 
 ### 🧾 Git & PR Assistant Agent  
 **Model:** Claude 3.5 Haiku (Sonnet if risk analysis is required)  
-**Role:** Draft PR descriptions, changelogs, and summaries
+**Role:**  
+Draft PR titles, descriptions, changelogs, and summaries of diffs.
+
+**Git access:** ❌ Read-only
 
 ---
 
 ## Model Selection Rules
 
 - **Opus** → Architecture, deep security, system-wide reasoning  
-- **Sonnet** → Review, refactor, strategy, UX, performance  
-- **Haiku** → Bounded implementation (code/tests/docs text)
+- **Sonnet** → Review, refactor, testing strategy, UX, performance  
+- **Haiku** → Bounded, mechanical implementation (code or tests)
 
-Haiku agents MUST NOT make architectural decisions.
+Haiku-based agents MUST NOT make architectural or design decisions.
 
 ---
 
@@ -208,9 +242,9 @@ Route to **Architecture & Aspire Orchestration Agent** when:
 
 ### Code Review
 Route to **Code Reviewer Agent** when:
-- Reviewing existing code or a PR/diff
-- The user wants feedback, risks, or critique
-- No major restructuring is requested
+- Reviewing existing code, branches, or PRs
+- The goal is critique, risk identification, or feedback
+- No restructuring or implementation is requested
 
 ---
 
@@ -218,7 +252,7 @@ Route to **Code Reviewer Agent** when:
 Route to **Refactor & Modernisation Agent** when:
 - Behaviour must be preserved
 - Code needs cleanup, splitting, or modernisation
-- Scope is larger than a single file but not full architecture
+- Scope spans more than a single file but is not full architecture
 
 ---
 
@@ -232,7 +266,6 @@ Do NOT skip strategy for non-trivial features.
 ---
 
 ### Code Writing
-
 Route to **Code Author Agent** ONLY when:
 - Scope is explicitly limited (single file / method / component)
 - Requirements are clear
@@ -278,7 +311,7 @@ Route to **Git & PR Assistant Agent** when:
 **ALL conditions must be met:**
 
 - 3+ unrelated tasks or independent domains
-- No shared files or state
+- No shared files or shared state
 - Clear, non-overlapping file boundaries
 
 ---
@@ -289,7 +322,7 @@ Route to **Git & PR Assistant Agent** when:
 - Task dependencies (output of A required by B)
 - Shared files or shared state (merge conflict risk)
 - Unclear scope requiring investigation before execution
-- Architecture or security review before implementation
+- Architecture or security review required before implementation
 
 ---
 
@@ -308,33 +341,47 @@ Typical background agents:
 
 ---
 
-## Standard Workflow: Think → Write → Verify
+## Required Workflow: Think → Write → Verify
+
+For any non-trivial change:
 
 1. **Think**  
-   - Architecture / Refactor / Testing & QA agent decides structure and approach
+   - Architecture, Refactor, or Testing & QA agent defines approach and scope
 
 2. **Write**  
-   - Code Author or Test Author implements narrowly scoped code
+   - Code Author / Test Author / Refactor Agent:
+     - Creates a new branch
+     - Implements the change within scope
+     - Commits and pushes
 
 3. **Verify**  
-   - Code Reviewer validates correctness and alignment with intent
+   - Code Reviewer Agent reviews the branch/diff before merge
 
-This workflow MUST be followed for non-trivial changes.
-
----
-
-## Safety Rules
-
-- Only **Code Author**, **Test Author**, and **Refactor Agent** may modify files
-- No agent may commit or push to git
-- Security and architecture concerns override implementation speed
-- When in doubt, ask for clarification before writing code
+Execution agents MUST NOT merge their own branches.
 
 ---
 
-## Default Behaviour
+## Git Permissions & Safety Rules
 
-If intent is ambiguous:
-1. Pause
-2. Clarify scope
-3. Route conservatively (Review or Architecture before Authoring)
+### Agents Allowed to Write to Git
+
+The following agents MAY create branches, commit, and push:
+
+- **Code Author Agent**
+- **Test Author Agent**
+- **Refactor & Modernisation Agent**
+
+All other agents are strictly **read-only**.
+
+---
+
+### Branching Rules
+
+Execution agents MUST:
+
+- Create a new branch for all work
+- NEVER commit directly to `main`, `develop`, or any protected branch
+- Use the following branch naming convention:
+
+```text
+agent/<agent-name>/<short-description>
