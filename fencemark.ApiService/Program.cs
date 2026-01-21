@@ -1,5 +1,4 @@
 using System;
-using System.Security.Claims;
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
 using fencemark.ApiService.Features.Auth;
@@ -228,117 +227,47 @@ builder.Services.AddAuthentication(options =>
                 },
                 OnTokenValidated = async context =>
                 {
-                    var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    
                     // Azure AD v1.0 tokens use ClaimTypes.Name for the email
-                    var email = context.Principal?.FindFirst(ClaimTypes.Name)?.Value
-                               ?? context.Principal?.FindFirst(ClaimTypes.Email)?.Value
+                    var email = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                               ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                                ?? context.Principal?.FindFirst("preferred_username")?.Value
                                ?? context.Principal?.FindFirst("email")?.Value;
-                    
-                    // Get the Azure AD object ID (oid) or subject (sub) claim
-                    var externalId = context.Principal?.FindFirst("oid")?.Value
-                                   ?? context.Principal?.FindFirst("sub")?.Value;
                                
-                    logger.LogInformation("[ApiService] Token validated for user: {Email}, ExternalId: {ExternalId}", email, externalId);
+                    Console.WriteLine($"[ApiService] Token validated for user: {email}");
                     
-                    if (!string.IsNullOrEmpty(email) && !string.IsNullOrEmpty(externalId))
+                    if (!string.IsNullOrEmpty(email))
                     {
                         // Look up the user's organization membership
                         var dbContext = context.HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-                        var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<ApplicationUser>>();
-                        var seedDataService = context.HttpContext.RequestServices.GetRequiredService<ISeedDataService>();
+                        var userManager = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<ApplicationUser>>();
                         
-                        // Try to find user by external ID first, then by email
-                        var user = await userManager.Users
-                            .FirstOrDefaultAsync(u => u.ExternalId == externalId && u.ExternalProvider == "AzureAD");
-                        
-                        if (user == null)
+                        var user = await userManager.FindByEmailAsync(email);
+                        if (user != null)
                         {
-                            // Try to find by email
-                            user = await userManager.FindByEmailAsync(email);
+                            var membership = await dbContext.OrganizationMembers
+                                .FirstOrDefaultAsync(m => m.UserId == user.Id);
                             
-                            if (user != null)
+                            if (membership != null)
                             {
-                                // Existing user, link external identity
-                                user.ExternalId = externalId;
-                                user.ExternalProvider = "AzureAD";
-                                user.IsEmailVerified = true; // External provider verified the email
-                                user.IsGuest = false;
-                                await userManager.UpdateAsync(user);
-                                logger.LogInformation("[ApiService] Linked existing user {Email} to external identity {ExternalId}", email, externalId);
+                                // Add OrganizationId claim to the principal
+                                var claims = new List<System.Security.Claims.Claim>
+                                {
+                                    new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId)
+                                };
+                                var appIdentity = new System.Security.Claims.ClaimsIdentity(claims);
+                                context.Principal?.AddIdentity(appIdentity);
+                                
+                                Console.WriteLine($"[ApiService] Added OrganizationId claim: {membership.OrganizationId}");
                             }
                             else
                             {
-                                // Create new user
-                                user = new ApplicationUser
-                                {
-                                    UserName = email,
-                                    Email = email,
-                                    ExternalId = externalId,
-                                    ExternalProvider = "AzureAD",
-                                    IsEmailVerified = true, // External provider verified the email
-                                    IsGuest = false,
-                                    CreatedAt = DateTime.UtcNow
-                                };
-                                
-                                var result = await userManager.CreateAsync(user);
-                                if (!result.Succeeded)
-                                {
-                                    logger.LogError("[ApiService] Failed to create user {Email}: {Errors}", email, string.Join(", ", result.Errors.Select(e => e.Description)));
-                                    // Don't add claims if user creation failed
-                                    // This will result in authentication failure downstream
-                                    return;
-                                }
-                                logger.LogInformation("[ApiService] Created new user {Email} with external identity {ExternalId}", email, externalId);
-                            }
-                        }
-                        
-                        // Ensure the user has an organization membership
-                        var membership = await dbContext.OrganizationMembers
-                            .Include(m => m.Organization)
-                            .FirstOrDefaultAsync(m => m.UserId == user.Id);
-                        
-                        if (membership != null)
-                        {
-                            // Check if organization needs seed data (may have been deleted)
-                            if (!await seedDataService.HasSampleDataAsync(membership.OrganizationId))
-                            {
-                                await seedDataService.SeedSampleDataAsync(membership.OrganizationId);
-                                logger.LogInformation("[ApiService] Re-seeded sample data for organization {OrgId}", membership.OrganizationId);
+                                Console.WriteLine($"[ApiService] Warning: User {email} has no organization membership");
                             }
                         }
                         else
                         {
-                            // User has no organization - they need to go through onboarding
-                            logger.LogInformation("[ApiService] User {Email} has no organization - onboarding required", email);
+                            Console.WriteLine($"[ApiService] Warning: User {email} not found in database");
                         }
-                        
-                        // Add custom claims to the principal
-                        var claims = new List<Claim>
-                        {
-                            // Add ApplicationUserId claim to map JWT user to ASP.NET Identity user
-                            new Claim(CustomClaimTypes.ApplicationUserId, user.Id)
-                        };
-                        
-                        if (membership != null)
-                        {
-                            // Add OrganizationId claim to the principal
-                            claims.Add(new Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
-                            logger.LogInformation("[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={UserId}, OrgId={OrgId}", user.Id, membership.OrganizationId);
-                        }
-                        else
-                        {
-                            logger.LogInformation("[ApiService] Added ApplicationUserId claim: {UserId}", user.Id);
-                            logger.LogWarning("[ApiService] User {Email} has no organization membership", email);
-                        }
-                        
-                        var appIdentity = new ClaimsIdentity(claims);
-                        context.Principal?.AddIdentity(appIdentity);
-                    }
-                    else
-                    {
-                        logger.LogWarning("[ApiService] Token validated but missing email or external ID claims");
                     }
                 }
             };

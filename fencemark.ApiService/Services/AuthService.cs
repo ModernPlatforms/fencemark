@@ -1,6 +1,5 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
-using fencemark.ApiService.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -86,7 +85,7 @@ public class AuthService(
         await seedDataService.SeedSampleDataAsync(organization.Id);
 
         // Add organization ID as a claim
-        await userManager.AddClaimAsync(user, new System.Security.Claims.Claim(CustomClaimTypes.OrganizationId, organization.Id));
+        await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", organization.Id));
 
         // Generate email verification token (for future use)
         var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -126,14 +125,14 @@ public class AuthService(
         {
             // Remove any existing OrganizationId claims first
             var existingClaims = await userManager.GetClaimsAsync(user);
-            var orgClaims = existingClaims.Where(c => c.Type == CustomClaimTypes.OrganizationId).ToList();
+            var orgClaims = existingClaims.Where(c => c.Type == "OrganizationId").ToList();
             foreach (var claim in orgClaims)
             {
                 await userManager.RemoveClaimAsync(user, claim);
             }
             
             // Add the current organization ID claim
-            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
+            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", membership.OrganizationId));
             
             // Check if organization needs seed data
             if (!await seedDataService.HasSampleDataAsync(membership.OrganizationId))
@@ -266,14 +265,14 @@ public class AuthService(
         {
             // Remove any existing OrganizationId claims first
             var existingClaims = await userManager.GetClaimsAsync(user);
-            var orgClaims = existingClaims.Where(c => c.Type == CustomClaimTypes.OrganizationId).ToList();
+            var orgClaims = existingClaims.Where(c => c.Type == "OrganizationId").ToList();
             foreach (var claim in orgClaims)
             {
                 await userManager.RemoveClaimAsync(user, claim);
             }
             
             // Add the current organization ID claim
-            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim(CustomClaimTypes.OrganizationId, userMembership.OrganizationId));
+            await userManager.AddClaimAsync(user, new System.Security.Claims.Claim("OrganizationId", userMembership.OrganizationId));
             
             // Check if organization needs seed data (may have been deleted)
             if (!await seedDataService.HasSampleDataAsync(userMembership.OrganizationId))

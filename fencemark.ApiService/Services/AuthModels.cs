@@ -104,22 +104,3 @@ public record UpdateUserRequest
     public string? CurrentPassword { get; init; }
     public string? NewPassword { get; init; }
 }
-
-/// <summary>
-/// Request model for creating a new organization
-/// </summary>
-public record CreateOrganizationRequest
-{
-    public required string Name { get; init; }
-}
-
-/// <summary>
-/// Response model for organization creation
-/// </summary>
-public record CreateOrganizationResponse
-{
-    public bool Success { get; init; }
-    public string? Message { get; init; }
-    public string? OrganizationId { get; init; }
-    public string? OrganizationName { get; init; }
-}
