@@ -101,3 +101,240 @@ WASM client connects to API at `https://localhost:62010` (or Aspire-assigned por
 - `fencemark.Client/wwwroot/appsettings.json` - WASM client config (gitignored, created at build)
 - `fencemark.ApiService/appsettings.json` - API config including AzureAd settings
 - `fencemark.AppHost/nginx.conf` - nginx config for local WASM serving
+
+
+**Sub-Agent Routing & Execution Rules**  
+*(Aspire-hosted API + Blazor WebAssembly, C# 10)*
+
+---
+
+## Purpose
+
+This project uses **specialised sub-agents** to improve correctness, safety, and velocity.
+
+Claude MUST route work to the most appropriate sub-agent based on **intent**, **scope**, and **risk**, following the rules below.
+
+Default behaviour should favour **clarity and safety over speed**.
+
+---
+
+## Agent Roster & Responsibilities
+
+### 🧠 Architecture & Aspire Orchestration Agent  
+**Model:** Claude 3.5 Opus  
+**Role:** System-level design, service boundaries, Aspire wiring
+
+---
+
+### 🔍 Code Reviewer Agent  
+**Model:** Claude 3.5 Sonnet (upgrade to Opus for large/high-risk diffs)  
+**Role:** Review existing code and changes without rewriting
+
+---
+
+### 🔧 Refactor & Modernisation Agent  
+**Model:** Claude 3.5 Sonnet  
+**Role:** Incremental refactors that preserve behaviour
+
+---
+
+### 🧪 Testing & QA Agent (Strategy)  
+**Model:** Claude 3.5 Sonnet  
+**Role:** Decide what to test and identify coverage gaps
+
+---
+
+### ✍️ Code Author Agent  
+**Model:** Claude 3.5 Haiku  
+**Role:** Write production code in tightly scoped files only
+
+---
+
+### 🧫 Test Author Agent  
+**Model:** Claude 3.5 Haiku  
+**Role:** Write test code only (unit, integration, or component tests)
+
+---
+
+### 🔐 Security & AuthZ Agent  
+**Model:** Claude 3.5 Sonnet (Opus for deep reviews)  
+**Role:** Identify and explain security risks
+
+---
+
+### ⚡ Performance & Observability Agent  
+**Model:** Claude 3.5 Sonnet  
+**Role:** Identify performance issues and observability gaps
+
+---
+
+### 🎨 Blazor UX & Componentisation Agent  
+**Model:** Claude 3.5 Sonnet  
+**Role:** Improve Blazor WASM UI structure, UX, and rendering behaviour
+
+---
+
+### 📚 Documentation & Onboarding Agent  
+**Model:** Claude 3.5 Sonnet  
+**Role:** Produce README, feature docs, and onboarding material
+
+---
+
+### 🧾 Git & PR Assistant Agent  
+**Model:** Claude 3.5 Haiku (Sonnet if risk analysis is required)  
+**Role:** Draft PR descriptions, changelogs, and summaries
+
+---
+
+## Model Selection Rules
+
+- **Opus** → Architecture, deep security, system-wide reasoning  
+- **Sonnet** → Review, refactor, strategy, UX, performance  
+- **Haiku** → Bounded implementation (code/tests/docs text)
+
+Haiku agents MUST NOT make architectural decisions.
+
+---
+
+## Hard Routing Rules (Intent-Based)
+
+### Architecture & Design
+Route to **Architecture & Aspire Orchestration Agent** when:
+- Project structure, layering, or service boundaries are discussed
+- Aspire host wiring or cross-cutting concerns are involved
+- The question is “where should this live?” or “how should this be structured?”
+
+---
+
+### Code Review
+Route to **Code Reviewer Agent** when:
+- Reviewing existing code or a PR/diff
+- The user wants feedback, risks, or critique
+- No major restructuring is requested
+
+---
+
+### Refactoring
+Route to **Refactor & Modernisation Agent** when:
+- Behaviour must be preserved
+- Code needs cleanup, splitting, or modernisation
+- Scope is larger than a single file but not full architecture
+
+---
+
+### Testing (Strategy vs Implementation)
+
+- **Testing & QA Agent** → deciding *what* to test  
+- **Test Author Agent** → writing *actual test code*
+
+Do NOT skip strategy for non-trivial features.
+
+---
+
+### Code Writing
+
+Route to **Code Author Agent** ONLY when:
+- Scope is explicitly limited (single file / method / component)
+- Requirements are clear
+- No architectural decisions are required
+
+---
+
+### Security
+Route to **Security & AuthZ Agent** when:
+- Auth, authz, tokens, secrets, PII, or trust boundaries are involved
+- The question is “is this safe?”
+
+---
+
+### Performance & Observability
+Route to **Performance & Observability Agent** when:
+- Performance, rendering, payload size, async behaviour, logging, or telemetry are discussed
+
+---
+
+### Blazor UX
+Route to **Blazor UX & Componentisation Agent** when:
+- The concern is UI structure, UX, validation, or rendering efficiency
+
+---
+
+### Documentation
+Route to **Documentation & Onboarding Agent** when:
+- Writing or improving README, feature docs, or onboarding content
+
+---
+
+### Git / PR Work
+Route to **Git & PR Assistant Agent** when:
+- Writing PR descriptions, summaries, or changelogs
+- Explaining diffs rather than modifying code
+
+---
+
+## Dispatch Strategy
+
+### Parallel Dispatch  
+**ALL conditions must be met:**
+
+- 3+ unrelated tasks or independent domains
+- No shared files or state
+- Clear, non-overlapping file boundaries
+
+---
+
+### Sequential Dispatch  
+**ANY condition triggers:**
+
+- Task dependencies (output of A required by B)
+- Shared files or shared state (merge conflict risk)
+- Unclear scope requiring investigation before execution
+- Architecture or security review before implementation
+
+---
+
+### Background Dispatch
+
+Use background-only agents when:
+
+- Task is research or analysis
+- No file modifications are required
+- Results are non-blocking
+
+Typical background agents:
+- Architecture & Aspire
+- Security & AuthZ
+- Performance & Observability
+
+---
+
+## Standard Workflow: Think → Write → Verify
+
+1. **Think**  
+   - Architecture / Refactor / Testing & QA agent decides structure and approach
+
+2. **Write**  
+   - Code Author or Test Author implements narrowly scoped code
+
+3. **Verify**  
+   - Code Reviewer validates correctness and alignment with intent
+
+This workflow MUST be followed for non-trivial changes.
+
+---
+
+## Safety Rules
+
+- Only **Code Author**, **Test Author**, and **Refactor Agent** may modify files
+- No agent may commit or push to git
+- Security and architecture concerns override implementation speed
+- When in doubt, ask for clarification before writing code
+
+---
+
+## Default Behaviour
+
+If intent is ambiguous:
+1. Pause
+2. Clarify scope
+3. Route conservatively (Review or Architecture before Authoring)
