@@ -299,7 +299,51 @@ builder.Services.AddAuthentication(options =>
                             .Include(m => m.Organization)
                             .FirstOrDefaultAsync(m => m.UserId == user.Id);
                         
-                        if (membership != null)
+                        if (membership == null)
+                        {
+                            // User has no organization - create one automatically from their email domain
+                            logger.LogInformation("[ApiService] User {Email} has no organization - creating one automatically", email);
+                            
+                            // Extract organization name from email domain
+                            var emailParts = email.Split('@');
+                            var domain = emailParts.Length > 1 ? emailParts[1] : "Unknown";
+                            var orgName = domain.Split('.')[0]; // Get the domain name before the TLD
+                            
+                            // Capitalize first letter
+                            if (!string.IsNullOrEmpty(orgName))
+                            {
+                                orgName = char.ToUpper(orgName[0]) + orgName.Substring(1);
+                            }
+                            
+                            // Create organization
+                            var organization = new Data.Models.Organization
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                Name = orgName,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            dbContext.Organizations.Add(organization);
+                            
+                            // Add user as owner of the organization
+                            membership = new Data.Models.OrganizationMember
+                            {
+                                Id = Guid.NewGuid().ToString(),
+                                UserId = user.Id,
+                                OrganizationId = organization.Id,
+                                Role = Data.Models.Role.Owner,
+                                JoinedAt = DateTime.UtcNow,
+                                IsAccepted = true
+                            };
+                            dbContext.OrganizationMembers.Add(membership);
+                            
+                            await dbContext.SaveChangesAsync();
+                            logger.LogInformation("[ApiService] Created organization {OrgName} ({OrgId}) for user {Email}", orgName, organization.Id, email);
+                            
+                            // Seed sample data for the new organization
+                            await seedDataService.SeedSampleDataAsync(organization.Id);
+                            logger.LogInformation("[ApiService] Seeded sample data for new organization {OrgId}", organization.Id);
+                        }
+                        else
                         {
                             // Check if organization needs seed data (may have been deleted)
                             if (!await seedDataService.HasSampleDataAsync(membership.OrganizationId))
@@ -307,11 +351,6 @@ builder.Services.AddAuthentication(options =>
                                 await seedDataService.SeedSampleDataAsync(membership.OrganizationId);
                                 logger.LogInformation("[ApiService] Re-seeded sample data for organization {OrgId}", membership.OrganizationId);
                             }
-                        }
-                        else
-                        {
-                            // User has no organization - they need to go through onboarding
-                            logger.LogInformation("[ApiService] User {Email} has no organization - onboarding required", email);
                         }
                         
                         // Add custom claims to the principal

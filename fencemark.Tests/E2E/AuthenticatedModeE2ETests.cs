@@ -260,16 +260,20 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             // Query selectors after navigation is complete
             var userNameElement = await Page.QuerySelectorAsync(".modern-user-name, [data-testid='user-name']");
             
-            if (userNameElement != null)
-            {
-                var userName = await userNameElement.TextContentAsync();
-                Assert.NotNull(userName);
-                Assert.NotEmpty(userName.Trim());
-                Console.WriteLine($"User name displayed: {userName}");
-            }
+            Assert.NotNull(userNameElement);
+            var userName = await userNameElement.TextContentAsync();
+            Assert.NotNull(userName);
+            Assert.NotEmpty(userName.Trim());
+            Console.WriteLine($"User name displayed: {userName}");
+            
+            // Should be a clickable link
+            var href = await userNameElement.GetAttributeAsync("href");
+            Assert.NotNull(href);
+            Assert.Contains("/account", href);
+            Console.WriteLine($"User name link href: {href}");
 
             // Should show logout button
-            var logoutButton = await Page.QuerySelectorAsync("a[href*='logout'], button:has-text('Sign Out')");
+            var logoutButton = await Page.QuerySelectorAsync("[data-testid='logout'], a[href*='logout'], button:has-text('Sign Out')");
             Assert.NotNull(logoutButton);
 
             await TakeScreenshotAsync("authenticated-layout.png");
@@ -279,6 +283,102 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
         {
             Console.WriteLine($"❌ MainLayout test failed: {ex.Message}");
             await TakeScreenshotAsync("mainlayout-test-error.png");
+            throw;
+        }
+        finally
+        {
+            await TeardownAsync();
+        }
+    }
+
+    [Fact]
+    public async Task UserName_IsClickable_NavigatesToProfile()
+    {
+        SkipIfEnvironmentNotConfigured();
+        
+        // Arrange
+        await SetupAsync();
+
+        try
+        {
+            // Act - Login first
+            await LoginIfNeededAsync();
+
+            // Navigate to a page
+            await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
+            
+            // Wait for the page to be fully loaded
+            await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            await Task.Delay(1000); // Give the Blazor app time to render
+
+            // Find and click the user name link
+            var userNameElement = await Page.QuerySelectorAsync("[data-testid='user-name'], .modern-user-name");
+            Assert.NotNull(userNameElement);
+
+            // Click the user name
+            await userNameElement.ClickAsync();
+            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await Task.Delay(500);
+
+            // Assert - Should navigate to /account page
+            var currentUrl = Page.Url;
+            Assert.Contains("/account", currentUrl);
+            
+            await TakeScreenshotAsync("account-page.png");
+            Console.WriteLine("✅ User name link navigates to account page");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ User name link test failed: {ex.Message}");
+            await TakeScreenshotAsync("user-name-link-test-error.png");
+            throw;
+        }
+        finally
+        {
+            await TeardownAsync();
+        }
+    }
+
+    [Fact]
+    public async Task OrganizationLink_NavigatesToOrganizationPage()
+    {
+        SkipIfEnvironmentNotConfigured();
+        
+        // Arrange
+        await SetupAsync();
+
+        try
+        {
+            // Act - Login first
+            await LoginIfNeededAsync();
+
+            // Navigate to a page
+            await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
+            
+            // Wait for the page to be fully loaded
+            await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            await Task.Delay(1000); // Give the Blazor app time to render
+
+            // Find and click the organization link
+            var orgLink = await Page.QuerySelectorAsync("a:has-text('Organization')");
+            Assert.NotNull(orgLink);
+
+            // Click the organization link
+            await orgLink.ClickAsync();
+            await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+            await Task.Delay(500);
+
+            // Assert - Should navigate to /organization page
+            var currentUrl = Page.Url;
+            Assert.Contains("/organization", currentUrl);
+            
+            await TakeScreenshotAsync("organization-page.png");
+            Console.WriteLine("✅ Organization link navigates to organization page");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Organization link test failed: {ex.Message}");
+            await TakeScreenshotAsync("organization-link-test-error.png");
             throw;
         }
         finally
