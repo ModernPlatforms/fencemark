@@ -240,7 +240,7 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
     public async Task MainLayout_ShowsUserName_WhenAuthenticated()
     {
         SkipIfEnvironmentNotConfigured();
-        
+
         // Arrange
         await SetupAsync();
 
@@ -251,22 +251,22 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             // Navigate to a page
             await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
-            
+
             // Wait for the page to be fully loaded
             await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
-            await Task.Delay(1000); // Give the Blazor app time to render
+            await Task.Delay(2000); // Give the Blazor app time to render and fetch user info
 
             // Assert - Should show user name in the layout
             // Query selectors after navigation is complete
             var userNameElement = await Page.QuerySelectorAsync(".modern-user-name, [data-testid='user-name']");
-            
+
             Assert.NotNull(userNameElement);
             var userName = await userNameElement.TextContentAsync();
             Assert.NotNull(userName);
             Assert.NotEmpty(userName.Trim());
             Console.WriteLine($"User name displayed: {userName}");
-            
-            // Should be a clickable link
+
+            // Should be a clickable link to /account
             var href = await userNameElement.GetAttributeAsync("href");
             Assert.NotNull(href);
             Assert.Contains("/account", href);
@@ -277,11 +277,11 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             Assert.NotNull(logoutButton);
 
             await TakeScreenshotAsync("authenticated-layout.png");
-            Console.WriteLine("✅ MainLayout correctly shows authenticated user info");
+            Console.WriteLine("MainLayout correctly shows authenticated user info");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ MainLayout test failed: {ex.Message}");
+            Console.WriteLine($"MainLayout test failed: {ex.Message}");
             await TakeScreenshotAsync("mainlayout-test-error.png");
             throw;
         }
@@ -292,10 +292,10 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
     }
 
     [Fact]
-    public async Task UserName_IsClickable_NavigatesToProfile()
+    public async Task UserName_IsClickable_NavigatesToAccount()
     {
         SkipIfEnvironmentNotConfigured();
-        
+
         // Arrange
         await SetupAsync();
 
@@ -306,10 +306,10 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
 
             // Navigate to a page
             await Page!.GotoAsync($"{BaseUrl}/jobs", new() { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 });
-            
+
             // Wait for the page to be fully loaded
             await Page.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
-            await Task.Delay(1000); // Give the Blazor app time to render
+            await Task.Delay(2000); // Give the Blazor app time to render and fetch user info
 
             // Find and click the user name link
             var userNameElement = await Page.QuerySelectorAsync("[data-testid='user-name'], .modern-user-name");
@@ -318,18 +318,18 @@ public class AuthenticatedModeE2ETests : PlaywrightTestBase
             // Click the user name
             await userNameElement.ClickAsync();
             await Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(500);
+            await Task.Delay(1000);
 
             // Assert - Should navigate to /account page
             var currentUrl = Page.Url;
             Assert.Contains("/account", currentUrl);
-            
+
             await TakeScreenshotAsync("account-page.png");
-            Console.WriteLine("✅ User name link navigates to account page");
+            Console.WriteLine("User name link navigates to account page");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ User name link test failed: {ex.Message}");
+            Console.WriteLine($"User name link test failed: {ex.Message}");
             await TakeScreenshotAsync("user-name-link-test-error.png");
             throw;
         }

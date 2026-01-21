@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gh issue create:*)"
+      "Bash(gh issue create:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet test:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)"
     ]
   }
 }

@@ -229,18 +229,26 @@ builder.Services.AddAuthentication(options =>
                 OnTokenValidated = async context =>
                 {
                     var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
-                    
+
                     // Azure AD v1.0 tokens use ClaimTypes.Name for the email
                     var email = context.Principal?.FindFirst(ClaimTypes.Name)?.Value
                                ?? context.Principal?.FindFirst(ClaimTypes.Email)?.Value
                                ?? context.Principal?.FindFirst("preferred_username")?.Value
                                ?? context.Principal?.FindFirst("email")?.Value;
-                    
+
                     // Get the Azure AD object ID (oid) or subject (sub) claim
                     var externalId = context.Principal?.FindFirst("oid")?.Value
                                    ?? context.Principal?.FindFirst("sub")?.Value;
-                               
-                    logger.LogInformation("[ApiService] Token validated for user: {Email}, ExternalId: {ExternalId}", email, externalId);
+
+                    // Get user's name from Azure AD claims
+                    var givenName = context.Principal?.FindFirst(ClaimTypes.GivenName)?.Value
+                                  ?? context.Principal?.FindFirst("given_name")?.Value;
+                    var familyName = context.Principal?.FindFirst(ClaimTypes.Surname)?.Value
+                                   ?? context.Principal?.FindFirst("family_name")?.Value;
+                    // Fallback to "name" claim if individual name parts not available
+                    var displayName = context.Principal?.FindFirst("name")?.Value;
+
+                    logger.LogInformation("[ApiService] Token validated for user: {Email}, ExternalId: {ExternalId}, Name: {GivenName} {FamilyName}", email, externalId, givenName, familyName);
                     
                     if (!string.IsNullOrEmpty(email) && !string.IsNullOrEmpty(externalId))
                     {
@@ -260,28 +268,59 @@ builder.Services.AddAuthentication(options =>
                             
                             if (user != null)
                             {
-                                // Existing user, link external identity
+                                // Existing user, link external identity and update name if available
                                 user.ExternalId = externalId;
                                 user.ExternalProvider = "AzureAD";
                                 user.IsEmailVerified = true; // External provider verified the email
                                 user.IsGuest = false;
+
+                                // Update name from Azure AD claims if not already set
+                                if (string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(givenName))
+                                {
+                                    user.FirstName = givenName;
+                                }
+                                if (string.IsNullOrWhiteSpace(user.LastName) && !string.IsNullOrWhiteSpace(familyName))
+                                {
+                                    user.LastName = familyName;
+                                }
+                                // If no first/last name but we have a display name, try to parse it
+                                if (string.IsNullOrWhiteSpace(user.FirstName) && string.IsNullOrWhiteSpace(user.LastName) && !string.IsNullOrWhiteSpace(displayName))
+                                {
+                                    var nameParts = displayName.Split(' ', 2);
+                                    user.FirstName = nameParts[0];
+                                    user.LastName = nameParts.Length > 1 ? nameParts[1] : null;
+                                }
+
                                 await userManager.UpdateAsync(user);
                                 logger.LogInformation("[ApiService] Linked existing user {Email} to external identity {ExternalId}", email, externalId);
                             }
                             else
                             {
-                                // Create new user
+                                // Create new user with name from Azure AD claims
+                                var firstName = givenName;
+                                var lastName = familyName;
+
+                                // If no first/last name but we have a display name, try to parse it
+                                if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName) && !string.IsNullOrWhiteSpace(displayName))
+                                {
+                                    var nameParts = displayName.Split(' ', 2);
+                                    firstName = nameParts[0];
+                                    lastName = nameParts.Length > 1 ? nameParts[1] : null;
+                                }
+
                                 user = new ApplicationUser
                                 {
                                     UserName = email,
                                     Email = email,
+                                    FirstName = firstName,
+                                    LastName = lastName,
                                     ExternalId = externalId,
                                     ExternalProvider = "AzureAD",
                                     IsEmailVerified = true, // External provider verified the email
                                     IsGuest = false,
                                     CreatedAt = DateTime.UtcNow
                                 };
-                                
+
                                 var result = await userManager.CreateAsync(user);
                                 if (!result.Succeeded)
                                 {

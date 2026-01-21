@@ -101,6 +101,9 @@ public static class AuthEndpoints
             userId = user.Id,
             email = user.Email,
             userName = user.UserName,
+            firstName = user.FirstName,
+            lastName = user.LastName,
+            displayName = user.DisplayName,
             organizationId = membership?.OrganizationId,
             organizationName = membership?.Organization?.Name,
             isEmailVerified = user.IsEmailVerified,
@@ -126,6 +129,34 @@ public static class AuthEndpoints
             return Results.NotFound();
         }
 
+        var needsUpdate = false;
+
+        // Update name fields if provided
+        if (request.FirstName != null && request.FirstName != user.FirstName)
+        {
+            user.FirstName = request.FirstName;
+            needsUpdate = true;
+        }
+        if (request.LastName != null && request.LastName != user.LastName)
+        {
+            user.LastName = request.LastName;
+            needsUpdate = true;
+        }
+
+        if (needsUpdate)
+        {
+            var updateResult = await userManager.UpdateAsync(user);
+            if (!updateResult.Succeeded)
+            {
+                return Results.BadRequest(new
+                {
+                    success = false,
+                    message = "Failed to update profile",
+                    errors = updateResult.Errors.Select(e => e.Description)
+                });
+            }
+        }
+
         // Update email if changed
         if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
         {
@@ -139,7 +170,7 @@ public static class AuthEndpoints
                     errors = emailResult.Errors.Select(e => e.Description)
                 });
             }
-            
+
             // Also update username to match email
             await userManager.SetUserNameAsync(user, request.Email);
         }
@@ -164,7 +195,10 @@ public static class AuthEndpoints
             success = true,
             message = "Account updated successfully",
             userId = user.Id,
-            email = user.Email
+            email = user.Email,
+            firstName = user.FirstName,
+            lastName = user.LastName,
+            displayName = user.DisplayName
         });
     }
 

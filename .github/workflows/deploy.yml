@@ -117,9 +117,6 @@ jobs:
       - name: Publish API Service
         run: dotnet publish fencemark.ApiService/fencemark.ApiService.csproj -c Release -o ./publish/apiservice --no-build
 
-      - name: Publish Web Frontend
-        run: dotnet publish fencemark.Web/fencemark.Web.csproj -c Release -o ./publish/webfrontend --no-build
-
       - name: Publish Blazor WASM
         run: dotnet publish fencemark.Client/fencemark.Client.csproj -c Release -o ./publish/blazor-wasm --no-build
 
