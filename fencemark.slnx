@@ -14,5 +14,4 @@
   <Project Path="fencemark.Client/fencemark.Client.csproj" />
   <Project Path="fencemark.ServiceDefaults/fencemark.ServiceDefaults.csproj" />
   <Project Path="fencemark.Tests/fencemark.Tests.csproj" />
-  <Project Path="fencemark.Web/fencemark.Web.csproj" />
 </Solution>
