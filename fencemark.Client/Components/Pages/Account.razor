@@ -80,7 +80,17 @@
                     <div class="card-body">
                         <dl class="row mb-0">
                             <dt class="col-sm-4">Organization</dt>
-                            <dd class="col-sm-8">@(currentUser.OrganizationName ?? "None")</dd>
+                            <dd class="col-sm-8">
+                                @if (string.IsNullOrEmpty(currentUser.OrganizationName))
+                                {
+                                    <span class="text-muted">None</span>
+                                    <a href="/onboarding" class="btn btn-sm btn-primary ms-2">Create Organization</a>
+                                }
+                                else
+                                {
+                                    @currentUser.OrganizationName
+                                }
+                            </dd>
 
                             <dt class="col-sm-4">Email Verified</dt>
                             <dd class="col-sm-8">

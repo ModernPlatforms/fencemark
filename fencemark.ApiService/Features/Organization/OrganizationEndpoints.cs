@@ -48,14 +48,22 @@ public static class OrganizationEndpoints
         CreateOrganizationRequest request,
         IOrganizationService orgService,
         ICurrentUserService currentUser,
+        ILogger<Program> logger,
         CancellationToken ct)
     {
+        logger.LogInformation("[CreateOrganization] IsAuthenticated: {IsAuth}, UserId: {UserId}, Email: {Email}", 
+            currentUser.IsAuthenticated, currentUser.UserId, currentUser.Email);
+
         if (!currentUser.IsAuthenticated || string.IsNullOrEmpty(currentUser.UserId))
         {
+            logger.LogWarning("[CreateOrganization] Unauthorized - IsAuthenticated: {IsAuth}, UserId: {UserId}", 
+                currentUser.IsAuthenticated, currentUser.UserId);
             return Results.Unauthorized();
         }
 
         var result = await orgService.CreateOrganizationAsync(currentUser.UserId, request, ct);
+        logger.LogInformation("[CreateOrganization] Result: Success={Success}, Message={Message}", 
+            result.Success, result.Message);
         return result.Success ? Results.Ok(result) : Results.BadRequest(result);
     }
 

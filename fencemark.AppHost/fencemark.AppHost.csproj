@@ -24,4 +24,12 @@
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.Azure.StaticWebApps" Version="9.5.0" />
   </ItemGroup>
 
+  <!-- Automatically publish the Blazor WASM client on build -->
+  <Target Name="PublishBlazorClient" AfterTargets="Build">
+    <Message Text="Publishing Blazor WASM client for Aspire..." Importance="high" />
+    <MSBuild Projects="..\fencemark.Client\fencemark.Client.csproj" 
+             Targets="Publish" 
+             Properties="Configuration=$(Configuration);PublishDir=bin\$(Configuration)\net10.0\publish\" />
+  </Target>
+
 </Project>
