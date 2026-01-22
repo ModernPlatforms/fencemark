@@ -523,6 +523,23 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'ASPNETCORE_DATAPROTECTION_KEYVAULT_KEYIDENTIFIER'
             value: 'https://${keyVault.outputs.name}${environment().suffixes.keyvaultDns}/Keys/dataprotection-key'
           }
+          // CORS configuration - allow requests from Static Web App
+          {
+            name: 'Cors__AllowedOrigins__0'
+            value: 'https://${computedCustomDomain}'
+          }
+          {
+            name: 'Cors__AllowedOrigins__1'
+            value: 'https://${staticSiteCustomDomain}'
+          }
+          {
+            name: 'Cors__AllowedOrigins__2'
+            value: 'https://localhost:5001'
+          }
+          {
+            name: 'Cors__AllowedOrigins__3'
+            value: 'https://localhost:7001'
+          }
         ]
         probes: [
           {
