@@ -29,9 +29,9 @@ services:
     host: containerapp
     language: dotnet
 
-  webfrontend:
-    project: ./fencemark.Web
-    host: containerapp
+  blazor-wasm:
+    project: ./fencemark.Client
+    host: staticwebapp
     language: dotnet
 
 # ============================================================================

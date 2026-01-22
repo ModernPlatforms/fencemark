@@ -12,7 +12,20 @@ public record InviteUserRequest(string Email, string Role);
 public record InviteUserResponse(bool Success, string? Message, string? InvitationToken);
 public record AcceptInvitationRequest(string Token, string Password);
 public record UpdateRoleRequest(string UserId, string Role);
-public record CurrentUserResponse(string? UserId, string? Email, string? OrganizationId);
+public record CurrentUserResponse(
+    string? UserId,
+    string? Email,
+    string? UserName,
+    string? FirstName,
+    string? LastName,
+    string? DisplayName,
+    string? OrganizationId,
+    string? OrganizationName,
+    bool IsEmailVerified,
+    bool IsGuest,
+    DateTime? CreatedAt);
+public record UpdateUserRequest(string? Email, string? FirstName, string? LastName, string? CurrentPassword, string? NewPassword);
+public record UpdateUserResponse(bool Success, string? Message, string? UserId, string? Email, string? FirstName, string? LastName, string? DisplayName);
 
 /// <summary>
 /// Client service for authentication operations
@@ -55,6 +68,20 @@ public class AuthApiClient(IHttpClientFactory httpClientFactory)
             return await response.Content.ReadFromJsonAsync<CurrentUserResponse>(cancellationToken);
         }
         return null;
+    }
+
+    public async Task<UpdateUserResponse?> UpdateCurrentUserAsync(UpdateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var response = await _httpClient.PutAsJsonAsync("/api/auth/me", request, cancellationToken);
+        return await response.Content.ReadFromJsonAsync<UpdateUserResponse>(cancellationToken);
+    }
+
+    public async Task<bool> DeleteAccountAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await _httpClient.DeleteAsync("/api/auth/account", cancellationToken);
+        return response.IsSuccessStatusCode;
     }
 }
 

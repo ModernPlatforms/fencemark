@@ -46,7 +46,9 @@
                 </nav>
                 
                 <div class="flex items-center gap-3 modern-nav-actions">
-                    <span class="text-sm text-muted modern-user-name">@context.User.Identity?.Name</span>
+                    <a href="/account" class="text-sm text-muted modern-user-name" data-testid="user-name" style="text-decoration: none; cursor: pointer;">
+                        @(_userDisplayName ?? context.User.Identity?.Name ?? "User")
+                    </a>
                     <button @onclick="BeginLogout" class="modern-btn modern-btn-ghost modern-btn-sm gap-2">
                         <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Small" />
                         <span>Sign Out</span>
@@ -97,11 +99,12 @@
     private bool _drawerOpen = true;
     private bool _onboardingChecked = false;
     private bool _isAuthConfigured = false;
+    private string? _userDisplayName;
 
     protected override void OnInitialized()
     {
         var azureAdClientId = Configuration["AzureAd:ClientId"];
-        _isAuthConfigured = !string.IsNullOrEmpty(azureAdClientId) && 
+        _isAuthConfigured = !string.IsNullOrEmpty(azureAdClientId) &&
                            azureAdClientId != "00000000-0000-0000-0000-000000000000" &&
                            !azureAdClientId.StartsWith("{");
     }
@@ -142,21 +145,28 @@
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             if (!authState.User.Identity?.IsAuthenticated ?? true)
                 return;
-            
+
             // Get current user info from API
             var response = await ApiClient.GetAsync("/api/auth/me");
             if (!response.IsSuccessStatusCode)
                 return;
-                
+
             var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
-            if (userInfo?.OrganizationName == null)
+            if (userInfo == null)
                 return;
-            
+
+            // Update display name from API response
+            _userDisplayName = userInfo.DisplayName;
+            StateHasChanged();
+
+            if (userInfo.OrganizationName == null)
+                return;
+
             // Check if organization name looks like an email domain or common provider name
             var commonProviders = new[] { "hotmail", "gmail", "yahoo", "outlook", "live", "msn", "icloud" };
-            var isEmailDomain = userInfo.OrganizationName.Contains(".") || 
+            var isEmailDomain = userInfo.OrganizationName.Contains(".") ||
                                commonProviders.Any(p => userInfo.OrganizationName.Equals(p, StringComparison.OrdinalIgnoreCase));
-            
+
             if (isEmailDomain)
             {
                 // TODO: Enable this when OrganizationSetup page is migrated
@@ -165,15 +175,15 @@
                 //     { "CurrentOrganizationName", userInfo.OrganizationName },
                 //     { "OrganizationId", userInfo.OrganizationId }
                 // };
-                // 
-                // var options = new DialogOptions 
-                // { 
+                //
+                // var options = new DialogOptions
+                // {
                 //     CloseOnEscapeKey = false,
                 //     CloseButton = false,
                 //     MaxWidth = MaxWidth.Small,
                 //     FullWidth = true
                 // };
-                // 
+                //
                 // await DialogService.ShowAsync<Pages.OrganizationSetup>("Organization Setup", parameters, options);
                 // StateHasChanged();
             }
@@ -183,11 +193,12 @@
             // Silently fail onboarding check
         }
     }
-    
+
     private class UserInfoResponse
     {
         public string? UserId { get; set; }
         public string? Email { get; set; }
+        public string? DisplayName { get; set; }
         public string? OrganizationId { get; set; }
         public string? OrganizationName { get; set; }
     }

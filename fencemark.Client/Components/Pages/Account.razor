@@ -1,0 +1,355 @@
+@page "/account"
+@using fencemark.Client.Features.Auth
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject AuthApiClient AuthApi
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>My Account</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h2 class="mb-4">My Account</h2>
+
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (currentUser == null)
+            {
+                <div class="alert alert-warning">
+                    Unable to load account information. Please try again.
+                </div>
+            }
+            else
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@profileModel" OnValidSubmit="@HandleProfileUpdateAsync">
+                            <DataAnnotationsValidator />
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="firstName" class="form-label">First Name</label>
+                                    <InputText id="firstName" @bind-Value="profileModel.FirstName" class="form-control" placeholder="Enter first name" />
+                                    <ValidationMessage For="@(() => profileModel.FirstName)" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="lastName" class="form-label">Last Name</label>
+                                    <InputText id="lastName" @bind-Value="profileModel.LastName" class="form-control" placeholder="Enter last name" />
+                                    <ValidationMessage For="@(() => profileModel.LastName)" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <InputText id="email" @bind-Value="profileModel.Email" class="form-control" disabled="@isExternalUser" />
+                                @if (isExternalUser)
+                                {
+                                    <small class="text-muted">Email is managed by your identity provider and cannot be changed here.</small>
+                                }
+                                <ValidationMessage For="@(() => profileModel.Email)" />
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2"></span>
+                                    }
+                                    Save Changes
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Account Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Organization</dt>
+                            <dd class="col-sm-8">@(currentUser.OrganizationName ?? "None")</dd>
+
+                            <dt class="col-sm-4">Email Verified</dt>
+                            <dd class="col-sm-8">
+                                @if (currentUser.IsEmailVerified)
+                                {
+                                    <span class="badge bg-success">Verified</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">Not Verified</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-4">Account Created</dt>
+                            <dd class="col-sm-8">@(currentUser.CreatedAt?.ToLocalTime().ToString("f") ?? "Unknown")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                @if (!isExternalUser)
+                {
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Change Password</h5>
+                        </div>
+                        <div class="card-body">
+                            <EditForm Model="@passwordModel" OnValidSubmit="@HandlePasswordChangeAsync">
+                                <DataAnnotationsValidator />
+
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Current Password</label>
+                                    <InputText id="currentPassword" type="password" @bind-Value="passwordModel.CurrentPassword" class="form-control" />
+                                    <ValidationMessage For="@(() => passwordModel.CurrentPassword)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <InputText id="newPassword" type="password" @bind-Value="passwordModel.NewPassword" class="form-control" />
+                                    <ValidationMessage For="@(() => passwordModel.NewPassword)" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                    <InputText id="confirmPassword" type="password" @bind-Value="passwordModel.ConfirmPassword" class="form-control" />
+                                    <ValidationMessage For="@(() => passwordModel.ConfirmPassword)" />
+                                </div>
+
+                                <div class="d-flex justify-content-end">
+                                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                        @if (isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                        }
+                                        Change Password
+                                    </button>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">Danger Zone</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Deleting your account is permanent and cannot be undone. All your data will be removed.</p>
+                        <button class="btn btn-outline-danger" @onclick="HandleDeleteAccountAsync" disabled="@isSubmitting">
+                            Delete My Account
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private CurrentUserResponse? currentUser;
+    private bool isLoading = true;
+    private bool isSubmitting;
+    private bool isExternalUser;
+    private string? errorMessage;
+    private string? successMessage;
+    private ProfileModel profileModel = new();
+    private PasswordModel passwordModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserAsync();
+    }
+
+    private async Task LoadUserAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            currentUser = await AuthApi.GetCurrentUserAsync();
+            if (currentUser != null)
+            {
+                profileModel = new ProfileModel
+                {
+                    FirstName = currentUser.FirstName ?? "",
+                    LastName = currentUser.LastName ?? "",
+                    Email = currentUser.Email ?? ""
+                };
+
+                // Check if user is using external identity provider (Azure AD)
+                // External users have their email managed by the identity provider
+                isExternalUser = currentUser.IsEmailVerified && !string.IsNullOrEmpty(currentUser.UserName);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load account: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleProfileUpdateAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var request = new UpdateUserRequest(
+                Email: isExternalUser ? null : profileModel.Email,
+                FirstName: profileModel.FirstName,
+                LastName: profileModel.LastName,
+                CurrentPassword: null,
+                NewPassword: null);
+
+            var response = await AuthApi.UpdateCurrentUserAsync(request);
+
+            if (response?.Success == true)
+            {
+                successMessage = "Profile updated successfully";
+                await LoadUserAsync();
+            }
+            else
+            {
+                errorMessage = response?.Message ?? "Failed to update profile";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandlePasswordChangeAsync()
+    {
+        if (passwordModel.NewPassword != passwordModel.ConfirmPassword)
+        {
+            errorMessage = "New password and confirmation do not match";
+            return;
+        }
+
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var request = new UpdateUserRequest(
+                Email: null,
+                FirstName: null,
+                LastName: null,
+                CurrentPassword: passwordModel.CurrentPassword,
+                NewPassword: passwordModel.NewPassword);
+
+            var response = await AuthApi.UpdateCurrentUserAsync(request);
+
+            if (response?.Success == true)
+            {
+                successMessage = "Password changed successfully";
+                passwordModel = new PasswordModel();
+            }
+            else
+            {
+                errorMessage = response?.Message ?? "Failed to change password";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task HandleDeleteAccountAsync()
+    {
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete your account? This action cannot be undone."))
+            return;
+
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var success = await AuthApi.DeleteAccountAsync();
+
+            if (success)
+            {
+                // Redirect to home page after account deletion
+                Navigation.NavigateTo("/", forceLoad: true);
+            }
+            else
+            {
+                errorMessage = "Failed to delete account";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private class ProfileModel
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = "";
+    }
+
+    private class PasswordModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string CurrentPassword { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(8, ErrorMessage = "Password must be at least 8 characters")]
+        public string NewPassword { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
