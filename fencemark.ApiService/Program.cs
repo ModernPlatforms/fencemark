@@ -195,9 +195,14 @@ builder.Services.AddAuthentication(options =>
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {
                 ValidateIssuer = true,
-                ValidIssuers = new[] 
-                { 
+                ValidIssuers = new[]
+                {
+                    // Custom domain format (e.g., https://devfencemark.ciamlogin.com/{tenantId}/v2.0)
                     $"{instance.TrimEnd('/')}/{tenantId}/v2.0",
+                    // Tenant GUID subdomain format - Azure Entra External ID uses this in tokens
+                    // (e.g., https://{tenantId}.ciamlogin.com/{tenantId}/v2.0)
+                    $"https://{tenantId}.ciamlogin.com/{tenantId}/v2.0",
+                    // Standard Azure AD issuers (fallback)
                     $"https://login.microsoftonline.com/{tenantId}/v2.0",
                     $"https://sts.windows.net/{tenantId}/"
                 },
