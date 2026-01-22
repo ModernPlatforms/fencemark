@@ -182,12 +182,12 @@ builder.Services.AddAuthentication(options =>
             // For Entra External ID, use the CIAM authority
             options.Authority = $"{instance.TrimEnd('/')}/{tenantId}/v2.0";
             
-            // Audience is the API's Application ID URI
-            options.Audience = $"api://{audience}";
+            // Don't set options.Audience - use ValidAudiences in TokenValidationParameters instead
+            // This allows the token to have either format: "api://clientId" or just "clientId"
             options.RequireHttpsMetadata = true;
             
             Console.WriteLine($"[ApiService] Using Authority: {options.Authority}");
-            Console.WriteLine($"[ApiService] Using Audience: {options.Audience}");
+            Console.WriteLine($"[ApiService] Accepted Audiences: api://{audience}, {audience}");
             
             // Enable detailed PII logging for debugging
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
@@ -242,7 +242,10 @@ builder.Services.AddAuthentication(options =>
                                ?? context.Principal?.FindFirst("email")?.Value;
 
                     // Get the Azure AD object ID (oid) or subject (sub) claim
-                    var externalId = context.Principal?.FindFirst("oid")?.Value
+                    // Use ClaimTypes constants which handle both short and long claim type URIs
+                    var externalId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                                   ?? context.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+                                   ?? context.Principal?.FindFirst("oid")?.Value
                                    ?? context.Principal?.FindFirst("sub")?.Value;
 
                     // Get user's name from Azure AD claims
