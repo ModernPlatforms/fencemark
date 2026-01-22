@@ -206,7 +206,7 @@
 
                 // Check if user is using external identity provider (Azure AD)
                 // External users have their email managed by the identity provider
-                isExternalUser = currentUser.IsEmailVerified && string.IsNullOrEmpty(currentUser.UserName) == false;
+                isExternalUser = currentUser.IsEmailVerified && !string.IsNullOrEmpty(currentUser.UserName);
             }
         }
         catch (Exception ex)
