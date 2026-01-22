@@ -21,7 +21,7 @@ public class ApplicationUser : IdentityUser
     /// User's display name. If not set, defaults to email.
     /// </summary>
     public string DisplayName => !string.IsNullOrWhiteSpace(FirstName) || !string.IsNullOrWhiteSpace(LastName)
-        ? $"{FirstName} {LastName}".Trim()
+        ? $"{FirstName ?? string.Empty} {LastName ?? string.Empty}".Trim()
         : Email ?? UserName ?? "User";
 
     /// <summary>
