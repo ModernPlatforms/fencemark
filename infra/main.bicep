@@ -552,7 +552,7 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
       minReplicas: apiServiceMinReplicas
       maxReplicas: apiServiceMaxReplicas
     }
-    ingressExternal: false
+    ingressExternal: true
     ingressTargetPort: 8080
     ingressTransport: 'http'
     registries: [

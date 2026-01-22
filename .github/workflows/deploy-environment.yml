@@ -112,6 +112,27 @@ jobs:
           echo "static-web-app-name=${{ steps.deploy-infra.outputs.staticWebAppName }}" >> $GITHUB_OUTPUT
           echo "static-web-app-token=${{ steps.deploy-infra.outputs.staticWebAppDeploymentToken }}" >> $GITHUB_OUTPUT
 
+      - name: Inject API URL into appsettings
+        run: |
+          API_URL="https://${{ steps.get-outputs.outputs.api-url }}"
+          echo "Injecting API URL: $API_URL"
+
+          # Update the dev appsettings with actual API URL
+          if [ -f "publish/blazor-wasm/wwwroot/appsettings.dev.json" ]; then
+            jq --arg url "$API_URL" '.ApiBaseUrl = $url' \
+              publish/blazor-wasm/wwwroot/appsettings.dev.json > tmp.json && \
+              mv tmp.json publish/blazor-wasm/wwwroot/appsettings.dev.json
+          fi
+
+          # Also update staging and prod if they exist
+          for env in staging prod; do
+            if [ -f "publish/blazor-wasm/wwwroot/appsettings.${env}.json" ]; then
+              jq --arg url "$API_URL" '.ApiBaseUrl = $url' \
+                "publish/blazor-wasm/wwwroot/appsettings.${env}.json" > tmp.json && \
+                mv tmp.json "publish/blazor-wasm/wwwroot/appsettings.${env}.json"
+            fi
+          done
+
       - name: Download API Service artifact
         uses: actions/download-artifact@v4
         with:
