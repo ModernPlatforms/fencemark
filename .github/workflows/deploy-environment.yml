@@ -112,27 +112,6 @@ jobs:
           echo "static-web-app-name=${{ steps.deploy-infra.outputs.staticWebAppName }}" >> $GITHUB_OUTPUT
           echo "static-web-app-token=${{ steps.deploy-infra.outputs.staticWebAppDeploymentToken }}" >> $GITHUB_OUTPUT
 
-      - name: Inject API URL into appsettings
-        run: |
-          API_URL="https://${{ steps.get-outputs.outputs.api-url }}"
-          echo "Injecting API URL: $API_URL"
-
-          # Update the dev appsettings with actual API URL
-          if [ -f "publish/blazor-wasm/wwwroot/appsettings.dev.json" ]; then
-            jq --arg url "$API_URL" '.ApiBaseUrl = $url' \
-              publish/blazor-wasm/wwwroot/appsettings.dev.json > tmp.json && \
-              mv tmp.json publish/blazor-wasm/wwwroot/appsettings.dev.json
-          fi
-
-          # Also update staging and prod if they exist
-          for env in staging prod; do
-            if [ -f "publish/blazor-wasm/wwwroot/appsettings.${env}.json" ]; then
-              jq --arg url "$API_URL" '.ApiBaseUrl = $url' \
-                "publish/blazor-wasm/wwwroot/appsettings.${env}.json" > tmp.json && \
-                mv tmp.json "publish/blazor-wasm/wwwroot/appsettings.${env}.json"
-            fi
-          done
-
       - name: Download API Service artifact
         uses: actions/download-artifact@v4
         with:
@@ -168,7 +147,33 @@ jobs:
         with:
           name: blazor-wasm-publish
           path: ./publish/blazor-wasm
-          
+
+      - name: Inject API URL into appsettings
+        run: |
+          set -e  # Exit on any error
+
+          API_URL="https://${{ steps.get-outputs.outputs.api-url }}"
+
+          # Validate API URL is not empty
+          if [ -z "${{ steps.get-outputs.outputs.api-url }}" ] || [ "$API_URL" = "https://" ]; then
+            echo "ERROR: API URL output is empty or invalid"
+            exit 1
+          fi
+
+          echo "Injecting API URL: $API_URL"
+
+          # Update all environment appsettings files
+          for env in dev staging prod; do
+            ENV_FILE="publish/blazor-wasm/wwwroot/appsettings.${env}.json"
+            if [ -f "$ENV_FILE" ]; then
+              echo "✅ Updating $ENV_FILE"
+              jq --arg url "$API_URL" '.ApiBaseUrl = $url' "$ENV_FILE" > tmp.json && \
+                mv tmp.json "$ENV_FILE"
+            else
+              echo "⚠️ Skipping $ENV_FILE (not found)"
+            fi
+          done
+
       - name: Combine Appsettings Files for environment
         uses: Afterlife-Guide/AppSettings.Merge@0.1.3.4
         with:
