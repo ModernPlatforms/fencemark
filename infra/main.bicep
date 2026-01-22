@@ -528,10 +528,13 @@ module apiService 'br/public:avm/res/app/container-app:0.19.0' = {
             name: 'Cors__AllowedOrigins__0'
             value: 'https://${computedCustomDomain}'
           }
-          {
-            name: 'Cors__AllowedOrigins__1'
-            value: !empty(staticSiteCustomDomain) ? 'https://${staticSiteCustomDomain}' : ''
-          }
+          // Only include staticSiteCustomDomain if it's not empty
+          ...(!empty(staticSiteCustomDomain) ? [
+            {
+              name: 'Cors__AllowedOrigins__1'
+              value: 'https://${staticSiteCustomDomain}'
+            }
+          ] : [])
           {
             name: 'Cors__AllowedOrigins__2'
             value: 'https://localhost:5001'
