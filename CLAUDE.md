@@ -103,7 +103,6 @@ WASM client connects to API at `https://localhost:62010` (or Aspire-assigned por
 - `fencemark.AppHost/nginx.conf` - nginx config for local WASM serving
 
 
-# CLAUDE.md  
 **Sub-Agent Routing, Execution & Git Rules**  
 *(Aspire-hosted API + Blazor WebAssembly, C# 10)*
 

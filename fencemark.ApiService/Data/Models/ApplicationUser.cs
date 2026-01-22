@@ -8,6 +8,23 @@ namespace fencemark.ApiService.Data.Models;
 public class ApplicationUser : IdentityUser
 {
     /// <summary>
+    /// User's first name (given name)
+    /// </summary>
+    public string? FirstName { get; set; }
+
+    /// <summary>
+    /// User's last name (family name)
+    /// </summary>
+    public string? LastName { get; set; }
+
+    /// <summary>
+    /// User's display name. If not set, defaults to email.
+    /// </summary>
+    public string DisplayName => !string.IsNullOrWhiteSpace(FirstName) || !string.IsNullOrWhiteSpace(LastName)
+        ? $"{FirstName ?? string.Empty} {LastName ?? string.Empty}".Trim()
+        : Email ?? UserName ?? "User";
+
+    /// <summary>
     /// Indicates if the user's email has been verified
     /// </summary>
     public bool IsEmailVerified { get; set; }
