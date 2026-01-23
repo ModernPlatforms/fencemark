@@ -37,7 +37,7 @@
                         <EditForm Model="@profileModel" OnValidSubmit="@HandleProfileUpdateAsync">
                             <DataAnnotationsValidator />
 
-                            <div class="row mb-3">
+                            <div class="row mb-4">
                                 <div class="col-md-6">
                                     <label for="firstName" class="form-label">First Name</label>
                                     <InputText id="firstName" @bind-Value="profileModel.FirstName" class="form-control" placeholder="Enter first name" />
@@ -55,7 +55,7 @@
                                 <InputText id="email" @bind-Value="profileModel.Email" class="form-control" disabled="@isExternalUser" />
                                 @if (isExternalUser)
                                 {
-                                    <small class="text-muted">Email is managed by your identity provider and cannot be changed here.</small>
+                                    <small class="d-block text-muted mt-2">Email is managed by your identity provider and cannot be changed here.</small>
                                 }
                                 <ValidationMessage For="@(() => profileModel.Email)" />
                             </div>

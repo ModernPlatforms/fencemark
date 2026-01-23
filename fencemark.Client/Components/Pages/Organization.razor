@@ -14,8 +14,8 @@
     <div class="row">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Organization Members</h2>
-                <button class="btn btn-success" @onclick="ShowInviteModal">
+                <h2 class="m-0">Organization Members</h2>
+                <button class="btn btn-success ms-3" @onclick="ShowInviteModal">
                     <i class="bi bi-person-plus"></i> Invite Member
                 </button>
             </div>
@@ -113,12 +113,13 @@
 <!-- Invite Member Modal -->
 @if (showInviteModal)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="false">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Invite Member</h5>
-                    <button type="button" class="btn-close" @onclick="HideInviteModal"></button>
+                    <button type="button" class="btn-close" @onclick="HideInviteModal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="@inviteModel" OnValidSubmit="@HandleInviteAsync">
@@ -138,7 +139,7 @@
                             </InputSelect>
                             <ValidationMessage For="@(() => inviteModel.Role)" />
                         </div>
-                        <div class="d-flex justify-content-end gap-2">
+                        <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
                             <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
                                 @if (isSubmitting)
@@ -158,12 +159,13 @@
 <!-- Change Role Modal -->
 @if (showRoleModal && selectedMember != null)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="false">
+        <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Change Role for @selectedMember.Email</h5>
-                    <button type="button" class="btn-close" @onclick="HideRoleModal"></button>
+                    <button type="button" class="btn-close" @onclick="HideRoleModal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="@roleModel" OnValidSubmit="@HandleRoleChangeAsync">
@@ -176,7 +178,7 @@
                                 <option value="ReadOnly">Read Only</option>
                             </InputSelect>
                         </div>
-                        <div class="d-flex justify-content-end gap-2">
+                        <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" @onclick="HideRoleModal">Cancel</button>
                             <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
                                 @if (isSubmitting)
@@ -222,10 +224,7 @@
             var currentUser = await AuthApi.GetCurrentUserAsync();
             if (currentUser != null)
             {
-                // Extract organizationId from the response
-                var userJson = System.Text.Json.JsonSerializer.Serialize(currentUser);
-                using var doc = System.Text.Json.JsonDocument.Parse(userJson);
-                organizationId = doc.RootElement.GetProperty("organizationId").GetString();
+                organizationId = currentUser.OrganizationId;
 
                 if (!string.IsNullOrEmpty(organizationId))
                 {
