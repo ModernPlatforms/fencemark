@@ -2,6 +2,7 @@
 @using fencemark.Client.Features.Auth
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
+@implements IDisposable
 @inject HttpClient ApiClient
 @inject NavigationManager Navigation
 @inject AuthApiClient AuthApi
@@ -27,12 +28,19 @@
                     }
                     else if (hasOrganization)
                     {
-                        <div class="alert alert-info">
-                            You already have an organization set up!
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <svg class="text-success" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                            <h5 class="mb-3 text-success">Organization Ready!</h5>
+                            <p class="mb-4 text-muted">You already have an organization set up. Ready to get started?</p>
+                            <button class="btn btn-primary btn-lg" @onclick="@(() => Navigation.NavigateTo("/jobs"))">
+                                Go to Jobs
+                            </button>
+                            <p class="mt-3 text-muted small">Redirecting in @redirectCountdown seconds...</p>
                         </div>
-                        <button class="btn btn-primary" @onclick="@(() => Navigation.NavigateTo("/jobs"))">
-                            Go to Jobs
-                        </button>
                     }
                     else
                     {
@@ -82,10 +90,42 @@
     private bool isSubmitting;
     private bool hasOrganization;
     private string? errorMessage;
+    private int redirectCountdown = 5;
+    private System.Threading.Timer? redirectTimer;
 
     protected override async Task OnInitializedAsync()
     {
         await CheckOrganizationStatus();
+
+        if (hasOrganization)
+        {
+            StartRedirectCountdown();
+        }
+    }
+
+    private void StartRedirectCountdown()
+    {
+        redirectTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                if (redirectCountdown > 0)
+                {
+                    redirectCountdown--;
+                    StateHasChanged();
+                }
+                else
+                {
+                    redirectTimer?.Dispose();
+                    Navigation.NavigateTo("/jobs", forceLoad: true);
+                }
+            });
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    public void Dispose()
+    {
+        redirectTimer?.Dispose();
     }
 
     private async Task CheckOrganizationStatus()
