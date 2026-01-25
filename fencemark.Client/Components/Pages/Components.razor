@@ -98,104 +98,122 @@
 
 @if (showModal)
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); z-index: 1050; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
-        <div class="modal-dialog modal-dialog-scrollable" style="max-width: min(800px, calc(100vw - 240px)); margin: 1.75rem auto;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(editingComponent?.Id == null ? "Create" : "Edit") Component</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body" style="max-height: calc(100vh - 200px); overflow-y: auto;">
-                    @if (!string.IsNullOrEmpty(errorMessage))
+    <MudOverlay Visible="@showModal" DarkBackground="true" ZIndex="1300" LockScroll="true">
+        <MudPaper Class="pa-4 ma-4" Style="max-width: 800px; width: 100%; max-height: calc(100vh - 100px); overflow-y: auto;">
+            <MudText Typo="Typo.h6" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Class="mr-2" />
+                @(editingComponent?.Id == null ? "Create" : "Edit") Component
+            </MudText>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+            }
+
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudTextField Label="Name"
+                                  @bind-Value="editingComponent.Name"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Placeholder="e.g., 6x6 Pressure Treated Post" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudTextField Label="SKU"
+                                  @bind-Value="editingComponent.Sku"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Placeholder="e.g., PT-POST-6X6" />
+                </MudItem>
+            </MudGrid>
+
+            <MudTextField Label="Description"
+                          @bind-Value="editingComponent.Description"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="2"
+                          Class="mt-3"
+                          Placeholder="Additional details about this component" />
+
+            <MudGrid Class="mt-3">
+                <MudItem xs="12" md="6">
+                    <MudSelect Label="Category"
+                               @bind-Value="editingComponent.Category"
+                               Required="true"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem Value="@("")">Select category...</MudSelectItem>
+                        <MudSelectItem Value="@("Post")">Post</MudSelectItem>
+                        <MudSelectItem Value="@("Rail")">Rail</MudSelectItem>
+                        <MudSelectItem Value="@("Panel")">Panel</MudSelectItem>
+                        <MudSelectItem Value="@("Picket")">Picket</MudSelectItem>
+                        <MudSelectItem Value="@("Hardware")">Hardware</MudSelectItem>
+                        <MudSelectItem Value="@("Gate Hardware")">Gate Hardware</MudSelectItem>
+                        <MudSelectItem Value="@("Fastener")">Fastener</MudSelectItem>
+                        <MudSelectItem Value="@("Concrete")">Concrete</MudSelectItem>
+                        <MudSelectItem Value="@("Stain/Sealer")">Stain/Sealer</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField Label="Material"
+                                  @bind-Value="editingComponent.Material"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Placeholder="e.g., Pressure Treated Pine" />
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-3">
+                <MudItem xs="12" md="4">
+                    <MudTextField Label="Dimensions"
+                                  @bind-Value="editingComponent.Dimensions"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Placeholder="e.g., 6x6x8" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect Label="Unit of Measure"
+                               @bind-Value="editingComponent.UnitOfMeasure"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense">
+                        <MudSelectItem Value="@("Each")">Each</MudSelectItem>
+                        <MudSelectItem Value="@("Linear Foot")">Linear Foot</MudSelectItem>
+                        <MudSelectItem Value="@("Board Foot")">Board Foot</MudSelectItem>
+                        <MudSelectItem Value="@("Square Foot")">Square Foot</MudSelectItem>
+                        <MudSelectItem Value="@("Gallon")">Gallon</MudSelectItem>
+                        <MudSelectItem Value="@("Bag")">Bag</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudNumericField Label="Unit Price"
+                                     @bind-Value="editingComponent.UnitPrice"
+                                     T="decimal"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Min="0m"
+                                     Step="0.01m"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                </MudItem>
+            </MudGrid>
+
+            <div class="d-flex justify-end gap-2 mt-4">
+                <MudButton Variant="Variant.Text" OnClick="CloseModal">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="SaveComponent"
+                           Disabled="@isSaving">
+                    @if (isSaving)
                     {
-                        <div class="alert alert-danger">@errorMessage</div>
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
-                            <label class="form-label">Name *</label>
-                            <input type="text" class="form-control" @bind="editingComponent.Name" placeholder="e.g., 6x6 Pressure Treated Post" />
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">SKU</label>
-                            <input type="text" class="form-control" @bind="editingComponent.Sku" placeholder="e.g., PT-POST-6X6" />
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" @bind="editingComponent.Description" rows="2" placeholder="Additional details about this component"></textarea>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Category *</label>
-                            <select class="form-select" @bind="editingComponent.Category">
-                                <option value="">Select category...</option>
-                                <option value="Post">Post</option>
-                                <option value="Rail">Rail</option>
-                                <option value="Panel">Panel</option>
-                                <option value="Picket">Picket</option>
-                                <option value="Hardware">Hardware</option>
-                                <option value="Gate Hardware">Gate Hardware</option>
-                                <option value="Fastener">Fastener</option>
-                                <option value="Concrete">Concrete</option>
-                                <option value="Stain/Sealer">Stain/Sealer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Material</label>
-                            <input type="text" class="form-control" @bind="editingComponent.Material" placeholder="e.g., Pressure Treated Pine" />
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Dimensions</label>
-                            <input type="text" class="form-control" @bind="editingComponent.Dimensions" placeholder="e.g., 6x6x8" />
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Unit of Measure *</label>
-                            <select class="form-select" @bind="editingComponent.UnitOfMeasure">
-                                <option value="Each">Each</option>
-                                <option value="Linear Foot">Linear Foot</option>
-                                <option value="Board Foot">Board Foot</option>
-                                <option value="Square Foot">Square Foot</option>
-                                <option value="Gallon">Gallon</option>
-                                <option value="Bag">Bag</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label">Unit Price *</label>
-                            <input type="number" step="0.01" class="form-control" @bind="editingComponent.UnitPrice" />
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveComponent" disabled="@isSaving">
-                        @if (isSaving)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2"></span>
-                        }
-                        Save
-                    </button>
-                </div>
+                    Save
+                </MudButton>
             </div>
-        </div>
-    </div>
+        </MudPaper>
+    </MudOverlay>
 }
-
-<style>
-    .price-cell {
-        font-weight: 600;
-        color: #28a745;
-    }
-
-    .table tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-</style>
 
 @code {
     private List<ComponentDto>? components;
