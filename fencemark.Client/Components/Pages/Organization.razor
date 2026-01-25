@@ -16,9 +16,20 @@
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="m-0">Organization Members</h2>
-                <button class="btn btn-success ms-3" @onclick="ShowInviteModal">
-                    <i class="bi bi-person-plus"></i> Invite Member
-                </button>
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Settings"
+                               Href="/settings/organization">
+                        Settings
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.PersonAdd"
+                               OnClick="ShowInviteModal">
+                        Invite Member
+                    </MudButton>
+                </div>
             </div>
 
             @if (isLoading)
