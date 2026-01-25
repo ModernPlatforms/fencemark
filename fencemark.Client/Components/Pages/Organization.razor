@@ -2,6 +2,7 @@
 @using fencemark.Client.Features.Auth
 @using fencemark.Client.Features.Organization
 @using Microsoft.AspNetCore.Authorization
+@using MudBlazor
 @attribute [Authorize]
 @inject OrganizationApiClient OrgApi
 @inject AuthApiClient AuthApi
@@ -111,89 +112,92 @@
 </div>
 
 <!-- Invite Member Modal -->
-@if (showInviteModal)
-{
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="false">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Invite Member</h5>
-                    <button type="button" class="btn-close" @onclick="HideInviteModal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <EditForm Model="@inviteModel" OnValidSubmit="@HandleInviteAsync">
-                        <DataAnnotationsValidator />
-                        <div class="mb-3">
-                            <label for="inviteEmail" class="form-label">Email</label>
-                            <InputText id="inviteEmail" @bind-Value="inviteModel.Email" class="form-control" />
-                            <ValidationMessage For="@(() => inviteModel.Email)" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="inviteRole" class="form-label">Role</label>
-                            <InputSelect id="inviteRole" @bind-Value="inviteModel.Role" class="form-select">
-                                <option value="Admin">Admin</option>
-                                <option value="Member">Member</option>
-                                <option value="Billing">Billing</option>
-                                <option value="ReadOnly">Read Only</option>
-                            </InputSelect>
-                            <ValidationMessage For="@(() => inviteModel.Role)" />
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="HideInviteModal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                Send Invitation
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
+<MudOverlay Visible="@showInviteModal" DarkBackground="true" ZIndex="1300" LockScroll="true">
+    <MudPaper Class="pa-4 ma-4" Style="max-width: 500px; width: 100%;">
+        <MudText Typo="Typo.h6" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2" />
+            Invite Member
+        </MudText>
+
+        <EditForm Model="@inviteModel" OnValidSubmit="@HandleInviteAsync">
+            <DataAnnotationsValidator />
+
+            <MudTextField Label="Email"
+                          @bind-Value="inviteModel.Email"
+                          Required="true"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          InputType="InputType.Email"
+                          Class="mb-3" />
+            <ValidationMessage For="@(() => inviteModel.Email)" />
+
+            <MudSelect Label="Role"
+                       @bind-Value="inviteModel.Role"
+                       Required="true"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                <MudSelectItem Value="@("Member")">Member</MudSelectItem>
+                <MudSelectItem Value="@("Billing")">Billing</MudSelectItem>
+                <MudSelectItem Value="@("ReadOnly")">Read Only</MudSelectItem>
+            </MudSelect>
+            <ValidationMessage For="@(() => inviteModel.Role)" />
+
+            <div class="d-flex justify-end gap-2 mt-4">
+                <MudButton Variant="Variant.Text" OnClick="HideInviteModal">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           ButtonType="ButtonType.Submit"
+                           Disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Send Invitation
+                </MudButton>
             </div>
-        </div>
-    </div>
-}
+        </EditForm>
+    </MudPaper>
+</MudOverlay>
 
 <!-- Change Role Modal -->
-@if (showRoleModal && selectedMember != null)
-{
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-hidden="false">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Change Role for @selectedMember.Email</h5>
-                    <button type="button" class="btn-close" @onclick="HideRoleModal" aria-label="Close"></button>
+<MudOverlay Visible="@showRoleModal" DarkBackground="true" ZIndex="1300" LockScroll="true">
+    @if (selectedMember != null)
+    {
+        <MudPaper Class="pa-4 ma-4" Style="max-width: 500px; width: 100%;">
+            <MudText Typo="Typo.h6" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="mr-2" />
+                Change Role for @selectedMember.Email
+            </MudText>
+
+            <EditForm Model="@roleModel" OnValidSubmit="@HandleRoleChangeAsync">
+                <MudSelect Label="New Role"
+                           @bind-Value="roleModel.Role"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense">
+                    <MudSelectItem Value="@("Admin")">Admin</MudSelectItem>
+                    <MudSelectItem Value="@("Member")">Member</MudSelectItem>
+                    <MudSelectItem Value="@("Billing")">Billing</MudSelectItem>
+                    <MudSelectItem Value="@("ReadOnly")">Read Only</MudSelectItem>
+                </MudSelect>
+
+                <div class="d-flex justify-end gap-2 mt-4">
+                    <MudButton Variant="Variant.Text" OnClick="HideRoleModal">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               ButtonType="ButtonType.Submit"
+                               Disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Update Role
+                    </MudButton>
                 </div>
-                <div class="modal-body">
-                    <EditForm Model="@roleModel" OnValidSubmit="@HandleRoleChangeAsync">
-                        <div class="mb-3">
-                            <label for="newRole" class="form-label">New Role</label>
-                            <InputSelect id="newRole" @bind-Value="roleModel.Role" class="form-select">
-                                <option value="Admin">Admin</option>
-                                <option value="Member">Member</option>
-                                <option value="Billing">Billing</option>
-                                <option value="ReadOnly">Read Only</option>
-                            </InputSelect>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="HideRoleModal">Cancel</button>
-                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
-                                @if (isSubmitting)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                Update Role
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-        </div>
-    </div>
-}
+            </EditForm>
+        </MudPaper>
+    }
+</MudOverlay>
 
 @code {
     private List<OrganizationMemberResponse>? members;

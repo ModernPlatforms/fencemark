@@ -94,85 +94,82 @@ else
     </MudGrid>
 }
 
-@if (showDialog)
-{
-    <MudDialog>
-        <TitleContent>
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.Fence" Class="mr-2" />
-                @(editingFence?.Id == null ? "Create" : "Edit") Fence Type
-            </MudText>
-        </TitleContent>
-        <DialogContent>
-            <MudForm @ref="form" @bind-IsValid="@formIsValid">
-                <MudTextField Label="Name" 
-                              @bind-Value="editingFence.Name" 
-                              Required="true" 
-                              RequiredError="Name is required"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Placeholder="e.g., 6ft Privacy Fence" />
-                
-                <MudTextField Label="Description" 
-                              @bind-Value="editingFence.Description" 
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Lines="3"
-                              Placeholder="Detailed description of the fence type" />
-                
-                <MudNumericField Label="Height (feet)" 
-                                 @bind-Value="editingFence.HeightInFeet" 
-                                 T="decimal"
-                                 Required="true"
-                                 RequiredError="Height is required"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Min="0m"
-                                 Step="0.1m" />
-                
-                <MudNumericField Label="Price per Linear Foot" 
-                                 @bind-Value="editingFence.PricePerLinearFoot" 
-                                 T="decimal"
-                                 Required="true"
-                                 RequiredError="Price is required"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Min="0m"
-                                 Step="0.01m"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
-                
-                <MudSelect Label="Material" 
-                           @bind-Value="editingFence.Material" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
-                    <MudSelectItem Value="@("")">Select material...</MudSelectItem>
-                    <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
-                    <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
-                    <MudSelectItem Value="@("Chain Link")">Chain Link</MudSelectItem>
-                    <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
-                    <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
-                    <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
-                </MudSelect>
-                
-                <MudSelect Label="Style" 
-                           @bind-Value="editingFence.Style" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
-                    <MudSelectItem Value="@("")">Select style...</MudSelectItem>
-                    <MudSelectItem Value="@("Privacy")">Privacy</MudSelectItem>
-                    <MudSelectItem Value="@("Picket")">Picket</MudSelectItem>
-                    <MudSelectItem Value="@("Split Rail")">Split Rail</MudSelectItem>
-                    <MudSelectItem Value="@("Shadowbox")">Shadowbox</MudSelectItem>
-                    <MudSelectItem Value="@("Lattice Top")">Lattice Top</MudSelectItem>
-                </MudSelect>
-            </MudForm>
-        </DialogContent>
-        <DialogActions>
+<MudOverlay Visible="@showDialog" DarkBackground="true" ZIndex="1300" LockScroll="true">
+    <MudPaper Class="pa-4 ma-4" Style="max-width: 600px; width: 100%;">
+        <MudText Typo="Typo.h6" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Fence" Class="mr-2" />
+            @(editingFence?.Id == null ? "Create" : "Edit") Fence Type
+        </MudText>
+
+        <MudForm @ref="form" @bind-IsValid="@formIsValid">
+            <MudTextField Label="Name"
+                          @bind-Value="editingFence.Name"
+                          Required="true"
+                          RequiredError="Name is required"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Placeholder="e.g., 6ft Privacy Fence" />
+
+            <MudTextField Label="Description"
+                          @bind-Value="editingFence.Description"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3"
+                          Placeholder="Detailed description of the fence type" />
+
+            <MudNumericField Label="Height (feet)"
+                             @bind-Value="editingFence.HeightInFeet"
+                             T="decimal"
+                             Required="true"
+                             RequiredError="Height is required"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Min="0m"
+                             Step="0.1m" />
+
+            <MudNumericField Label="Price per Linear Foot"
+                             @bind-Value="editingFence.PricePerLinearFoot"
+                             T="decimal"
+                             Required="true"
+                             RequiredError="Price is required"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Min="0m"
+                             Step="0.01m"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+
+            <MudSelect Label="Material"
+                       @bind-Value="editingFence.Material"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem Value="@("")">Select material...</MudSelectItem>
+                <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
+                <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
+                <MudSelectItem Value="@("Chain Link")">Chain Link</MudSelectItem>
+                <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
+                <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
+                <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect Label="Style"
+                       @bind-Value="editingFence.Style"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem Value="@("")">Select style...</MudSelectItem>
+                <MudSelectItem Value="@("Privacy")">Privacy</MudSelectItem>
+                <MudSelectItem Value="@("Picket")">Picket</MudSelectItem>
+                <MudSelectItem Value="@("Split Rail")">Split Rail</MudSelectItem>
+                <MudSelectItem Value="@("Shadowbox")">Shadowbox</MudSelectItem>
+                <MudSelectItem Value="@("Lattice Top")">Lattice Top</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+
+        <div class="d-flex justify-end gap-2 mt-4">
             <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary" 
-                       OnClick="SaveFence" 
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveFence"
                        Disabled="@(!formIsValid || isSaving)">
                 @if (isSaving)
                 {
@@ -180,9 +177,9 @@ else
                 }
                 Save
             </MudButton>
-        </DialogActions>
-    </MudDialog>
-}
+        </div>
+    </MudPaper>
+</MudOverlay>
 
 @code {
     private List<FenceTypeDto>? fences;

@@ -98,95 +98,92 @@ else
     </MudGrid>
 }
 
-@if (showDialog)
-{
-    <MudDialog>
-        <TitleContent>
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.DoorFront" Class="mr-2" />
-                @(editingGate?.Id == null ? "Create" : "Edit") Gate Type
-            </MudText>
-        </TitleContent>
-        <DialogContent>
-            <MudForm @ref="form" @bind-IsValid="@formIsValid">
-                <MudTextField Label="Name" 
-                              @bind-Value="editingGate.Name" 
-                              Required="true" 
-                              RequiredError="Name is required"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Placeholder="e.g., 6ft Privacy Gate" />
-                
-                <MudTextField Label="Description" 
-                              @bind-Value="editingGate.Description" 
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Lines="3"
-                              Placeholder="Detailed description of the gate type" />
-                
-                <MudNumericField Label="Width (feet)" 
-                                 @bind-Value="editingGate.WidthInFeet" 
-                                 T="decimal"
-                                 Required="true"
-                                 RequiredError="Width is required"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Min="0m"
-                                 Step="0.1m" />
-                
-                <MudNumericField Label="Height (feet)" 
-                                 @bind-Value="editingGate.HeightInFeet" 
-                                 T="decimal"
-                                 Required="true"
-                                 RequiredError="Height is required"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Min="0m"
-                                 Step="0.1m" />
-                
-                <MudNumericField Label="Base Price" 
-                                 @bind-Value="editingGate.BasePrice" 
-                                 T="decimal"
-                                 Required="true"
-                                 RequiredError="Base price is required"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Min="0m"
-                                 Step="0.01m"
-                                 Adornment="Adornment.Start"
-                                 AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
-                
-                <MudSelect Label="Material" 
-                           @bind-Value="editingGate.Material" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
-                    <MudSelectItem Value="@("")">Select material...</MudSelectItem>
-                    <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
-                    <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
-                    <MudSelectItem Value="@("Metal")">Metal</MudSelectItem>
-                    <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
-                    <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
-                    <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
-                </MudSelect>
-                
-                <MudSelect Label="Style" 
-                           @bind-Value="editingGate.Style" 
-                           Variant="Variant.Outlined"
-                           Margin="Margin.Dense">
-                    <MudSelectItem Value="@("")">Select style...</MudSelectItem>
-                    <MudSelectItem Value="@("Walk-through")">Walk-through</MudSelectItem>
-                    <MudSelectItem Value="@("Drive-through")">Drive-through</MudSelectItem>
-                    <MudSelectItem Value="@("Pedestrian")">Pedestrian</MudSelectItem>
-                    <MudSelectItem Value="@("Double")">Double</MudSelectItem>
-                    <MudSelectItem Value="@("Sliding")">Sliding</MudSelectItem>
-                </MudSelect>
-            </MudForm>
-        </DialogContent>
-        <DialogActions>
+<MudOverlay Visible="@showDialog" DarkBackground="true" ZIndex="1300" LockScroll="true">
+    <MudPaper Class="pa-4 ma-4" Style="max-width: 600px; width: 100%;">
+        <MudText Typo="Typo.h6" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.DoorFront" Class="mr-2" />
+            @(editingGate?.Id == null ? "Create" : "Edit") Gate Type
+        </MudText>
+
+        <MudForm @ref="form" @bind-IsValid="@formIsValid">
+            <MudTextField Label="Name"
+                          @bind-Value="editingGate.Name"
+                          Required="true"
+                          RequiredError="Name is required"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Placeholder="e.g., 6ft Privacy Gate" />
+
+            <MudTextField Label="Description"
+                          @bind-Value="editingGate.Description"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Lines="3"
+                          Placeholder="Detailed description of the gate type" />
+
+            <MudNumericField Label="Width (feet)"
+                             @bind-Value="editingGate.WidthInFeet"
+                             T="decimal"
+                             Required="true"
+                             RequiredError="Width is required"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Min="0m"
+                             Step="0.1m" />
+
+            <MudNumericField Label="Height (feet)"
+                             @bind-Value="editingGate.HeightInFeet"
+                             T="decimal"
+                             Required="true"
+                             RequiredError="Height is required"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Min="0m"
+                             Step="0.1m" />
+
+            <MudNumericField Label="Base Price"
+                             @bind-Value="editingGate.BasePrice"
+                             T="decimal"
+                             Required="true"
+                             RequiredError="Base price is required"
+                             Variant="Variant.Outlined"
+                             Margin="Margin.Dense"
+                             Min="0m"
+                             Step="0.01m"
+                             Adornment="Adornment.Start"
+                             AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+
+            <MudSelect Label="Material"
+                       @bind-Value="editingGate.Material"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem Value="@("")">Select material...</MudSelectItem>
+                <MudSelectItem Value="@("Wood")">Wood</MudSelectItem>
+                <MudSelectItem Value="@("Vinyl")">Vinyl</MudSelectItem>
+                <MudSelectItem Value="@("Metal")">Metal</MudSelectItem>
+                <MudSelectItem Value="@("Aluminum")">Aluminum</MudSelectItem>
+                <MudSelectItem Value="@("Steel")">Steel</MudSelectItem>
+                <MudSelectItem Value="@("Composite")">Composite</MudSelectItem>
+            </MudSelect>
+
+            <MudSelect Label="Style"
+                       @bind-Value="editingGate.Style"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense">
+                <MudSelectItem Value="@("")">Select style...</MudSelectItem>
+                <MudSelectItem Value="@("Walk-through")">Walk-through</MudSelectItem>
+                <MudSelectItem Value="@("Drive-through")">Drive-through</MudSelectItem>
+                <MudSelectItem Value="@("Pedestrian")">Pedestrian</MudSelectItem>
+                <MudSelectItem Value="@("Double")">Double</MudSelectItem>
+                <MudSelectItem Value="@("Sliding")">Sliding</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+
+        <div class="d-flex justify-end gap-2 mt-4">
             <MudButton Variant="Variant.Text" OnClick="CloseDialog">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary" 
-                       OnClick="SaveGate" 
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="SaveGate"
                        Disabled="@(!formIsValid || isSaving)">
                 @if (isSaving)
                 {
@@ -194,9 +191,9 @@ else
                 }
                 Save
             </MudButton>
-        </DialogActions>
-    </MudDialog>
-}
+        </div>
+    </MudPaper>
+</MudOverlay>
 
 @code {
     private List<GateTypeDto>? gates;
