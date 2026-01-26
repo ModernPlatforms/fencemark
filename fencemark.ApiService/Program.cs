@@ -14,6 +14,7 @@ using fencemark.ApiService.Features.Jobs;
 using fencemark.ApiService.Features.Organization;
 using fencemark.ApiService.Features.Parcels;
 using fencemark.ApiService.Features.Pricing;
+using fencemark.ApiService.Features.Quotes;
 using fencemark.ApiService.Features.TaxRegions;
 using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
@@ -496,6 +497,7 @@ app.MapGateEndpoints();
 app.MapComponentEndpoints();
 app.MapJobEndpoints();
 app.MapPricingEndpoints();
+app.MapQuoteEndpoints();
 app.MapTaxRegionEndpoints();
 app.MapDiscountEndpoints();
 app.MapParcelEndpoints();
@@ -520,205 +522,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
-// Quote endpoints
-app.MapPost("/api/quotes/generate", async (GenerateQuoteRequest request, IPricingService pricingService, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    try
-    {
-        var quote = await pricingService.GenerateQuoteAsync(request.JobId, request.PricingConfigId, ct);
-        return Results.Ok(quote);
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.RequireAuthorization()
-.WithName("GenerateQuote")
-.WithTags("Quotes");
-
-app.MapPost("/api/quotes/{id}/recalculate", async (string id, RecalculateQuoteRequest request, IPricingService pricingService, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    // Verify quote belongs to user's organization
-    var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    if (quote == null)
-        return Results.NotFound();
-
-    try
-    {
-        var updatedQuote = await pricingService.RecalculateQuoteAsync(id, request.ChangeSummary, ct);
-        return Results.Ok(updatedQuote);
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.RequireAuthorization()
-.WithName("RecalculateQuote")
-.WithTags("Quotes");
-
-app.MapGet("/api/quotes", async (ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var quotes = await db.Quotes
-        .Include(q => q.Job)
-        .Where(q => q.OrganizationId == currentUser.OrganizationId)
-        .OrderByDescending(q => q.CreatedAt)
-        .ToListAsync(ct);
-    return Results.Ok(quotes);
-})
-.RequireAuthorization()
-.WithName("GetQuotes")
-.WithTags("Quotes");
-
-app.MapGet("/api/quotes/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var quote = await db.Quotes
-        .Include(q => q.Job)
-        .Include(q => q.BillOfMaterials)
-        .Include(q => q.Versions)
-        .Include(q => q.PricingConfig)
-        .FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    
-    return quote != null ? Results.Ok(quote) : Results.NotFound();
-})
-.RequireAuthorization()
-.WithName("GetQuoteById")
-.WithTags("Quotes");
-
-app.MapPut("/api/quotes/{id}", async (string id, UpdateQuoteRequest request, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    if (quote == null)
-        return Results.NotFound();
-
-    quote.Status = request.Status;
-    quote.ValidUntil = request.ValidUntil;
-    quote.Terms = request.Terms;
-    quote.Notes = request.Notes;
-    quote.TaxAmount = request.TaxAmount;
-    quote.GrandTotal = quote.TotalAmount + request.TaxAmount;
-    quote.UpdatedAt = DateTime.UtcNow;
-
-    await db.SaveChangesAsync(ct);
-    return Results.Ok(quote);
-})
-.RequireAuthorization()
-.WithName("UpdateQuote")
-.WithTags("Quotes");
-
-app.MapDelete("/api/quotes/{id}", async (string id, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    if (quote == null)
-        return Results.NotFound();
-
-    db.Quotes.Remove(quote);
-    await db.SaveChangesAsync(ct);
-    return Results.Ok(new { success = true });
-})
-.RequireAuthorization()
-.WithName("DeleteQuote")
-.WithTags("Quotes");
-
-// BOM endpoints
-app.MapGet("/api/jobs/{jobId}/bom", async (string jobId, IPricingService pricingService, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    // Verify job belongs to user's organization
-    var job = await db.Jobs.FirstOrDefaultAsync(j => j.Id == jobId && j.OrganizationId == currentUser.OrganizationId, ct);
-    if (job == null)
-        return Results.NotFound();
-
-    try
-    {
-        var bom = await pricingService.CalculateBillOfMaterialsAsync(jobId, ct);
-        return Results.Ok(bom);
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.RequireAuthorization()
-.WithName("GetJobBillOfMaterials")
-.WithTags("BOM");
-
-// Export endpoints
-app.MapGet("/api/quotes/{id}/export/html", async (string id, IQuoteExportService exportService, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    // Verify quote belongs to user's organization
-    var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    if (quote == null)
-        return Results.NotFound();
-
-    try
-    {
-        var html = await exportService.ExportQuoteAsHtmlAsync(id, ct);
-        return Results.Content(html, "text/html");
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.RequireAuthorization()
-.WithName("ExportQuoteAsHtml")
-.WithTags("Export");
-
-app.MapGet("/api/quotes/{id}/export/csv", async (string id, IQuoteExportService exportService, ApplicationDbContext db, ICurrentUserService currentUser, CancellationToken ct) =>
-{
-    if (!currentUser.IsAuthenticated)
-        return Results.Unauthorized();
-
-    // Verify quote belongs to user's organization
-    var quote = await db.Quotes.FirstOrDefaultAsync(q => q.Id == id && q.OrganizationId == currentUser.OrganizationId, ct);
-    if (quote == null)
-        return Results.NotFound();
-
-    try
-    {
-        var csv = await exportService.ExportBomAsCsvAsync(id, ct);
-        return Results.Text(csv, "text/csv");
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Results.BadRequest(new { error = ex.Message });
-    }
-})
-.RequireAuthorization()
-.WithName("ExportBomAsCsv")
-.WithTags("Export");
-
 app.Run();
-
-// Request/Response DTOs
-record GenerateQuoteRequest(string JobId, string? PricingConfigId = null);
-record RecalculateQuoteRequest(string? ChangeSummary = null);
-record UpdateQuoteRequest(QuoteStatus Status, DateTime? ValidUntil, string? Terms, string? Notes, decimal TaxAmount);
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
