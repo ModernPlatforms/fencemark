@@ -1,6 +1,7 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using System.Text;
 
 namespace fencemark.ApiService.Services;
@@ -48,7 +49,7 @@ public class QuoteExportService : IQuoteExportService
         html.AppendLine("<html>");
         html.AppendLine("<head>");
         html.AppendLine("    <meta charset=\"UTF-8\">");
-        html.AppendLine("    <title>Quote " + data.QuoteNumber + "</title>");
+        html.AppendLine($"    <title>Quote {WebUtility.HtmlEncode(data.QuoteNumber)}</title>");
         html.AppendLine("    <style>");
         html.AppendLine("        body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; }");
         html.AppendLine("        .header { border-bottom: 3px solid #333; padding-bottom: 20px; margin-bottom: 30px; }");
@@ -71,8 +72,8 @@ public class QuoteExportService : IQuoteExportService
 
         // Header
         html.AppendLine("    <div class=\"header\">");
-        html.AppendLine($"        <h1>{data.OrganizationName}</h1>");
-        html.AppendLine($"        <h2>Quote #{data.QuoteNumber}</h2>");
+        html.AppendLine($"        <h1>{WebUtility.HtmlEncode(data.OrganizationName)}</h1>");
+        html.AppendLine($"        <h2>Quote #{WebUtility.HtmlEncode(data.QuoteNumber)}</h2>");
         html.AppendLine("    </div>");
 
         // Quote Info
@@ -81,7 +82,7 @@ public class QuoteExportService : IQuoteExportService
         html.AppendLine("        <div class=\"info-grid\">");
         html.AppendLine($"            <div class=\"info-label\">Quote Date:</div><div>{data.CreatedAt:MMMM dd, yyyy}</div>");
         html.AppendLine($"            <div class=\"info-label\">Valid Until:</div><div>{data.ValidUntil:MMMM dd, yyyy}</div>");
-        html.AppendLine($"            <div class=\"info-label\">Status:</div><div>{data.Status}</div>");
+        html.AppendLine($"            <div class=\"info-label\">Status:</div><div>{WebUtility.HtmlEncode(data.Status)}</div>");
         html.AppendLine($"            <div class=\"info-label\">Version:</div><div>{data.Version}</div>");
         html.AppendLine("        </div>");
         html.AppendLine("    </div>");
@@ -90,13 +91,13 @@ public class QuoteExportService : IQuoteExportService
         html.AppendLine("    <div class=\"info-section\">");
         html.AppendLine("        <h2>Customer Information</h2>");
         html.AppendLine("        <div class=\"info-grid\">");
-        html.AppendLine($"            <div class=\"info-label\">Name:</div><div>{data.CustomerName}</div>");
+        html.AppendLine($"            <div class=\"info-label\">Name:</div><div>{WebUtility.HtmlEncode(data.CustomerName)}</div>");
         if (!string.IsNullOrEmpty(data.CustomerEmail))
-            html.AppendLine($"            <div class=\"info-label\">Email:</div><div>{data.CustomerEmail}</div>");
+            html.AppendLine($"            <div class=\"info-label\">Email:</div><div>{WebUtility.HtmlEncode(data.CustomerEmail)}</div>");
         if (!string.IsNullOrEmpty(data.CustomerPhone))
-            html.AppendLine($"            <div class=\"info-label\">Phone:</div><div>{data.CustomerPhone}</div>");
+            html.AppendLine($"            <div class=\"info-label\">Phone:</div><div>{WebUtility.HtmlEncode(data.CustomerPhone)}</div>");
         if (!string.IsNullOrEmpty(data.InstallationAddress))
-            html.AppendLine($"            <div class=\"info-label\">Address:</div><div>{data.InstallationAddress}</div>");
+            html.AppendLine($"            <div class=\"info-label\">Address:</div><div>{WebUtility.HtmlEncode(data.InstallationAddress)}</div>");
         html.AppendLine("        </div>");
         html.AppendLine("    </div>");
 
@@ -121,13 +122,13 @@ public class QuoteExportService : IQuoteExportService
             if (currentCategory != item.Category)
             {
                 currentCategory = item.Category;
-                html.AppendLine($"                <tr class=\"category-header\"><td colspan=\"5\">{currentCategory}</td></tr>");
+                html.AppendLine($"                <tr class=\"category-header\"><td colspan=\"5\">{WebUtility.HtmlEncode(currentCategory)}</td></tr>");
             }
 
             html.AppendLine("                <tr>");
-            html.AppendLine($"                    <td>{item.Description}</td>");
-            html.AppendLine($"                    <td>{item.Sku ?? "-"}</td>");
-            html.AppendLine($"                    <td style=\"text-align: right;\">{item.Quantity:N2} {item.UnitOfMeasure}</td>");
+            html.AppendLine($"                    <td>{WebUtility.HtmlEncode(item.Description)}</td>");
+            html.AppendLine($"                    <td>{WebUtility.HtmlEncode(item.Sku ?? "-")}</td>");
+            html.AppendLine($"                    <td style=\"text-align: right;\">{item.Quantity:N2} {WebUtility.HtmlEncode(item.UnitOfMeasure)}</td>");
             html.AppendLine($"                    <td style=\"text-align: right;\">${item.UnitPrice:N2}</td>");
             html.AppendLine($"                    <td style=\"text-align: right;\">${item.TotalPrice:N2}</td>");
             html.AppendLine("                </tr>");
@@ -173,12 +174,12 @@ public class QuoteExportService : IQuoteExportService
             if (!string.IsNullOrEmpty(data.Terms))
             {
                 html.AppendLine("        <h2>Terms and Conditions</h2>");
-                html.AppendLine($"        <p>{data.Terms.Replace("\n", "<br>")}</p>");
+                html.AppendLine($"        <p>{WebUtility.HtmlEncode(data.Terms).Replace("\n", "<br>")}</p>");
             }
             if (!string.IsNullOrEmpty(data.Notes))
             {
                 html.AppendLine("        <h2>Notes</h2>");
-                html.AppendLine($"        <p>{data.Notes.Replace("\n", "<br>")}</p>");
+                html.AppendLine($"        <p>{WebUtility.HtmlEncode(data.Notes).Replace("\n", "<br>")}</p>");
             }
             html.AppendLine("    </div>");
         }
