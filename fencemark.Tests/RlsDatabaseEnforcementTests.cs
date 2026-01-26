@@ -197,7 +197,6 @@ public class RlsDatabaseEnforcementTests
         using (var cmd = connection.CreateCommand())
         {
             cmd.CommandText = "EXEC sp_set_session_context @key = N'OrganizationId', @value = @orgId;";
-            cmd.Parameters.Clear();
             cmd.Parameters.AddWithValue("@orgId", org2Id);
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
@@ -296,7 +295,6 @@ public class RlsDatabaseEnforcementTests
         using (var cmd = connection.CreateCommand())
         {
             cmd.CommandText = "EXEC sp_set_session_context @key = N'OrganizationId', @value = @orgId;";
-            cmd.Parameters.Clear();
             cmd.Parameters.AddWithValue("@orgId", org2Id);
             await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
