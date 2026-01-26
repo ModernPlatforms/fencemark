@@ -40,7 +40,8 @@ public static class QuoteEndpoints
             .WithName("ExportBomAsCsv")
             .WithTags("Export");
 
-        // BOM endpoint
+        // BOM endpoint - mapped at top level because it's under /api/jobs/*, not /api/quotes/*
+        // This is closely related to quotes but kept outside the group to match original structure
         app.MapGet("/api/jobs/{jobId}/bom", GetJobBillOfMaterials)
             .RequireAuthorization()
             .WithName("GetJobBillOfMaterials")
