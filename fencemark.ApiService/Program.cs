@@ -27,11 +27,16 @@ using Microsoft.AspNetCore.DataProtection.AzureKeyVault;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// CRITICAL DEBUG: Force log output to verify code is running
-var tempLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
-tempLogger.LogCritical("============================================");
-tempLogger.LogCritical("[ApiService] STARTING API SERVICE - BUILD v{Ticks}", DateTime.Now.Ticks);
-tempLogger.LogCritical("============================================");
+// Check logging level early - only log startup messages if verbose logging is enabled
+var earlyLoggingLevel = builder.Configuration.GetValue<string>("Logging:LoggingLevel") ?? "Verbose";
+if (earlyLoggingLevel.Equals("Verbose", StringComparison.OrdinalIgnoreCase))
+{
+    // CRITICAL DEBUG: Force log output to verify code is running
+    var tempLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
+    tempLogger.LogCritical("============================================");
+    tempLogger.LogCritical("[ApiService] STARTING API SERVICE - BUILD v{Ticks}", DateTime.Now.Ticks);
+    tempLogger.LogCritical("============================================");
+}
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
@@ -57,11 +62,20 @@ if (!connectionString.Contains("Connection Timeout", StringComparison.OrdinalIgn
     connectionString += ";Connection Timeout=5";
 }
 
-Console.WriteLine("============================================");
-Console.WriteLine("[ApiService] STARTING API SERVICE - BUILD v" + DateTime.Now.Ticks);
-Console.WriteLine("============================================");
+// Get logging level from configuration
+var loggingLevel = LoggingHelper.GetLoggingLevel(builder.Configuration);
+var isVerboseLogging = LoggingHelper.IsVerboseLoggingEnabled(loggingLevel);
 
-Console.WriteLine($"[ApiService] Using DefaultConnection: {connectionString}");
+if (isVerboseLogging)
+{
+    Console.WriteLine("============================================");
+    Console.WriteLine("[ApiService] STARTING API SERVICE - BUILD v" + DateTime.Now.Ticks);
+    Console.WriteLine("============================================");
+    Console.WriteLine($"[ApiService] Environment: {builder.Environment.EnvironmentName}");
+    Console.WriteLine($"[ApiService] Logging Level: {loggingLevel}");
+    Console.WriteLine($"[ApiService] Using DefaultConnection: {LoggingHelper.MaskConnectionString(connectionString)}");
+}
+
 
 // Always use SQL Server with TenantConnectionInterceptor (RLS via SESSION_CONTEXT)
 builder.Services.AddScoped<TenantConnectionInterceptor>();

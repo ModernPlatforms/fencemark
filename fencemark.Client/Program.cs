@@ -6,6 +6,10 @@ using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+// Get logging level from configuration
+var loggingLevel = builder.Configuration["LoggingLevel"] ?? "Verbose";
+var isVerboseLogging = loggingLevel.Equals("Verbose", StringComparison.OrdinalIgnoreCase);
+
 // Add root components
 builder.RootComponents.Add<Routes>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -21,8 +25,11 @@ var isValidAzureAdConfig = !string.IsNullOrEmpty(azureAdClientId) &&
                            !azureAdClientId.StartsWith("{") &&
                            !string.IsNullOrEmpty(azureAdAuthority);
 
-
-Console.WriteLine($"[Client] Azure AD Config - ClientId: {azureAdClientId}, Authority: {azureAdAuthority}, Valid: {isValidAzureAdConfig}");
+// Only log configuration info in verbose mode, and NEVER log sensitive values
+if (isVerboseLogging)
+{
+    Console.WriteLine($"[Client] Azure AD Config - Valid: {isValidAzureAdConfig}");
+}
 
 
 
@@ -33,7 +40,11 @@ var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
                 ?? "https://localhost:62010";
 
 
-Console.WriteLine($"[Client] Using API Base URL: {apiBaseUrl}");
+if (isVerboseLogging)
+{
+    Console.WriteLine($"[Client] Using API Base URL: {apiBaseUrl}");
+}
+
 
 
 var apiScope = builder.Configuration["ApiScope"]; // Read from root level, not AzureAd section
@@ -41,7 +52,10 @@ var apiScope = builder.Configuration["ApiScope"]; // Read from root level, not A
 // Register MSAL authentication first so AuthorizationMessageHandler is available
 if (!string.IsNullOrEmpty(apiScope))
 {
-    Console.WriteLine($"[Client] Using API Scope: {apiScope}");
+    if (isVerboseLogging)
+    {
+        Console.WriteLine("[Client] Configuring MSAL authentication");
+    }
     builder.Services.AddMsalAuthentication(options =>
     {
         // Manually configure authentication options instead of using Bind()
@@ -94,13 +108,19 @@ if (!string.IsNullOrEmpty(apiScope))
         // Add required scopes
         options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
         
-        Console.WriteLine($"[Client] MSAL scopes configured: {string.Join(", ", options.ProviderOptions.DefaultAccessTokenScopes)}");
-        Console.WriteLine($"[Client] Known authorities configured: {(options.ProviderOptions.Authentication.KnownAuthorities.Count > 0 ? string.Join(", ", options.ProviderOptions.Authentication.KnownAuthorities) : "none")}");
+        if (isVerboseLogging)
+        {
+            Console.WriteLine($"[Client] MSAL scopes configured: {options.ProviderOptions.DefaultAccessTokenScopes.Count} scope(s)");
+            Console.WriteLine($"[Client] Known authorities configured: {(options.ProviderOptions.Authentication.KnownAuthorities.Count > 0 ? options.ProviderOptions.Authentication.KnownAuthorities.Count + " authority(ies)" : "none")}");
+        }
     });
 }
 else
 {
-    Console.WriteLine("[Client] No API Scope configured; skipping MSAL authentication setup.");
+    if (isVerboseLogging)
+    {
+        Console.WriteLine("[Client] No API Scope configured; skipping MSAL authentication setup.");
+    }
 }
 
 // Register HttpClient for API calls
