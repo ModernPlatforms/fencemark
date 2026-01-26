@@ -165,12 +165,8 @@ public static class OrganizationEndpoints
             return Results.Unauthorized();
         }
 
-        // Check if sample data already exists
-        if (await seedService.HasSampleDataAsync(currentUser.OrganizationId))
-        {
-            return Results.BadRequest(new { success = false, message = "Sample data already exists for this organization" });
-        }
-
+        // Allow seeding even if data exists - users may want to add more sample data
+        // or re-seed after deleting some entities
         await seedService.SeedSampleDataAsync(currentUser.OrganizationId);
         return Results.Ok(new { success = true, message = "Sample data seeded successfully" });
     }
