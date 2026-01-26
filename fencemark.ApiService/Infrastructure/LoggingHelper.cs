@@ -10,23 +10,33 @@ public static partial class LoggingHelper
     /// <summary>
     /// Gets the configured logging level from configuration, defaulting to "Verbose" if not set
     /// </summary>
-    public static string GetLoggingLevel(IConfiguration configuration)
+    public static string GetLoggingLevel(IConfiguration? configuration)
     {
+        if (configuration == null)
+        {
+            return "Verbose";
+        }
+        
         return configuration.GetValue<string>("Logging:LoggingLevel") ?? "Verbose";
     }
 
     /// <summary>
     /// Determines if verbose logging is enabled based on the logging level
     /// </summary>
-    public static bool IsVerboseLoggingEnabled(string loggingLevel)
+    public static bool IsVerboseLoggingEnabled(string? loggingLevel)
     {
+        if (string.IsNullOrEmpty(loggingLevel))
+        {
+            return true; // Default to verbose if not specified
+        }
+        
         return loggingLevel.Equals("Verbose", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
     /// Masks sensitive data in a connection string for safe logging
     /// </summary>
-    public static string MaskConnectionString(string connectionString)
+    public static string MaskConnectionString(string? connectionString)
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {

@@ -95,7 +95,7 @@ public class LoggingHelperTests
         string? connectionString = null;
 
         // Act
-        var masked = LoggingHelper.MaskConnectionString(connectionString!);
+        var masked = LoggingHelper.MaskConnectionString(connectionString);
 
         // Assert
         Assert.Equal("[empty]", masked);
@@ -134,6 +134,16 @@ public class LoggingHelperTests
         Assert.Equal("Verbose", level);
     }
 
+    [Fact]
+    public void GetLoggingLevel_WithNullConfiguration_ReturnsVerbose()
+    {
+        // Act
+        var level = LoggingHelper.GetLoggingLevel(null);
+
+        // Assert
+        Assert.Equal("Verbose", level);
+    }
+
     [Theory]
     [InlineData("Verbose", true)]
     [InlineData("verbose", true)]
@@ -148,6 +158,26 @@ public class LoggingHelperTests
 
         // Assert
         Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void IsVerboseLoggingEnabled_WithNull_ReturnsTrue()
+    {
+        // Act
+        var result = LoggingHelper.IsVerboseLoggingEnabled(null);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void IsVerboseLoggingEnabled_WithEmptyString_ReturnsTrue()
+    {
+        // Act
+        var result = LoggingHelper.IsVerboseLoggingEnabled("");
+
+        // Assert
+        Assert.True(result);
     }
 
     [Fact]
