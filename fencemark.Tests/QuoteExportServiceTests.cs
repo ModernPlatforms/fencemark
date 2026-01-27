@@ -414,4 +414,96 @@ public class QuoteExportServiceTests
         var taxLines = lines.Where(line => line.StartsWith("Tax,"));
         Assert.Empty(taxLines);
     }
+
+    [Fact]
+    public async Task ExportQuoteAsHtmlAsync_EncodesHtmlInUserInput_PreventingXSS()
+    {
+        // Arrange - Create a quote with XSS payloads in various fields
+        await using var context = CreateDbContext();
+        
+        var org = new Organization
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "<script>alert('xss-org')</script>"
+        };
+        context.Organizations.Add(org);
+
+        var job = new Job
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = "XSS Test Job",
+            CustomerName = "<script>alert('xss-customer')</script>",
+            CustomerEmail = "<img src=x onerror=alert('xss-email')>",
+            CustomerPhone = "<b>bold-phone</b>",
+            InstallationAddress = "<script>alert('xss-address')</script>",
+            OrganizationId = org.Id,
+            TotalLinearFeet = 100.0m
+        };
+        context.Jobs.Add(job);
+
+        var quote = new Quote
+        {
+            Id = Guid.NewGuid().ToString(),
+            JobId = job.Id,
+            OrganizationId = org.Id,
+            QuoteNumber = "<script>alert('xss-quote')</script>",
+            CurrentVersion = 1,
+            Status = QuoteStatus.Sent,
+            MaterialsCost = 1000.00m,
+            LaborCost = 500.00m,
+            Subtotal = 1500.00m,
+            ContingencyAmount = 150.00m,
+            ProfitAmount = 330.00m,
+            TotalAmount = 1980.00m,
+            TaxAmount = 99.00m,
+            GrandTotal = 2079.00m,
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Terms = "<script>alert('xss-terms')</script>",
+            Notes = "<img src=x onerror=alert('xss-notes')>"
+        };
+        context.Quotes.Add(quote);
+
+        var bomItem = new BillOfMaterialsItem
+        {
+            Id = Guid.NewGuid().ToString(),
+            QuoteId = quote.Id,
+            Category = "<script>alert('xss-category')</script>",
+            Description = "<img src=x onerror=alert('xss-desc')>",
+            Sku = "<b>xss-sku</b>",
+            Quantity = 10.0m,
+            UnitOfMeasure = "<i>xss-unit</i>",
+            UnitPrice = 100.00m,
+            TotalPrice = 1000.00m,
+            SortOrder = 1
+        };
+        context.BillOfMaterialsItems.Add(bomItem);
+        await context.SaveChangesAsync();
+
+        var service = new QuoteExportService(context);
+
+        // Act
+        var html = await service.ExportQuoteAsHtmlAsync(quote.Id);
+
+        // Assert - Verify that HTML special characters are encoded
+        // Script tags should be encoded
+        Assert.DoesNotContain("<script>", html);
+        Assert.Contains("&lt;script&gt;", html);
+        
+        // Image tags should be encoded
+        Assert.DoesNotContain("<img src=x", html);
+        Assert.Contains("&lt;img src=x", html);
+        
+        // Bold tags should be encoded
+        Assert.DoesNotContain("<b>bold-phone</b>", html);
+        Assert.Contains("&lt;b&gt;bold-phone&lt;/b&gt;", html);
+        
+        // Italic tags should be encoded
+        Assert.DoesNotContain("<i>xss-unit</i>", html);
+        Assert.Contains("&lt;i&gt;xss-unit&lt;/i&gt;", html);
+        
+        // Verify the HTML structure is still valid (only contains expected HTML tags)
+        Assert.Contains("<!DOCTYPE html>", html);
+        Assert.Contains("<html>", html);
+        Assert.Contains("</html>", html);
+    }
 }
