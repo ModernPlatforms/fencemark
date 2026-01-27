@@ -24,7 +24,8 @@ public class SeedDataService : ISeedDataService
 
     public async Task<bool> HasSampleDataAsync(string organizationId)
     {
-        // Check if organization already has sample data
+        // Check if organization already has any data that would be created by seeding
+        // We check Components and FenceTypes as these are the primary entities
         var hasComponents = await _db.Components.AnyAsync(c => c.OrganizationId == organizationId);
         var hasFences = await _db.FenceTypes.AnyAsync(f => f.OrganizationId == organizationId);
         
@@ -33,13 +34,6 @@ public class SeedDataService : ISeedDataService
 
     public async Task SeedSampleDataAsync(string organizationId)
     {
-        // Don't seed if data already exists
-        if (await HasSampleDataAsync(organizationId))
-        {
-            // Data already exists, nothing to do
-            return;
-        }
-
         // Seed Components
         var components = new List<Component>
         {
