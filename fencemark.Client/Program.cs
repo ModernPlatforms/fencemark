@@ -111,7 +111,7 @@ if (!string.IsNullOrEmpty(apiScope))
         if (isVerboseLogging)
         {
             Console.WriteLine($"[Client] MSAL scopes configured: {options.ProviderOptions.DefaultAccessTokenScopes.Count} scope(s)");
-            Console.WriteLine($"[Client] Known authorities configured: {(options.ProviderOptions.Authentication.KnownAuthorities.Count > 0 ? options.ProviderOptions.Authentication.KnownAuthorities.Count + " authority(ies)" : "none")}");
+            Console.WriteLine($"[Client] Known authorities configured: {(options.ProviderOptions.Authentication.KnownAuthorities.Count > 0 ? $"{options.ProviderOptions.Authentication.KnownAuthorities.Count} authority(ies)" : "none")}");
         }
     });
 }
