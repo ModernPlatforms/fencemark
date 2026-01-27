@@ -44,32 +44,33 @@ public static partial class LoggingHelper
         }
 
         // Mask password values in connection string
-        var masked = PasswordRegex().Replace(connectionString, "Password=***;");
-        masked = PwdRegex().Replace(masked, "pwd=***;");
+        var masked = PasswordRegex().Replace(connectionString, "Password=***$1");
+        masked = PwdRegex().Replace(masked, "pwd=***$1");
         
         // Mask User ID values
-        masked = UserIdRegex().Replace(masked, "User Id=***;");
-        masked = UidRegex().Replace(masked, "uid=***;");
+        masked = UserIdRegex().Replace(masked, "User Id=***$1");
+        masked = UidRegex().Replace(masked, "uid=***$1");
         
         // Mask any security tokens or keys
-        masked = SecurityTokenRegex().Replace(masked, "Security Token=***;");
+        masked = SecurityTokenRegex().Replace(masked, "Security Token=***$1");
         
         return masked;
     }
 
     // Regex patterns for matching sensitive connection string parts
-    [GeneratedRegex(@"Password=[^;]*;", RegexOptions.IgnoreCase)]
+    // Capture optional trailing semicolon to preserve connection string format
+    [GeneratedRegex(@"Password=[^;]*(;?)", RegexOptions.IgnoreCase)]
     private static partial Regex PasswordRegex();
 
-    [GeneratedRegex(@"pwd=[^;]*;", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"pwd=[^;]*(;?)", RegexOptions.IgnoreCase)]
     private static partial Regex PwdRegex();
 
-    [GeneratedRegex(@"User Id=[^;]*;", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"User Id=[^;]*(;?)", RegexOptions.IgnoreCase)]
     private static partial Regex UserIdRegex();
 
-    [GeneratedRegex(@"uid=[^;]*;", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"uid=[^;]*(;?)", RegexOptions.IgnoreCase)]
     private static partial Regex UidRegex();
 
-    [GeneratedRegex(@"Security Token=[^;]*;", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"Security Token=[^;]*(;?)", RegexOptions.IgnoreCase)]
     private static partial Regex SecurityTokenRegex();
 }

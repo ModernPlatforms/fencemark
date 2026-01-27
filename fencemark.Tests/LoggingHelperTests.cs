@@ -197,4 +197,53 @@ public class LoggingHelperTests
         Assert.Contains("Server=myserver.database.windows.net", masked);
         Assert.Contains("Database=mydb", masked);
     }
+
+    [Fact]
+    public void MaskConnectionString_WithoutTrailingSemicolon_MasksPassword()
+    {
+        // Arrange - Last parameter has no trailing semicolon
+        var connectionString = "Server=localhost;Database=fencemark;User Id=sa;Password=MyP@ssw0rd";
+
+        // Act
+        var masked = LoggingHelper.MaskConnectionString(connectionString);
+
+        // Assert
+        Assert.DoesNotContain("MyP@ssw0rd", masked);
+        Assert.DoesNotContain("sa", masked);
+        Assert.Contains("Password=***", masked);
+        Assert.Contains("User Id=***", masked);
+    }
+
+    [Fact]
+    public void MaskConnectionString_WithPasswordAtEnd_MasksCorrectly()
+    {
+        // Arrange - Password is the last parameter without semicolon
+        var connectionString = "Server=localhost;Database=fencemark;Password=Secret123!";
+
+        // Act
+        var masked = LoggingHelper.MaskConnectionString(connectionString);
+
+        // Assert
+        Assert.DoesNotContain("Secret123!", masked);
+        Assert.Contains("Password=***", masked);
+        Assert.Contains("Server=localhost", masked);
+        Assert.Contains("Database=fencemark", masked);
+    }
+
+    [Fact]
+    public void MaskConnectionString_MixedCaseParameters_MasksCorrectly()
+    {
+        // Arrange - Test case insensitivity for matching
+        var connectionString = "SERVER=localhost;DATABASE=fencemark;PASSWORD=Test123;USER ID=admin";
+
+        // Act
+        var masked = LoggingHelper.MaskConnectionString(connectionString);
+
+        // Assert
+        Assert.DoesNotContain("Test123", masked);
+        Assert.DoesNotContain("admin", masked);
+        // Note: Replacement normalizes to standard case
+        Assert.Contains("Password=***", masked);
+        Assert.Contains("User Id=***", masked);
+    }
 }
