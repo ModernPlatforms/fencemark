@@ -189,7 +189,7 @@ public static class DiscountEndpoints
             return Results.BadRequest(new { error = $"Minimum order value of ${discount.MinimumOrderValue.Value:F2} required" });
 
         if (discount.MinimumLinearFeet.HasValue && request.LinearFeet.GetValueOrDefault() < discount.MinimumLinearFeet.Value)
-            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear feet required" });
+            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear metres required" });
 
         return Results.Ok(discount);
     }

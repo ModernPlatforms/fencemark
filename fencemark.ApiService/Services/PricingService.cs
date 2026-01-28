@@ -339,7 +339,7 @@ public class PricingService : IPricingService
             {
                 QuoteId = string.Empty,
                 Category = "Labor",
-                Description = $"Installation Labor ({job.TotalLinearFeet:N2} linear feet)",
+                Description = $"Installation Labour ({job.TotalLinearFeet:N2} linear metres)",
                 Quantity = 1,
                 UnitOfMeasure = "Job",
                 UnitPrice = laborCost,
