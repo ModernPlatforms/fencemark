@@ -44,7 +44,7 @@ public class PricingServiceTests
                 Name = "2x4 Rail",
                 OrganizationId = org.Id,
                 Category = "Rails",
-                UnitOfMeasure = "Linear Foot",
+                UnitOfMeasure = "Linear Metre",
                 UnitPrice = 3.50m
             },
             new Component
@@ -75,22 +75,22 @@ public class PricingServiceTests
             OrganizationId = org.Id,
             Name = "Standard Pricing",
             LaborRatePerHour = 50.00m,
-            HoursPerLinearMeter = 0.492m, // Converted from 0.15 hours/foot
+            HoursPerLinearMetre = 0.492m, // Converted from 0.15 hours/foot
             ContingencyPercentage = 0.10m,
             ProfitMarginPercentage = 0.20m,
             IsDefault = true
         };
         context.PricingConfigs.Add(pricingConfig);
 
-        // Create height tiers (in meters)
+        // Create height tiers (in metres)
         var heightTiers = new[]
         {
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.83m, // 6 feet
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.83m, // 6 feet
                 Multiplier = 1.0m,
                 Description = "Standard height"
             },
@@ -98,8 +98,8 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 1.83m, // 6 feet
-                MaxHeightInMeters = 2.44m, // 8 feet
+                MinHeightInMetres = 1.83m, // 6 feet
+                MaxHeightInMetres = 2.44m, // 8 feet
                 Multiplier = 1.25m,
                 Description = "Tall fence surcharge"
             }
@@ -110,12 +110,12 @@ public class PricingServiceTests
         var fenceType = new FenceType
         {
             Id = Guid.NewGuid().ToString(),
-            Name = "6ft Privacy Fence",
+            Name = "1800mm Privacy Fence",
             OrganizationId = org.Id,
-            HeightInFeet = 6.0m,
+            HeightInMm = 1800m,
             Material = "Wood",
             Style = "Privacy",
-            PricePerLinearFoot = 25.00m
+            PricePerLinearMetre = 25.00m
         };
         context.FenceTypes.Add(fenceType);
 
@@ -127,21 +127,21 @@ public class PricingServiceTests
                 Id = Guid.NewGuid().ToString(),
                 FenceTypeId = fenceType.Id,
                 ComponentId = components[0].Id,
-                QuantityPerLinearFoot = 0.125m // 1 post per 8 feet
+                QuantityPerLinearMetre = 0.125m // 1 post per 8 metres
             },
             new FenceComponent
             {
                 Id = Guid.NewGuid().ToString(),
                 FenceTypeId = fenceType.Id,
                 ComponentId = components[1].Id,
-                QuantityPerLinearFoot = 3.0m // 3 rails per foot
+                QuantityPerLinearMetre = 3.0m // 3 rails per metre
             },
             new FenceComponent
             {
                 Id = Guid.NewGuid().ToString(),
                 FenceTypeId = fenceType.Id,
                 ComponentId = components[2].Id,
-                QuantityPerLinearFoot = 0.125m // 1 panel per 8 feet
+                QuantityPerLinearMetre = 0.125m // 1 panel per 8 metres
             }
         };
         context.FenceComponents.AddRange(fenceComponents);
@@ -152,8 +152,8 @@ public class PricingServiceTests
             Id = Guid.NewGuid().ToString(),
             Name = "Single Walk Gate",
             OrganizationId = org.Id,
-            WidthInFeet = 4.0m,
-            HeightInFeet = 6.0m,
+            WidthInMm = 1200m,
+            HeightInMm = 1800m,
             Material = "Wood",
             Style = "Walk-through",
             BasePrice = 350.00m
@@ -191,7 +191,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "John Doe",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -203,7 +203,7 @@ public class PricingServiceTests
                 JobId = job.Id,
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
-                Description = "100ft 6ft Privacy Fence",
+                Description = "100m 1800mm Privacy Fence",
                 Quantity = 100.0m,
                 UnitPrice = 25.00m,
                 TotalPrice = 2500.00m
@@ -255,7 +255,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "Jane Smith",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -265,7 +265,7 @@ public class PricingServiceTests
             JobId = job.Id,
             ItemType = LineItemType.Fence,
             FenceTypeId = fenceType.Id,
-            Description = "100ft fence",
+            Description = "100m fence",
             Quantity = 100.0m,
             UnitPrice = 25.00m,
             TotalPrice = 2500.00m
@@ -279,8 +279,8 @@ public class PricingServiceTests
         var quote = await service.GenerateQuoteAsync(job.Id);
 
         // Assert
-        // Expected: 100 ft * 0.3048 m/ft * 0.492 hours/m * $50/hour = ~$749.81
-        Assert.Equal(749.8080m, quote.LaborCost);
+        // Expected: 100 m * 0.492 hours/m * $50/hour = ~$2460.00
+        Assert.Equal(2460.0000m, quote.LaborCost);
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -306,7 +306,7 @@ public class PricingServiceTests
             JobId = job.Id,
             ItemType = LineItemType.Fence,
             FenceTypeId = fenceType.Id,
-            Description = "100ft fence",
+            Description = "100m fence",
             Quantity = 100.0m,
             UnitPrice = 25.00m,
             TotalPrice = 2500.00m
@@ -346,7 +346,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 80.0m
+            TotalLinearMetres = 80.0m
         };
         context.Jobs.Add(job);
 
@@ -358,7 +358,7 @@ public class PricingServiceTests
                 JobId = job.Id,
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
-                Description = "80ft fence",
+                Description = "80m fence",
                 Quantity = 80.0m,
                 UnitPrice = 25.00m,
                 TotalPrice = 2000.00m
@@ -385,27 +385,27 @@ public class PricingServiceTests
 
         // Assert
         Assert.NotEmpty(bom);
-        
-        // Check for posts (80 ft * 0.125 = 10 posts)
+
+        // Check for posts (80 m * 0.125 = 10 posts)
         var posts = bom.FirstOrDefault(b => b.Description == "6x6 Post");
         Assert.NotNull(posts);
         Assert.Equal(10.0m, posts.Quantity);
-        
-        // Check for rails (80 ft * 3 = 240 linear feet)
+
+        // Check for rails (80 m * 3 = 240 linear metres)
         var rails = bom.FirstOrDefault(b => b.Description == "2x4 Rail");
         Assert.NotNull(rails);
         Assert.Equal(240.0m, rails.Quantity);
-        
-        // Check for panels (80 ft * 0.125 = 10 panels)
+
+        // Check for panels (80 m * 0.125 = 10 panels)
         var panels = bom.FirstOrDefault(b => b.Description == "Fence Panel");
         Assert.NotNull(panels);
         Assert.Equal(10.0m, panels.Quantity);
-        
+
         // Check for gate hinges (2 gates * 2 hinges = 4 hinges)
         var hinges = bom.FirstOrDefault(b => b.Description == "Gate Hinge");
         Assert.NotNull(hinges);
         Assert.Equal(4.0m, hinges.Quantity);
-        
+
         // Check for labor
         var labor = bom.FirstOrDefault(b => b.Category == "Labor");
         Assert.NotNull(labor);
@@ -424,34 +424,34 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.83m, // 6 feet
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.83m, // 6 feet
                 Multiplier = 1.0m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 1.83m, // 6 feet
-                MaxHeightInMeters = 2.44m, // 8 feet
+                MinHeightInMetres = 1.83m, // 6 feet
+                MaxHeightInMetres = 2.44m, // 8 feet
                 Multiplier = 1.25m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 2.44m, // 8 feet
-                MaxHeightInMeters = null,
+                MinHeightInMetres = 2.44m, // 8 feet
+                MaxHeightInMetres = null,
                 Multiplier = 1.50m
             }
         };
 
-        // Act & Assert (test with heights in feet, which get converted to meters internally)
-        Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 4.0m));
-        Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 6.0m));
-        Assert.Equal(1.25m, service.GetHeightMultiplier(tiers, 7.0m));
-        Assert.Equal(1.50m, service.GetHeightMultiplier(tiers, 9.0m));
-        Assert.Equal(1.50m, service.GetHeightMultiplier(tiers, 12.0m));
+        // Act & Assert (test with heights in metres)
+        Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 1200m)); // 1200mm
+        Assert.Equal(1.0m, service.GetHeightMultiplier(tiers, 1800m)); // 1800mm
+        Assert.Equal(1.25m, service.GetHeightMultiplier(tiers, 2100m)); // 2100mm
+        Assert.Equal(1.50m, service.GetHeightMultiplier(tiers, 2700m)); // 2700mm
+        Assert.Equal(1.50m, service.GetHeightMultiplier(tiers, 3600m)); // 3600mm
     }
 
     [Fact]
@@ -467,7 +467,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -477,7 +477,7 @@ public class PricingServiceTests
             JobId = job.Id,
             ItemType = LineItemType.Fence,
             FenceTypeId = fenceType.Id,
-            Description = "100ft fence",
+            Description = "100m fence",
             Quantity = 100.0m,
             UnitPrice = 25.00m,
             TotalPrice = 2500.00m
@@ -490,8 +490,8 @@ public class PricingServiceTests
         var originalTotal = quote.TotalAmount;
         var originalVersion = quote.CurrentVersion;
 
-        // Update job to have more linear feet
-        job.TotalLinearFeet = 150.0m;
+        // Update job to have more linear metres
+        job.TotalLinearMetres = 150.0m;
         lineItem.Quantity = 150.0m;
         lineItem.TotalPrice = 3750.00m;
         await context.SaveChangesAsync();
@@ -537,7 +537,7 @@ public class PricingServiceTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
         await context.SaveChangesAsync();
@@ -564,7 +564,7 @@ public class PricingServiceTests
                 Name = "Job 1",
                 CustomerName = "Customer 1",
                 OrganizationId = org.Id,
-                TotalLinearFeet = 100.0m
+                TotalLinearMetres = 100.0m
             },
             new Job
             {
@@ -572,7 +572,7 @@ public class PricingServiceTests
                 Name = "Job 2",
                 CustomerName = "Customer 2",
                 OrganizationId = org.Id,
-                TotalLinearFeet = 100.0m
+                TotalLinearMetres = 100.0m
             }
         };
         context.Jobs.AddRange(jobs);
@@ -585,7 +585,7 @@ public class PricingServiceTests
                 JobId = job.Id,
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
-                Description = "100ft fence",
+                Description = "100m fence",
                 Quantity = 100.0m,
                 UnitPrice = 25.00m,
                 TotalPrice = 2500.00m

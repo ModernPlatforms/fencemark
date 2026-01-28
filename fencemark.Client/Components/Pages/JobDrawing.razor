@@ -70,7 +70,7 @@
                                     <div>
                                         <strong>@(segment.Name ?? "Segment")</strong>
                                         <div class="small text-muted">
-                                            @segment.LengthInFeet.ToString("F1") ft
+                                            @segment.LengthInMetres.ToString("F1") m
                                             @if (segment.IsSnappedToBoundary)
                                             {
                                                 <span class="badge bg-info ms-1">Snapped</span>

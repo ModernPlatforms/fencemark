@@ -12,7 +12,7 @@ The quoting engine provides comprehensive pricing calculation, bill of materials
 
 Organizations can define custom pricing configurations with:
 
-- **Labor Rates**: Hourly rate and hours per linear meter
+- **Labor Rates**: Hourly rate and hours per linear metre
 - **Contingency**: Percentage buffer for unexpected costs
 - **Profit Margin**: Target profit percentage
 - **Height Tiers**: Price multipliers based on fence height (e.g., taller fences cost more)
@@ -37,7 +37,7 @@ The system automatically generates quotes from jobs by:
    - Aggregates components by category (Posts, Rails, Panels, Gates, etc.)
 
 2. **Calculating Labor**:
-   - Uses the formula: `Total Hours = Linear Feet × Hours per Linear Foot`
+   - Uses the formula: `Total Hours = Linear Metres × Hours per Linear Metre`
    - Applies hourly labor rate
    - Example: 30.48 m × 0.492 hours/m × $50/hour = ~$750
 
@@ -61,7 +61,7 @@ Each quote includes a detailed BOM that lists:
 - **Category**: Posts, Rails, Panels, Hardware, Gates, Labor, etc.
 
 Components are automatically calculated based on:
-- **Fence Components**: Quantity per linear meter (e.g., 1 post per 2.44 meters)
+- **Fence Components**: Quantity per linear metre (e.g., 1 post per 2.44 metres)
 - **Gate Components**: Quantity per gate (e.g., 2 hinges per gate)
 
 ### 4. Quote Versioning
@@ -143,7 +143,7 @@ POST /api/pricing-configs
   "name": "Standard Pricing 2024",
   "description": "Default pricing for residential projects",
   "laborRatePerHour": 50.00,
-  "hoursPerLinearMeter": 0.492,
+  "hoursPerLinearMetre": 0.492,
   "contingencyPercentage": 0.10,
   "profitMarginPercentage": 0.20,
   "isDefault": true
@@ -200,7 +200,7 @@ Returns a complete HTML document that can be:
   "organizationId": "string",
   "name": "string",
   "laborRatePerHour": "decimal",
-  "hoursPerLinearMeter": "decimal",
+  "hoursPerLinearMetre": "decimal",
   "contingencyPercentage": "decimal",
   "profitMarginPercentage": "decimal",
   "isDefault": "boolean",
@@ -286,7 +286,7 @@ dotnet test --filter-class "*QuoteExportServiceTests"
 - 1 single walk gate
 
 **Pricing Config:**
-- Labor: $50/hour, 0.492 hours per linear meter
+- Labor: $50/hour, 0.492 hours per linear metre
 - Contingency: 10%
 - Profit: 20%
 

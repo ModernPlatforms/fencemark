@@ -26,9 +26,9 @@ public class FenceType : IOrganizationScoped
     public required string OrganizationId { get; set; }
 
     /// <summary>
-    /// Height of the fence in feet
+    /// Height of the fence in millimetres
     /// </summary>
-    public decimal HeightInFeet { get; set; }
+    public decimal HeightInMm { get; set; }
 
     /// <summary>
     /// Material of the fence (e.g., "Wood", "Vinyl", "Chain Link", "Aluminum")
@@ -41,9 +41,9 @@ public class FenceType : IOrganizationScoped
     public string? Style { get; set; }
 
     /// <summary>
-    /// Base price per linear foot (labor not included)
+    /// Base price per linear metre (labor not included)
     /// </summary>
-    public decimal PricePerLinearFoot { get; set; }
+    public decimal PricePerLinearMetre { get; set; }
 
     /// <summary>
     /// When the fence type was created

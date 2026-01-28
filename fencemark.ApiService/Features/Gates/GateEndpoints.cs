@@ -99,8 +99,8 @@ public static class GateEndpoints
 
         gate.Name = request.Name;
         gate.Description = request.Description;
-        gate.WidthInFeet = request.WidthInFeet;
-        gate.HeightInFeet = request.HeightInFeet;
+        gate.WidthInMm = request.WidthInMm;
+        gate.HeightInMm = request.HeightInMm;
         gate.Material = request.Material;
         gate.Style = request.Style;
         gate.BasePrice = request.BasePrice;

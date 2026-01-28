@@ -142,8 +142,7 @@ public static class FenceSegmentEndpoints
             Name = request.Name,
             FenceTypeId = request.FenceTypeId,
             GeoJsonGeometry = request.GeoJsonGeometry,
-            LengthInFeet = request.LengthInFeet,
-            LengthInMeters = request.LengthInMeters,
+            LengthInMetres = request.LengthInMetres,
             IsSnappedToBoundary = request.IsSnappedToBoundary,
             Notes = request.Notes,
             IsVerifiedOnsite = false,
@@ -175,12 +174,11 @@ public static class FenceSegmentEndpoints
         segment.Name = request.Name;
         segment.FenceTypeId = request.FenceTypeId;
         segment.GeoJsonGeometry = request.GeoJsonGeometry;
-        segment.LengthInFeet = request.LengthInFeet;
-        segment.LengthInMeters = request.LengthInMeters;
+        segment.LengthInMetres = request.LengthInMetres;
         segment.IsSnappedToBoundary = request.IsSnappedToBoundary;
         segment.Notes = request.Notes;
         segment.IsVerifiedOnsite = request.IsVerifiedOnsite;
-        segment.OnsiteVerifiedLengthInFeet = request.OnsiteVerifiedLengthInFeet;
+        segment.OnsiteVerifiedLengthInMetres = request.OnsiteVerifiedLengthInMetres;
         segment.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);
@@ -213,11 +211,10 @@ public static class FenceSegmentEndpoints
         string? Name,
         string? FenceTypeId,
         string GeoJsonGeometry,
-        decimal LengthInFeet,
-        decimal LengthInMeters,
+        decimal LengthInMetres,
         bool IsSnappedToBoundary,
         string? Notes,
         bool IsVerifiedOnsite = false,
-        decimal? OnsiteVerifiedLengthInFeet = null
+        decimal? OnsiteVerifiedLengthInMetres = null
     );
 }

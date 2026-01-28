@@ -34,7 +34,7 @@ public class QuoteExportServiceTests
             CustomerPhone = "(555) 123-4567",
             InstallationAddress = "123 Main St, Anytown, USA",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -83,7 +83,7 @@ public class QuoteExportServiceTests
                 Description = "2x4 Cedar Rail",
                 Sku = "RAIL-2X4-CDR",
                 Quantity = 300.0m,
-                UnitOfMeasure = "Linear Foot",
+                UnitOfMeasure = "Linear Metre",
                 UnitPrice = 2.50m,
                 TotalPrice = 750.00m,
                 SortOrder = 2
@@ -106,7 +106,7 @@ public class QuoteExportServiceTests
                 Id = Guid.NewGuid().ToString(),
                 QuoteId = quote.Id,
                 Category = "Labor",
-                Description = "Installation Labor (100.00 linear feet)",
+                Description = "Installation Labor (100.00 linear metres)",
                 Quantity = 1.0m,
                 UnitOfMeasure = "Job",
                 UnitPrice = 750.00m,
@@ -218,9 +218,9 @@ public class QuoteExportServiceTests
         Assert.NotNull(csv);
         Assert.Contains("Category,Description,SKU,Quantity,Unit of Measure,Unit Price,Total Price", csv);
         Assert.Contains("Posts,6x6 Pressure Treated Post,POST-6X6-PT,13.00,Each,45.00,585.00", csv);
-        Assert.Contains("Rails,2x4 Cedar Rail,RAIL-2X4-CDR,300.00,Linear Foot,2.50,750.00", csv);
+        Assert.Contains("Rails,2x4 Cedar Rail,RAIL-2X4-CDR,300.00,Linear Metre,2.50,750.00", csv);
         Assert.Contains("Panels,Privacy Panel 6ft,PANEL-6FT-PRV,13.00,Each,12.69,165.00", csv);
-        Assert.Contains("Labor,Installation Labor (100.00 linear feet),,1.00,Job,750.00,750.00", csv);
+        Assert.Contains("Labor,Installation Labor (100.00 linear metres),,1.00,Job,750.00,750.00", csv);
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class QuoteExportServiceTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 
@@ -437,7 +437,7 @@ public class QuoteExportServiceTests
             CustomerPhone = "<b>bold-phone</b>",
             InstallationAddress = "<script>alert('xss-address')</script>",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m
+            TotalLinearMetres = 100.0m
         };
         context.Jobs.Add(job);
 

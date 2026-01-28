@@ -128,7 +128,7 @@ public static class PricingEndpoints
         config.Name = request.Name;
         config.Description = request.Description;
         config.LaborRatePerHour = request.LaborRatePerHour;
-        config.HoursPerLinearMeter = request.HoursPerLinearMeter;
+        config.HoursPerLinearMetre = request.HoursPerLinearMetre;
         config.ContingencyPercentage = request.ContingencyPercentage;
         config.ProfitMarginPercentage = request.ProfitMarginPercentage;
         config.IsDefault = request.IsDefault;

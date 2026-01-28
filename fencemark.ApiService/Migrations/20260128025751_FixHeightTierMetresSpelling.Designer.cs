@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using fencemark.ApiService.Data;
 
@@ -11,9 +12,11 @@ using fencemark.ApiService.Data;
 namespace fencemark.ApiService.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128025751_FixHeightTierMetresSpelling")]
+    partial class FixHeightTierMetresSpelling
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1027,7 +1030,7 @@ namespace fencemark.ApiService.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal>("HoursPerLinearMetre")
+                    b.Property<decimal>("HoursPerLinearMeter")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 

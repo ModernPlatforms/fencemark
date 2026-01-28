@@ -36,7 +36,7 @@ public class Component : IOrganizationScoped
     public required string Category { get; set; }
 
     /// <summary>
-    /// Unit of measure (e.g., "Each", "Linear Foot", "Board Foot")
+    /// Unit of measure (e.g., "Each", "Linear Metre", "Board Metre")
     /// </summary>
     public string UnitOfMeasure { get; set; } = "Each";
 

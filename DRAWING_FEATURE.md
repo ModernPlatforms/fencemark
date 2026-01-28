@@ -11,14 +11,14 @@ The Drawing Feature enables users to visually plan fence installations using Azu
 - **Draw Fence Segments**: Click to add points and draw fence lines on the map
 - **Place Gates**: Click on fence segments to add gate positions
 - **Snapping**: Fence lines automatically snap to lot boundaries when close
-- **Measurements**: Real-time calculation of fence segment lengths in both feet and meters
+- **Measurements**: Real-time calculation of fence segment lengths in metres
 
 ### 2. Data Models
 
 #### FenceSegment
 Represents a drawn fence line on the map:
 - GeoJSON geometry (LineString format)
-- Calculated length in feet and meters
+- Calculated length in metres
 - Fence type selection
 - Snapping to boundary indicator
 - Onsite verification support
@@ -134,12 +134,11 @@ To enable lot boundary overlays:
 - `Name` (string, nullable)
 - `FenceTypeId` (string, FK, nullable)
 - `GeoJsonGeometry` (string, required) - LineString
-- `LengthInFeet` (decimal)
-- `LengthInMeters` (decimal)
+- `LengthInMetres` (decimal)
 - `IsSnappedToBoundary` (bool)
 - `Notes` (string, nullable)
 - `IsVerifiedOnsite` (bool)
-- `OnsiteVerifiedLengthInFeet` (decimal, nullable)
+- `OnsiteVerifiedLengthInMetres` (decimal, nullable)
 - `CreatedAt` (datetime)
 - `UpdatedAt` (datetime)
 
@@ -227,7 +226,7 @@ Gate positions use Point geometry:
 
 ### Distance Calculations
 - Uses Haversine formula for accurate distance on Earth's surface
-- Converts between meters and feet (1 meter = 3.28084 feet)
+- Measures distances in metres
 - Accounts for Earth's curvature for large properties
 
 ### Security

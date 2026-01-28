@@ -188,10 +188,10 @@ public class SeedDataService : ISeedDataService
                 OrganizationId = organizationId,
                 Name = "1800mm Pine Privacy Fence",
                 Description = "Standard 1800mm treated pine privacy fence",
-                HeightInFeet = 5.91m, // 1800mm in feet
+                HeightInMm = 1800,
                 Material = "Treated Pine",
                 Style = "Privacy",
-                PricePerLinearFoot = 115.00m, // per metre
+                PricePerLinearMetre = 377.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -201,10 +201,10 @@ public class SeedDataService : ISeedDataService
                 OrganizationId = organizationId,
                 Name = "1800mm Colorbond Privacy Fence",
                 Description = "Standard 1800mm Colorbond steel privacy fence",
-                HeightInFeet = 5.91m, // 1800mm in feet
+                HeightInMm = 1800,
                 Material = "Colorbond Steel",
                 Style = "Privacy",
-                PricePerLinearFoot = 135.00m, // per metre
+                PricePerLinearMetre = 443.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -214,10 +214,10 @@ public class SeedDataService : ISeedDataService
                 OrganizationId = organizationId,
                 Name = "1200mm Picket Fence",
                 Description = "Classic 1200mm timber picket fence",
-                HeightInFeet = 3.94m, // 1200mm in feet
+                HeightInMm = 1200,
                 Material = "Timber",
                 Style = "Picket",
-                PricePerLinearFoot = 95.00m, // per metre
+                PricePerLinearMetre = 312.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             },
@@ -227,10 +227,10 @@ public class SeedDataService : ISeedDataService
                 OrganizationId = organizationId,
                 Name = "2100mm Pine Privacy Fence",
                 Description = "Extra tall 2100mm treated pine privacy fence",
-                HeightInFeet = 6.89m, // 2100mm in feet
+                HeightInMm = 2100,
                 Material = "Treated Pine",
                 Style = "Privacy",
-                PricePerLinearFoot = 145.00m, // per metre
+                PricePerLinearMetre = 476.00m,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
@@ -247,8 +247,8 @@ public class SeedDataService : ISeedDataService
                 OrganizationId = organizationId,
                 Name = "Single Walk Gate",
                 Description = "Standard 900mm walk gate",
-                WidthInFeet = 2.95m, // 900mm in feet
-                HeightInFeet = 5.91m, // 1800mm in feet
+                WidthInMm = 900,
+                HeightInMm = 1800,
                 Material = "Treated Pine",
                 BasePrice = 385.00m,
                 CreatedAt = DateTime.UtcNow,
@@ -259,9 +259,9 @@ public class SeedDataService : ISeedDataService
                 Id = Guid.NewGuid().ToString(),
                 OrganizationId = organizationId,
                 Name = "Double Driveway Gate",
-                Description = "3000mm double driveway gate",
-                WidthInFeet = 9.84m, // 3000mm in feet
-                HeightInFeet = 5.91m, // 1800mm in feet
+                Description = "1200mm double driveway gate",
+                WidthInMm = 1200,
+                HeightInMm = 1800,
                 Material = "Treated Pine",
                 BasePrice = 1250.00m,
                 CreatedAt = DateTime.UtcNow,
@@ -279,7 +279,7 @@ public class SeedDataService : ISeedDataService
             Name = "Standard Pricing 2024",
             Description = "Default pricing for residential projects",
             LaborRatePerHour = 85.00m,
-            HoursPerLinearMeter = 0.5m, // ~0.5 hours per linear metre
+            HoursPerLinearMetre = 0.5m, // ~0.5 hours per linear metre
             ContingencyPercentage = 0.10m, // 10%
             ProfitMarginPercentage = 0.20m, // 20%
             IsDefault = true,
@@ -296,8 +296,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.8m, // 1800mm
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.8m, // 1800mm
                 Multiplier = 1.0m,
                 Description = "Standard height (up to 1800mm)"
             },
@@ -305,8 +305,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 1.8m,
-                MaxHeightInMeters = 2.1m, // 2100mm
+                MinHeightInMetres = 1.8m,
+                MaxHeightInMetres = 2.1m, // 2100mm
                 Multiplier = 1.25m,
                 Description = "Tall fence surcharge (1800mm-2100mm, 25% increase)"
             },
@@ -314,8 +314,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 2.1m,
-                MaxHeightInMeters = null,
+                MinHeightInMetres = 2.1m,
+                MaxHeightInMetres = null,
                 Multiplier = 1.5m,
                 Description = "Extra tall fence (over 2100mm, 50% increase)"
             }
@@ -353,7 +353,7 @@ public class SeedDataService : ISeedDataService
                 Description = "10% off for orders over 150 linear metres",
                 DiscountType = DiscountType.Percentage,
                 DiscountValue = 0.10m,
-                MinimumLinearFeet = 492.13m, // ~150 metres in feet
+                MinimumLinearMetres = 150m,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow

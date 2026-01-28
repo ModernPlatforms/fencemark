@@ -21,9 +21,9 @@ public class FenceComponent
     public required string ComponentId { get; set; }
 
     /// <summary>
-    /// Quantity needed per linear foot of fence
+    /// Quantity needed per linear metre of fence
     /// </summary>
-    public decimal QuantityPerLinearFoot { get; set; }
+    public decimal QuantityPerLinearMetre { get; set; }
 
     /// <summary>
     /// Navigation property for the fence type

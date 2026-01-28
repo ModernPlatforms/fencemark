@@ -31,12 +31,12 @@ public class JobFlowTests
         var fenceType = new FenceType
         {
             Id = Guid.NewGuid().ToString(),
-            Name = "6ft Chain Link",
+            Name = "1.8m Chain Link",
             OrganizationId = org.Id,
-            HeightInFeet = 6.0m,
+            HeightInMm = 1800,
             Material = "Chain Link",
             Style = "Standard",
-            PricePerLinearFoot = 15.00m
+            PricePerLinearMetre = 49.21m
         };
         context.FenceTypes.Add(fenceType);
 
@@ -45,8 +45,8 @@ public class JobFlowTests
             Id = Guid.NewGuid().ToString(),
             Name = "Chain Link Gate",
             OrganizationId = org.Id,
-            WidthInFeet = 4.0m,
-            HeightInFeet = 6.0m,
+            WidthInMm = 1200,
+            HeightInMm = 1800,
             Material = "Chain Link",
             Style = "Walk-through",
             BasePrice = 250.00m
@@ -105,7 +105,7 @@ public class JobFlowTests
             Name = "Complete Perimeter Fence",
             CustomerName = "Jane Doe",
             OrganizationId = org.Id,
-            TotalLinearFeet = 150.0m,
+            TotalLinearMetres = 45.7m,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -119,10 +119,10 @@ public class JobFlowTests
                 JobId = job.Id,
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
-                Description = "North side - 6ft Chain Link",
-                Quantity = 100.0m,
-                UnitPrice = 15.00m,
-                TotalPrice = 1500.00m
+                Description = "North side - 1.8m Chain Link",
+                Quantity = 30.5m,
+                UnitPrice = 49.21m,
+                TotalPrice = 1501.41m
             },
             new JobLineItem
             {
@@ -130,10 +130,10 @@ public class JobFlowTests
                 JobId = job.Id,
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
-                Description = "East side - 6ft Chain Link",
-                Quantity = 50.0m,
-                UnitPrice = 15.00m,
-                TotalPrice = 750.00m
+                Description = "East side - 1.8m Chain Link",
+                Quantity = 15.2m,
+                UnitPrice = 49.21m,
+                TotalPrice = 748.19m
             },
             new JobLineItem
             {
@@ -161,7 +161,7 @@ public class JobFlowTests
         Assert.Equal(3, savedJob.LineItems.Count);
         Assert.Equal(2, savedJob.LineItems.Count(li => li.ItemType == LineItemType.Fence));
         Assert.Single(savedJob.LineItems.Where(li => li.ItemType == LineItemType.Gate));
-        Assert.Equal(150.0m, savedJob.TotalLinearFeet);
+        Assert.Equal(45.7m, savedJob.TotalLinearMetres);
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class JobFlowTests
             Name = "Cost Calculation Test",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 80.0m,
+            TotalLinearMetres = 24.4m,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -297,9 +297,9 @@ public class JobFlowTests
                 ItemType = LineItemType.Fence,
                 FenceTypeId = fenceType.Id,
                 Description = "Chain Link Fence",
-                Quantity = 80.0m,
-                UnitPrice = 15.00m,
-                TotalPrice = 1200.00m
+                Quantity = 24.4m,
+                UnitPrice = 49.21m,
+                TotalPrice = 1200.72m
             },
             new JobLineItem
             {
@@ -327,9 +327,9 @@ public class JobFlowTests
         await context.SaveChangesAsync();
 
         // Assert
-        Assert.Equal(1450.00m, job.MaterialsCost);
+        Assert.Equal(1450.72m, job.MaterialsCost);
         Assert.Equal(500.00m, job.LaborCost);
-        Assert.Equal(1950.00m, job.TotalCost);
+        Assert.Equal(1950.72m, job.TotalCost);
     }
 
     [Fact]

@@ -26,9 +26,9 @@ public interface IPricingService
     Task<List<BillOfMaterialsItem>> CalculateBillOfMaterialsAsync(string jobId, CancellationToken ct = default);
 
     /// <summary>
-    /// Get height tier multiplier for a given height
+    /// Get height tier multiplier for a given height in millimetres
     /// </summary>
-    decimal GetHeightMultiplier(List<HeightTier> tiers, decimal heightInFeet);
+    decimal GetHeightMultiplier(List<HeightTier> tiers, decimal heightInMm);
 }
 
 public class PricingService : IPricingService
@@ -85,7 +85,7 @@ public class PricingService : IPricingService
 
         // Calculate costs
         var materialsCost = bomItems.Where(b => b.Category != "Labor").Sum(b => b.TotalPrice);
-        var laborCost = CalculateLaborCost(job.TotalLinearFeet, pricingConfig);
+        var laborCost = CalculateLaborCost(job.TotalLinearMetres, pricingConfig);
         var subtotal = materialsCost + laborCost;
         var contingencyAmount = subtotal * pricingConfig.ContingencyPercentage;
         var profitAmount = (subtotal + contingencyAmount) * pricingConfig.ProfitMarginPercentage;
@@ -174,7 +174,7 @@ public class PricingService : IPricingService
 
         // Recalculate costs
         var materialsCost = bomItems.Where(b => b.Category != "Labor").Sum(b => b.TotalPrice);
-        var laborCost = CalculateLaborCost(quote.Job.TotalLinearFeet, quote.PricingConfig);
+        var laborCost = CalculateLaborCost(quote.Job.TotalLinearMetres, quote.PricingConfig);
         var subtotal = materialsCost + laborCost;
         var contingencyAmount = subtotal * quote.PricingConfig.ContingencyPercentage;
         var profitAmount = (subtotal + contingencyAmount) * quote.PricingConfig.ProfitMarginPercentage;
@@ -254,15 +254,15 @@ public class PricingService : IPricingService
         foreach (var lineItem in job.LineItems.Where(li => li.ItemType == LineItemType.Fence && li.FenceType != null))
         {
             var fenceType = lineItem.FenceType!;
-            var linearFeet = lineItem.Quantity;
-            var heightMultiplier = GetHeightMultiplier(pricingConfig.HeightTiers.ToList(), fenceType.HeightInFeet);
+            var linearMetres = lineItem.Quantity;
+            var heightMultiplier = GetHeightMultiplier(pricingConfig.HeightTiers.ToList(), fenceType.HeightInMm);
 
             foreach (var fenceComponent in fenceType.Components)
             {
                 if (fenceComponent.Component == null) continue;
 
                 var component = fenceComponent.Component;
-                var quantity = fenceComponent.QuantityPerLinearFoot * linearFeet;
+                var quantity = fenceComponent.QuantityPerLinearMetre * linearMetres;
                 var category = component.Category;
 
                 if (!componentsByCategory.ContainsKey(category))
@@ -332,16 +332,14 @@ public class PricingService : IPricingService
         }
 
         // Add labor as a line item
-        var laborCost = CalculateLaborCost(job.TotalLinearFeet, pricingConfig);
+        var laborCost = CalculateLaborCost(job.TotalLinearMetres, pricingConfig);
         if (laborCost > 0)
         {
             bomItems.Add(new BillOfMaterialsItem
             {
                 QuoteId = string.Empty,
                 Category = "Labor",
-                // NOTE: Description currently displays TotalLinearFeet (in feet) but labels it as "linear metres".
-                // This is a known UI-only discrepancy and will be resolved as part of the full unit migration (see issue #162).
-                Description = $"Installation Labour ({job.TotalLinearFeet:N2} linear metres)",
+                Description = $"Installation Labour ({job.TotalLinearMetres:N2} linear metres)",
                 Quantity = 1,
                 UnitOfMeasure = "Job",
                 UnitPrice = laborCost,
@@ -353,28 +351,26 @@ public class PricingService : IPricingService
         return bomItems;
     }
 
-    private decimal CalculateLaborCost(decimal totalLinearFeet, PricingConfig pricingConfig)
+    private decimal CalculateLaborCost(decimal totalLinearMetres, PricingConfig pricingConfig)
     {
-        // Convert feet to meters for calculation (1 foot = 0.3048 meters)
-        var totalLinearMeters = totalLinearFeet * 0.3048m;
-        var totalHours = totalLinearMeters * pricingConfig.HoursPerLinearMeter;
+        var totalHours = totalLinearMetres * pricingConfig.HoursPerLinearMetre;
         return totalHours * pricingConfig.LaborRatePerHour;
     }
 
-    public decimal GetHeightMultiplier(List<HeightTier> tiers, decimal heightInFeet)
+    public decimal GetHeightMultiplier(List<HeightTier> tiers, decimal heightInMm)
     {
         if (tiers == null || tiers.Count == 0)
         {
             return 1.0m;
         }
 
-        // Convert feet to meters for comparison (1 foot = 0.3048 meters)
-        var heightInMeters = heightInFeet * 0.3048m;
+        // Convert millimetres to metres for comparison
+        var heightInMetres = heightInMm / 1000m;
 
         var applicableTier = tiers
-            .Where(t => heightInMeters >= t.MinHeightInMeters && 
-                       (t.MaxHeightInMeters == null || heightInMeters <= t.MaxHeightInMeters))
-            .OrderBy(t => t.MinHeightInMeters)
+            .Where(t => heightInMetres >= t.MinHeightInMetres &&
+                       (t.MaxHeightInMetres == null || heightInMetres <= t.MaxHeightInMetres))
+            .OrderBy(t => t.MinHeightInMetres)
             .FirstOrDefault();
 
         return applicableTier?.Multiplier ?? 1.0m;
@@ -413,13 +409,13 @@ public class PricingService : IPricingService
             {
                 pricingConfig.Name,
                 pricingConfig.LaborRatePerHour,
-                pricingConfig.HoursPerLinearMeter,
+                pricingConfig.HoursPerLinearMetre,
                 pricingConfig.ContingencyPercentage,
                 pricingConfig.ProfitMarginPercentage,
                 HeightTiers = pricingConfig.HeightTiers.Select(ht => new
                 {
-                    ht.MinHeightInMeters,
-                    ht.MaxHeightInMeters,
+                    ht.MinHeightInMetres,
+                    ht.MaxHeightInMetres,
                     ht.Multiplier,
                     ht.Description
                 })

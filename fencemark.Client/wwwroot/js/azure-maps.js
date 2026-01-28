@@ -121,9 +121,8 @@ function updateDrawingPreview() {
 }
 
 function finishFenceSegment() {
-    const lengthInMeters = calculateLineLength(currentDrawing);
-    const lengthInFeet = lengthInMeters * 3.28084;
-    
+    const lengthInMetres = calculateLineLength(currentDrawing);
+
     const segment = {
         type: 'Feature',
         geometry: {
@@ -133,15 +132,14 @@ function finishFenceSegment() {
         properties: {
             type: 'fence',
             id: generateId(),
-            lengthInFeet: lengthInFeet.toFixed(2),
-            lengthInMeters: lengthInMeters.toFixed(2)
+            lengthInMetres: lengthInMetres.toFixed(2)
         }
     };
-    
+
     datasource.add(segment);
     drawnSegments.push(segment);
     currentDrawing = [];
-    
+
     console.log('Fence segment created:', segment.properties);
 }
 
