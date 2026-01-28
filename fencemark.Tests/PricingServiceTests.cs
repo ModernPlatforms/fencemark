@@ -82,7 +82,7 @@ public class PricingServiceTests
         };
         context.PricingConfigs.Add(pricingConfig);
 
-        // Create height tiers (in meters)
+        // Create height tiers (in metres)
         var heightTiers = new[]
         {
             new HeightTier

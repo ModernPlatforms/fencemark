@@ -36,7 +36,7 @@ public class Parcel : IOrganizationScoped
     public string? ParcelNumber { get; set; }
 
     /// <summary>
-    /// Total area of the parcel (in square feet or square meters)
+    /// Total area of the parcel (in square metres)
     /// </summary>
     public decimal? TotalArea { get; set; }
 

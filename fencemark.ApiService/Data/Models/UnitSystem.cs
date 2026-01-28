@@ -11,7 +11,7 @@ public enum UnitSystem
     Imperial,
 
     /// <summary>
-    /// Metric/SI units (meters, centimeters)
+    /// Metric/SI units (metres, centimetres)
     /// </summary>
     Metric
 }

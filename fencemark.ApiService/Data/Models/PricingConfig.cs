@@ -87,12 +87,12 @@ public class HeightTier
     public required string PricingConfigId { get; set; }
 
     /// <summary>
-    /// Minimum height in meters for this tier
+    /// Minimum height in metres for this tier
     /// </summary>
     public decimal MinHeightInMetres { get; set; }
 
     /// <summary>
-    /// Maximum height in meters for this tier (null for unlimited)
+    /// Maximum height in metres for this tier (null for unlimited)
     /// </summary>
     public decimal? MaxHeightInMetres { get; set; }
 
