@@ -188,8 +188,10 @@ public static class DiscountEndpoints
         if (discount.MinimumOrderValue.HasValue && request.OrderValue.GetValueOrDefault() < discount.MinimumOrderValue.Value)
             return Results.BadRequest(new { error = $"Minimum order value of ${discount.MinimumOrderValue.Value:F2} required" });
 
+        // NOTE: The threshold is stored in MinimumLinearFeet (feet), but the message refers to "linear metres".
+        // This temporary inconsistency is tracked in issue #162 and should be revisited once that issue is resolved.
         if (discount.MinimumLinearFeet.HasValue && request.LinearFeet.GetValueOrDefault() < discount.MinimumLinearFeet.Value)
-            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear feet required" });
+            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear metres required" });
 
         return Results.Ok(discount);
     }
