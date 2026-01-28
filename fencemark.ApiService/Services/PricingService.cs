@@ -368,9 +368,9 @@ public class PricingService : IPricingService
         var heightInMetres = heightInMm / 1000m;
 
         var applicableTier = tiers
-            .Where(t => heightInMetres >= t.MinHeightInMeters &&
-                       (t.MaxHeightInMeters == null || heightInMetres <= t.MaxHeightInMeters))
-            .OrderBy(t => t.MinHeightInMeters)
+            .Where(t => heightInMetres >= t.MinHeightInMetres &&
+                       (t.MaxHeightInMetres == null || heightInMetres <= t.MaxHeightInMetres))
+            .OrderBy(t => t.MinHeightInMetres)
             .FirstOrDefault();
 
         return applicableTier?.Multiplier ?? 1.0m;
@@ -414,8 +414,8 @@ public class PricingService : IPricingService
                 pricingConfig.ProfitMarginPercentage,
                 HeightTiers = pricingConfig.HeightTiers.Select(ht => new
                 {
-                    ht.MinHeightInMeters,
-                    ht.MaxHeightInMeters,
+                    ht.MinHeightInMetres,
+                    ht.MaxHeightInMetres,
                     ht.Multiplier,
                     ht.Description
                 })

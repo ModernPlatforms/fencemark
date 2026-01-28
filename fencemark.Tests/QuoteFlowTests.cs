@@ -57,8 +57,8 @@ public class QuoteFlowTests
         {
             Id = Guid.NewGuid().ToString(),
             PricingConfigId = pricingConfig.Id,
-            MinHeightInMeters = 0,
-            MaxHeightInMeters = 2.0m,
+            MinHeightInMetres = 0,
+            MaxHeightInMetres = 2.0m,
             Multiplier = 1.0m,
             Description = "Standard height"
         };

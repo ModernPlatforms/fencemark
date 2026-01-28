@@ -33,7 +33,7 @@ public class Organization
 public enum UnitSystem
 {
     Imperial,  // Feet, inches (US/UK)
-    Metric     // Meters, millimeters (Australia, most of world)
+    Metric     // Metres, millimetres (Australia, most of world)
 }
 ```
 

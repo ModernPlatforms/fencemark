@@ -309,8 +309,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<HeightTier>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.MinHeightInMeters).HasPrecision(18, 2);
-            entity.Property(e => e.MaxHeightInMeters).HasPrecision(18, 2);
+            entity.Property(e => e.MinHeightInMetres).HasPrecision(18, 2);
+            entity.Property(e => e.MaxHeightInMetres).HasPrecision(18, 2);
             entity.Property(e => e.Multiplier).HasPrecision(18, 4);
             
             entity.HasOne(e => e.PricingConfig)

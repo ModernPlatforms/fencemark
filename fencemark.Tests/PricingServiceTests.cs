@@ -89,8 +89,8 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.83m, // 6 feet
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.83m, // 6 feet
                 Multiplier = 1.0m,
                 Description = "Standard height"
             },
@@ -98,8 +98,8 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 1.83m, // 6 feet
-                MaxHeightInMeters = 2.44m, // 8 feet
+                MinHeightInMetres = 1.83m, // 6 feet
+                MaxHeightInMetres = 2.44m, // 8 feet
                 Multiplier = 1.25m,
                 Description = "Tall fence surcharge"
             }
@@ -424,24 +424,24 @@ public class PricingServiceTests
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.83m, // 6 feet
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.83m, // 6 feet
                 Multiplier = 1.0m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 1.83m, // 6 feet
-                MaxHeightInMeters = 2.44m, // 8 feet
+                MinHeightInMetres = 1.83m, // 6 feet
+                MaxHeightInMetres = 2.44m, // 8 feet
                 Multiplier = 1.25m
             },
             new HeightTier
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = "test",
-                MinHeightInMeters = 2.44m, // 8 feet
-                MaxHeightInMeters = null,
+                MinHeightInMetres = 2.44m, // 8 feet
+                MaxHeightInMetres = null,
                 Multiplier = 1.50m
             }
         };

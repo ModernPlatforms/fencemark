@@ -296,8 +296,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 0,
-                MaxHeightInMeters = 1.8m, // 1800mm
+                MinHeightInMetres = 0,
+                MaxHeightInMetres = 1.8m, // 1800mm
                 Multiplier = 1.0m,
                 Description = "Standard height (up to 1800mm)"
             },
@@ -305,8 +305,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 1.8m,
-                MaxHeightInMeters = 2.1m, // 2100mm
+                MinHeightInMetres = 1.8m,
+                MaxHeightInMetres = 2.1m, // 2100mm
                 Multiplier = 1.25m,
                 Description = "Tall fence surcharge (1800mm-2100mm, 25% increase)"
             },
@@ -314,8 +314,8 @@ public class SeedDataService : ISeedDataService
             {
                 Id = Guid.NewGuid().ToString(),
                 PricingConfigId = pricingConfig.Id,
-                MinHeightInMeters = 2.1m,
-                MaxHeightInMeters = null,
+                MinHeightInMetres = 2.1m,
+                MaxHeightInMetres = null,
                 Multiplier = 1.5m,
                 Description = "Extra tall fence (over 2100mm, 50% increase)"
             }

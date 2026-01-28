@@ -10,7 +10,6 @@ public class FenceSegmentDto
     public string? FenceTypeId { get; set; }
     public required string GeoJsonGeometry { get; set; }
     public decimal LengthInMetres { get; set; }
-    public decimal LengthInMeters { get; set; }
     public bool IsSnappedToBoundary { get; set; }
     public string? Notes { get; set; }
     public bool IsVerifiedOnsite { get; set; }

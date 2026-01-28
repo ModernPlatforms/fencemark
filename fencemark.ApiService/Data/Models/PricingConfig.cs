@@ -89,12 +89,12 @@ public class HeightTier
     /// <summary>
     /// Minimum height in meters for this tier
     /// </summary>
-    public decimal MinHeightInMeters { get; set; }
+    public decimal MinHeightInMetres { get; set; }
 
     /// <summary>
     /// Maximum height in meters for this tier (null for unlimited)
     /// </summary>
-    public decimal? MaxHeightInMeters { get; set; }
+    public decimal? MaxHeightInMetres { get; set; }
 
     /// <summary>
     /// Multiplier to apply to base price (e.g., 1.0 for standard, 1.25 for 25% increase)
