@@ -7,6 +7,12 @@
     {
       "route": "/authentication/*",
       "rewrite": "/index.html"
+    },
+    {
+      "route": "/appsettings*.json",
+      "headers": {
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+      }
     }
   ],
   "responseOverrides": {
