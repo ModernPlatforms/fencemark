@@ -46,7 +46,7 @@ public class QuoteFlowTests
             OrganizationId = org.Id,
             Name = "Standard Pricing",
             LaborRatePerHour = 60.00m,
-            HoursPerLinearMeter = 0.5m,
+            HoursPerLinearMetre = 0.5m,
             ContingencyPercentage = 0.10m,
             ProfitMarginPercentage = 0.20m,
             IsDefault = true

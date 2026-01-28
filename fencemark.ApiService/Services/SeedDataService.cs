@@ -279,7 +279,7 @@ public class SeedDataService : ISeedDataService
             Name = "Standard Pricing 2024",
             Description = "Default pricing for residential projects",
             LaborRatePerHour = 85.00m,
-            HoursPerLinearMeter = 0.5m, // ~0.5 hours per linear metre
+            HoursPerLinearMetre = 0.5m, // ~0.5 hours per linear metre
             ContingencyPercentage = 0.10m, // 10%
             ProfitMarginPercentage = 0.20m, // 20%
             IsDefault = true,

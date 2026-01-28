@@ -31,9 +31,9 @@ public class PricingConfig : IOrganizationScoped
     public decimal LaborRatePerHour { get; set; }
 
     /// <summary>
-    /// Estimated hours per linear meter of fence
+    /// Estimated hours per linear metre of fence
     /// </summary>
-    public decimal HoursPerLinearMeter { get; set; }
+    public decimal HoursPerLinearMetre { get; set; }
 
     /// <summary>
     /// Contingency percentage (e.g., 0.10 for 10%)

@@ -75,7 +75,7 @@ public class PricingServiceTests
             OrganizationId = org.Id,
             Name = "Standard Pricing",
             LaborRatePerHour = 50.00m,
-            HoursPerLinearMeter = 0.492m, // Converted from 0.15 hours/foot
+            HoursPerLinearMetre = 0.492m, // Converted from 0.15 hours/foot
             ContingencyPercentage = 0.10m,
             ProfitMarginPercentage = 0.20m,
             IsDefault = true

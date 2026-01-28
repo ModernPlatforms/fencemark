@@ -292,7 +292,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.LaborRatePerHour).HasPrecision(18, 2);
-            entity.Property(e => e.HoursPerLinearMeter).HasPrecision(18, 4);
+            entity.Property(e => e.HoursPerLinearMetre).HasPrecision(18, 4);
             entity.Property(e => e.ContingencyPercentage).HasPrecision(5, 4);
             entity.Property(e => e.ProfitMarginPercentage).HasPrecision(5, 4);
             

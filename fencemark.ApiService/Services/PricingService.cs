@@ -353,7 +353,7 @@ public class PricingService : IPricingService
 
     private decimal CalculateLaborCost(decimal totalLinearMetres, PricingConfig pricingConfig)
     {
-        var totalHours = totalLinearMetres * pricingConfig.HoursPerLinearMeter;
+        var totalHours = totalLinearMetres * pricingConfig.HoursPerLinearMetre;
         return totalHours * pricingConfig.LaborRatePerHour;
     }
 
@@ -409,7 +409,7 @@ public class PricingService : IPricingService
             {
                 pricingConfig.Name,
                 pricingConfig.LaborRatePerHour,
-                pricingConfig.HoursPerLinearMeter,
+                pricingConfig.HoursPerLinearMetre,
                 pricingConfig.ContingencyPercentage,
                 pricingConfig.ProfitMarginPercentage,
                 HeightTiers = pricingConfig.HeightTiers.Select(ht => new
