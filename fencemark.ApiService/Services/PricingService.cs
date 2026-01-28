@@ -339,6 +339,8 @@ public class PricingService : IPricingService
             {
                 QuoteId = string.Empty,
                 Category = "Labor",
+                // NOTE: Description currently displays TotalLinearFeet (in feet) but labels it as "linear metres".
+                // This is a known UI-only discrepancy and will be resolved as part of the full unit migration (see issue #162).
                 Description = $"Installation Labour ({job.TotalLinearFeet:N2} linear metres)",
                 Quantity = 1,
                 UnitOfMeasure = "Job",
