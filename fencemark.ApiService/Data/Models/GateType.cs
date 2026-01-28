@@ -26,14 +26,14 @@ public class GateType : IOrganizationScoped
     public required string OrganizationId { get; set; }
 
     /// <summary>
-    /// Width of the gate in feet
+    /// Width of the gate in millimetres
     /// </summary>
-    public decimal WidthInFeet { get; set; }
+    public decimal WidthInMm { get; set; }
 
     /// <summary>
-    /// Height of the gate in feet
+    /// Height of the gate in millimetres
     /// </summary>
-    public decimal HeightInFeet { get; set; }
+    public decimal HeightInMm { get; set; }
 
     /// <summary>
     /// Material of the gate (e.g., "Wood", "Vinyl", "Metal", "Aluminum")

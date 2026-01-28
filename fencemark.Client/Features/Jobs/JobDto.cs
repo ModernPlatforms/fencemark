@@ -13,7 +13,7 @@ public class JobDto
     public string? InstallationAddress { get; set; }
     public string OrganizationId { get; set; } = string.Empty;
     public JobStatusDto Status { get; set; } = JobStatusDto.Draft;
-    public decimal TotalLinearFeet { get; set; }
+    public decimal TotalLinearMetres { get; set; }
     public decimal LaborCost { get; set; }
     public decimal MaterialsCost { get; set; }
     public decimal TotalCost { get; set; }

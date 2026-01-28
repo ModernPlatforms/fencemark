@@ -26,7 +26,7 @@ public class DiscountRule : IOrganizationScoped
     public string? Description { get; set; }
 
     /// <summary>
-    /// Type of discount (Percentage, FixedAmount, PerLinearFoot)
+    /// Type of discount (Percentage, FixedAmount, PerLinearMetre)
     /// </summary>
     public DiscountType DiscountType { get; set; }
 
@@ -41,9 +41,9 @@ public class DiscountRule : IOrganizationScoped
     public decimal? MinimumOrderValue { get; set; }
 
     /// <summary>
-    /// Minimum linear footage to qualify for discount (optional)
+    /// Minimum linear metres to qualify for discount (optional)
     /// </summary>
-    public decimal? MinimumLinearFeet { get; set; }
+    public decimal? MinimumLinearMetres { get; set; }
 
     /// <summary>
     /// Start date for the discount (optional)
@@ -97,7 +97,7 @@ public enum DiscountType
     FixedAmount,
 
     /// <summary>
-    /// Discount per linear foot (e.g., $0.50 off per foot)
+    /// Discount per linear metre (e.g., $0.50 off per metre)
     /// </summary>
-    PerLinearFoot
+    PerLinearMetre
 }

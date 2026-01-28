@@ -105,7 +105,7 @@ public static class JobEndpoints
         job.CustomerPhone = request.CustomerPhone;
         job.InstallationAddress = request.InstallationAddress;
         job.Status = request.Status;
-        job.TotalLinearFeet = request.TotalLinearFeet;
+        job.TotalLinearMetres = request.TotalLinearMetres;
         job.LaborCost = request.LaborCost;
         job.MaterialsCost = request.MaterialsCost;
         job.TotalCost = request.TotalCost;

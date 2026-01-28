@@ -128,7 +128,7 @@ public static class DiscountEndpoints
         discount.DiscountType = request.DiscountType;
         discount.DiscountValue = request.DiscountValue;
         discount.MinimumOrderValue = request.MinimumOrderValue;
-        discount.MinimumLinearFeet = request.MinimumLinearFeet;
+        discount.MinimumLinearMetres = request.MinimumLinearMetres;
         discount.ValidFrom = request.ValidFrom;
         discount.ValidUntil = request.ValidUntil;
         discount.IsActive = request.IsActive;
@@ -188,13 +188,13 @@ public static class DiscountEndpoints
         if (discount.MinimumOrderValue.HasValue && request.OrderValue.GetValueOrDefault() < discount.MinimumOrderValue.Value)
             return Results.BadRequest(new { error = $"Minimum order value of ${discount.MinimumOrderValue.Value:F2} required" });
 
-        // NOTE: The threshold is stored in MinimumLinearFeet (feet), but the message refers to "linear metres".
+        // NOTE: The threshold is stored in MinimumLinearMetres (metres), but the message refers to "linear metres".
         // This temporary inconsistency is tracked in issue #162 and should be revisited once that issue is resolved.
-        if (discount.MinimumLinearFeet.HasValue && request.LinearFeet.GetValueOrDefault() < discount.MinimumLinearFeet.Value)
-            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearFeet.Value:F2} linear metres required" });
+        if (discount.MinimumLinearMetres.HasValue && request.LinearMetres.GetValueOrDefault() < discount.MinimumLinearMetres.Value)
+            return Results.BadRequest(new { error = $"Minimum {discount.MinimumLinearMetres.Value:F2} linear metres required" });
 
         return Results.Ok(discount);
     }
 
-    public record PromoCodeRequest(string PromoCode, decimal? OrderValue = null, decimal? LinearFeet = null);
+    public record PromoCodeRequest(string PromoCode, decimal? OrderValue = null, decimal? LinearMetres = null);
 }

@@ -69,10 +69,10 @@ public class QuoteFlowTests
             Id = Guid.NewGuid().ToString(),
             Name = "6ft Wood Fence",
             OrganizationId = org.Id,
-            HeightInFeet = 6.0m,
+            HeightInMm = 1828.8m,
             Material = "Wood",
             Style = "Privacy",
-            PricePerLinearFoot = 20.00m
+            PricePerLinearMetre = 65.62m
         };
         context.FenceTypes.Add(fenceType);
 
@@ -81,7 +81,7 @@ public class QuoteFlowTests
             Id = Guid.NewGuid().ToString(),
             FenceTypeId = fenceType.Id,
             ComponentId = component.Id,
-            QuantityPerLinearFoot = 0.125m
+            QuantityPerLinearMetre = 0.125m
         };
         context.FenceComponents.Add(fenceComponent);
 
@@ -91,7 +91,7 @@ public class QuoteFlowTests
             Name = "Test Job",
             CustomerName = "Test Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 100.0m,
+            TotalLinearMetres = 30.48m,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -104,8 +104,8 @@ public class QuoteFlowTests
             ItemType = LineItemType.Fence,
             FenceTypeId = fenceType.Id,
             Description = "100ft Wood Fence",
-            Quantity = 100.0m,
-            UnitPrice = 20.00m,
+            Quantity = 30.48m,
+            UnitPrice = 65.62m,
             TotalPrice = 2000.00m
         };
         context.JobLineItems.Add(lineItem);
@@ -217,9 +217,9 @@ public class QuoteFlowTests
         var originalVersion = quote.CurrentVersion;
 
         // Update job details
-        job.TotalLinearFeet = 120.0m;
+        job.TotalLinearMetres = 36.576m;
         var lineItem = await context.JobLineItems.FirstAsync(li => li.JobId == job.Id);
-        lineItem.Quantity = 120.0m;
+        lineItem.Quantity = 36.576m;
         lineItem.TotalPrice = 2400.00m;
         await context.SaveChangesAsync();
 
@@ -250,7 +250,7 @@ public class QuoteFlowTests
             Name = "Second Job",
             CustomerName = "Another Customer",
             OrganizationId = org.Id,
-            TotalLinearFeet = 50.0m,
+            TotalLinearMetres = 15.24m,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -263,8 +263,8 @@ public class QuoteFlowTests
             ItemType = LineItemType.Fence,
             FenceTypeId = fenceType.Id,
             Description = "50ft Wood Fence",
-            Quantity = 50.0m,
-            UnitPrice = 20.00m,
+            Quantity = 15.24m,
+            UnitPrice = 65.62m,
             TotalPrice = 1000.00m
         };
         context.JobLineItems.Add(lineItem2);
@@ -377,9 +377,9 @@ public class QuoteFlowTests
         var version1Total = quote.TotalAmount;
 
         // Modify job
-        job.TotalLinearFeet = 150.0m;
+        job.TotalLinearMetres = 45.72m;
         var lineItem = await context.JobLineItems.FirstAsync(li => li.JobId == job.Id);
-        lineItem.Quantity = 150.0m;
+        lineItem.Quantity = 45.72m;
         lineItem.TotalPrice = 3000.00m;
         await context.SaveChangesAsync();
 

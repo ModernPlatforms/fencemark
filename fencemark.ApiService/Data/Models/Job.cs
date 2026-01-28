@@ -46,9 +46,9 @@ public class Job : IOrganizationScoped
     public JobStatus Status { get; set; } = JobStatus.Draft;
 
     /// <summary>
-    /// Total linear feet of fence
+    /// Total linear metres of fence
     /// </summary>
-    public decimal TotalLinearFeet { get; set; }
+    public decimal TotalLinearMetres { get; set; }
 
     /// <summary>
     /// Labor cost

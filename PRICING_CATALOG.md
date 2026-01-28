@@ -108,10 +108,10 @@ public class DiscountRule
     public string OrganizationId { get; set; }
     public string Name { get; set; }
     public string? Description { get; set; }
-    public DiscountType DiscountType { get; set; }  // Percentage, FixedAmount, PerLinearFoot
+    public DiscountType DiscountType { get; set; }  // Percentage, FixedAmount, PerLinearMetre
     public decimal DiscountValue { get; set; }
     public decimal? MinimumOrderValue { get; set; }
-    public decimal? MinimumLinearFeet { get; set; }
+    public decimal? MinimumLinearMetres { get; set; }
     public DateTime? ValidFrom { get; set; }
     public DateTime? ValidUntil { get; set; }
     public bool IsActive { get; set; }
@@ -122,7 +122,7 @@ public enum DiscountType
 {
     Percentage,      // e.g., 10% off
     FixedAmount,     // e.g., $100 off
-    PerLinearFoot    // e.g., $0.50 off per foot
+    PerLinearMetre   // e.g., $0.50 off per metre
 }
 ```
 
@@ -280,7 +280,7 @@ POST /api/discounts/validate-promo
 {
   "promoCode": "SUMMER2024",
   "orderValue": 2500,
-  "linearFeet": 150
+  "linearMetres": 150
 }
 ```
 

@@ -156,8 +156,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.PricePerLinearFoot).HasPrecision(18, 2);
-            entity.Property(e => e.HeightInFeet).HasPrecision(18, 2);
+            entity.Property(e => e.PricePerLinearMetre).HasPrecision(18, 2);
+            entity.Property(e => e.HeightInMm).HasPrecision(18, 2);
             
             entity.HasOne(e => e.Organization)
                 .WithMany()
@@ -173,8 +173,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.BasePrice).HasPrecision(18, 2);
-            entity.Property(e => e.WidthInFeet).HasPrecision(18, 2);
-            entity.Property(e => e.HeightInFeet).HasPrecision(18, 2);
+            entity.Property(e => e.WidthInMm).HasPrecision(18, 2);
+            entity.Property(e => e.HeightInMm).HasPrecision(18, 2);
             
             entity.HasOne(e => e.Organization)
                 .WithMany()
@@ -205,7 +205,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<FenceComponent>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.QuantityPerLinearFoot).HasPrecision(18, 4);
+            entity.Property(e => e.QuantityPerLinearMetre).HasPrecision(18, 4);
             
             entity.HasOne(e => e.FenceType)
                 .WithMany(f => f.Components)
@@ -245,7 +245,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
             entity.Property(e => e.CustomerName).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.TotalLinearFeet).HasPrecision(18, 2);
+            entity.Property(e => e.TotalLinearMetres).HasPrecision(18, 2);
             entity.Property(e => e.LaborCost).HasPrecision(18, 2);
             entity.Property(e => e.MaterialsCost).HasPrecision(18, 2);
             entity.Property(e => e.TotalCost).HasPrecision(18, 2);
@@ -492,7 +492,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.DiscountValue).HasPrecision(18, 4);
             entity.Property(e => e.MinimumOrderValue).HasPrecision(18, 2);
-            entity.Property(e => e.MinimumLinearFeet).HasPrecision(18, 2);
+            entity.Property(e => e.MinimumLinearMetres).HasPrecision(18, 2);
             entity.Property(e => e.PromoCode).HasMaxLength(50);
             
             entity.HasOne(e => e.Organization)
@@ -511,9 +511,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.GeoJsonGeometry).IsRequired();
-            entity.Property(e => e.LengthInFeet).HasPrecision(18, 2);
-            entity.Property(e => e.LengthInMeters).HasPrecision(18, 2);
-            entity.Property(e => e.OnsiteVerifiedLengthInFeet).HasPrecision(18, 2);
+            entity.Property(e => e.LengthInMetres).HasPrecision(18, 2);
+            entity.Property(e => e.OnsiteVerifiedLengthInMetres).HasPrecision(18, 2);
             
             entity.HasOne(e => e.Organization)
                 .WithMany()

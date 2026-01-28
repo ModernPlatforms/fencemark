@@ -58,11 +58,11 @@ else
                         <MudStack Spacing="2">
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Width:</MudText>
-                                <MudText Typo="Typo.body2"><strong>@gate.WidthInFeet ft</strong></MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.WidthInMm mm</strong></MudText>
                             </MudStack>
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Height:</MudText>
-                                <MudText Typo="Typo.body2"><strong>@gate.HeightInFeet ft</strong></MudText>
+                                <MudText Typo="Typo.body2"><strong>@gate.HeightInMm mm</strong></MudText>
                             </MudStack>
                             <MudStack Row="true" Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Material:</MudText>
@@ -121,8 +121,8 @@ else
                           Lines="3"
                           Placeholder="Detailed description of the gate type" />
 
-            <MudNumericField Label="Width (feet)"
-                             @bind-Value="editingGate.WidthInFeet"
+            <MudNumericField Label="Width (mm)"
+                             @bind-Value="editingGate.WidthInMm"
                              T="decimal"
                              Required="true"
                              RequiredError="Width is required"
@@ -131,8 +131,8 @@ else
                              Min="0m"
                              Step="0.1m" />
 
-            <MudNumericField Label="Height (feet)"
-                             @bind-Value="editingGate.HeightInFeet"
+            <MudNumericField Label="Height (mm)"
+                             @bind-Value="editingGate.HeightInMm"
                              T="decimal"
                              Required="true"
                              RequiredError="Height is required"
@@ -240,8 +240,8 @@ else
             Id = gate.Id,
             Name = gate.Name,
             Description = gate.Description,
-            WidthInFeet = gate.WidthInFeet,
-            HeightInFeet = gate.HeightInFeet,
+            WidthInMm = gate.WidthInMm,
+            HeightInMm = gate.HeightInMm,
             Material = gate.Material,
             Style = gate.Style,
             BasePrice = gate.BasePrice,

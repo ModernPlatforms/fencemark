@@ -110,10 +110,10 @@ public static class FenceEndpoints
 
         fence.Name = request.Name;
         fence.Description = request.Description;
-        fence.HeightInFeet = request.HeightInFeet;
+        fence.HeightInMm = request.HeightInMm;
         fence.Material = request.Material;
         fence.Style = request.Style;
-        fence.PricePerLinearFoot = request.PricePerLinearFoot;
+        fence.PricePerLinearMetre = request.PricePerLinearMetre;
         fence.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(ct);

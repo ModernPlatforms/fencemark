@@ -75,7 +75,7 @@
                             }
                             <div class="modern-info-item" style="margin-top: 0.75rem;">
                                 <MudIcon Icon="@Icons.Material.Filled.Straighten" Size="Size.Small" />
-                                <span><strong>@job.TotalLinearFeet m</strong> total</span>
+                                <span><strong>@job.TotalLinearMetres m</strong> total</span>
                             </div>
                         </div>
                         
@@ -94,7 +94,7 @@
                             </div>
                         </div>
                         
-                        @if (job.TotalLinearFeet > 0)
+                        @if (job.TotalLinearMetres > 0)
                         {
                             var progress = CalculateProgress(job);
                             <div style="margin-top: 1rem;">
@@ -203,7 +203,7 @@
         <MudGrid>
             <MudItem xs="12" md="3">
                 <MudNumericField Label="Total Linear Metres"
-                                 @bind-Value="editingJob.TotalLinearFeet"
+                                 @bind-Value="editingJob.TotalLinearMetres"
                                  T="decimal"
                                  Variant="Variant.Outlined"
                                  Margin="Margin.Dense"
@@ -333,7 +333,7 @@
             CustomerPhone = job.CustomerPhone,
             InstallationAddress = job.InstallationAddress,
             Status = job.Status,
-            TotalLinearFeet = job.TotalLinearFeet,
+            TotalLinearMetres = job.TotalLinearMetres,
             LaborCost = job.LaborCost,
             MaterialsCost = job.MaterialsCost,
             TotalCost = job.TotalCost,

@@ -42,14 +42,10 @@ public class FenceSegment : IOrganizationScoped
     public required string GeoJsonGeometry { get; set; }
 
     /// <summary>
-    /// Calculated length of the fence segment in feet
+    /// Calculated length of the fence segment in metres
     /// </summary>
-    public decimal LengthInFeet { get; set; }
+    public decimal LengthInMetres { get; set; }
 
-    /// <summary>
-    /// Calculated length of the fence segment in meters
-    /// </summary>
-    public decimal LengthInMeters { get; set; }
 
     /// <summary>
     /// Whether this segment was snapped to a lot boundary
@@ -69,7 +65,7 @@ public class FenceSegment : IOrganizationScoped
     /// <summary>
     /// Onsite measurement correction (if different from satellite measurement)
     /// </summary>
-    public decimal? OnsiteVerifiedLengthInFeet { get; set; }
+    public decimal? OnsiteVerifiedLengthInMetres { get; set; }
 
     /// <summary>
     /// When the fence segment was created
