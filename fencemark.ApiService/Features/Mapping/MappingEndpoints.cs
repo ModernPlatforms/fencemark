@@ -27,6 +27,10 @@ public static class MappingEndpoints
             .WithName("GetEnabledStates")
             .WithDescription("Get list of states with enabled cadastral APIs");
 
+        group.MapGet("/azure-maps-token", GetAzureMapsToken)
+            .WithName("GetAzureMapsToken")
+            .WithDescription("Get Azure Maps access token for client-side map initialization");
+
         return app;
     }
 
@@ -135,5 +139,37 @@ public static class MappingEndpoints
                 disabled = enabledStates.Count(s => !s.Value)
             }
         });
+    }
+
+    private static async Task<IResult> GetAzureMapsToken(
+        IAzureMapsTokenService azureMapsTokenService,
+        ICurrentUserService currentUser,
+        ILogger<MappingEndpoints> logger,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated)
+            return Results.Unauthorized();
+
+        try
+        {
+            var tokenResult = await azureMapsTokenService.GetTokenAsync(ct);
+
+            return Results.Ok(new
+            {
+                token = tokenResult.Token,
+                expiresOn = tokenResult.ExpiresOn,
+                clientId = tokenResult.ClientId
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning(ex, "Azure Maps not configured");
+            return Results.BadRequest(new { error = "Azure Maps is not configured on the server" });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to acquire Azure Maps token");
+            return Results.StatusCode(500);
+        }
     }
 }

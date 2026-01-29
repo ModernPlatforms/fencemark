@@ -65,6 +65,11 @@ param staticWebAppSku = 'Free'
 param staticWebAppLocation = 'eastasia'
 param staticSiteCustomDomain = 'dev.fencemark.com.au'
 
+// ============================================================================
+// CORS Configuration
+// ============================================================================
+param corsAllowedOrigins = '["https://localhost:7173","https://dev.fencemark.com.au"]'
+
 // Deprecated parameters (kept for compatibility)
 param staticSiteStorageSku = 'Standard_LRS'
 param staticSiteCdnMode = 'none'

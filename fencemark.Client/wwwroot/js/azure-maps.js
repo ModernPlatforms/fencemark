@@ -1,6 +1,7 @@
 // Azure Maps Drawing Integration for Fencemark
 // This provides the client-side map drawing functionality with Azure Maps
 // Compatible with Azure Maps Web SDK v3.x
+// Uses Azure AD authentication (no subscription key exposure)
 
 let map = null;
 let datasource = null;
@@ -10,26 +11,49 @@ let currentTool = 'pan';
 let drawnSegments = [];
 let placedGates = [];
 let currentDrawing = [];
+let tokenProvider = null;
 
-// Initialize Azure Maps
-window.initializeAzureMap = function (jobId, subscriptionKey) {
+// Initialize Azure Maps with Azure AD authentication
+// clientId: The Azure Maps account client ID (from Azure Portal)
+// dotNetRef: A .NET object reference that provides getAzureMapsToken method
+window.initializeAzureMap = function (jobId, clientId, dotNetRef) {
     currentJobId = jobId;
-    
-    // Validate subscription key is provided
-    if (!subscriptionKey || subscriptionKey === 'YOUR_AZURE_MAPS_SUBSCRIPTION_KEY') {
-        console.error('Azure Maps subscription key not configured. Please add AzureMaps:SubscriptionKey to appsettings.json');
+    tokenProvider = dotNetRef;
+
+    // Validate client ID is provided
+    if (!clientId) {
+        console.error('Azure Maps client ID not configured. Please add AzureMaps:ClientId to appsettings.json');
+        return;
+    }
+
+    if (!dotNetRef) {
+        console.error('Token provider not provided. Azure AD authentication requires a token provider.');
         return;
     }
 
     try {
-        // Initialize the map centered on Australia
+        // Initialize the map centered on Australia with Azure AD authentication
         map = new atlas.Map('map', {
             center: [133.7751, -25.2744],
             zoom: 4,
             language: 'en-US',
             authOptions: {
-                authType: 'subscriptionKey',
-                subscriptionKey: subscriptionKey
+                authType: 'anonymous',
+                clientId: clientId,
+                getToken: async function (resolve, reject) {
+                    try {
+                        // Call back to Blazor to get the Azure Maps access token
+                        const token = await tokenProvider.invokeMethodAsync('GetAzureMapsTokenAsync');
+                        if (token) {
+                            resolve(token);
+                        } else {
+                            reject(new Error('Failed to acquire Azure Maps token'));
+                        }
+                    } catch (error) {
+                        console.error('Error acquiring Azure Maps token:', error);
+                        reject(error);
+                    }
+                }
             },
             style: 'satellite_road_labels'
         });

@@ -35,6 +35,11 @@ param staticSiteStorageSku = 'Standard_LRS'
 param staticSiteCdnMode = 'none' // Use storage native custom domain for staging
 param staticSiteCustomDomain = '' // Empty - static site not using custom domain for staging
 
+// ============================================================================
+// CORS Configuration
+// ============================================================================
+param corsAllowedOrigins = '["https://stg.fencemark.com.au"]'
+
 // Deprecated parameters (backwards compatibility)
 param enableStaticSiteCdn = false
 
