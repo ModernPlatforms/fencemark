@@ -3,12 +3,14 @@
 @using fencemark.Client.Features.GatePositions
 @using fencemark.Client.Features.Jobs
 @using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject FenceSegmentApiClient FenceSegmentClient
 @inject GatePositionApiClient GatePositionClient
 @inject JobApiClient JobClient
 @inject IConfiguration Configuration
+@inject HttpClient Http
 @attribute [Authorize]
 
 <PageTitle>Job Drawing - Fencemark</PageTitle>
@@ -38,8 +40,22 @@
                     </button>
                 </div>
                 <div class="btn-group">
-                    <button class="btn btn-outline-secondary" @onclick="ToggleBoundaries" title="Toggle Lot Boundaries">
-                        <i class="bi bi-bounding-box"></i> Boundaries
+                    <button class="btn @(showBoundaries ? "btn-secondary" : "btn-outline-secondary")"
+                            @onclick="ToggleBoundaries"
+                            title="Toggle Lot Boundaries"
+                            disabled="@isLoadingBoundary">
+                        @if (isLoadingBoundary)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-bounding-box"></i>
+                        }
+                        Boundaries
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="LoadBoundaryAtCenter" title="Load Boundary at Map Center">
+                        <i class="bi bi-geo-alt"></i>
                     </button>
                     <button class="btn btn-outline-secondary" @onclick="ToggleSatellite" title="Toggle Satellite">
                         <i class="bi bi-globe"></i> @(showSatellite ? "Map" : "Satellite")
@@ -127,11 +143,25 @@
                 </div>
             </div>
 
+            @if (boundaryState != null)
+            {
+                <div class="sidebar-section mt-3">
+                    <h6><i class="bi bi-bounding-box"></i> Lot Boundary</h6>
+                    <div class="small">
+                        <span class="badge bg-info">@boundaryState</span>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ClearBoundary">
+                            <i class="bi bi-x"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            }
+
             <div class="sidebar-section mt-3">
                 <h6><i class="bi bi-info-circle"></i> Instructions</h6>
                 <div class="small text-muted">
                     <p><strong>Draw Fence:</strong> Click points on the map to draw fence segments. Double-click to finish.</p>
                     <p><strong>Place Gate:</strong> Click on a fence segment to place a gate.</p>
+                    <p><strong>Load Boundary:</strong> Click the <i class="bi bi-geo-alt"></i> button to load the lot boundary at the map center.</p>
                     <p><strong>Snap to Boundary:</strong> Fence lines will automatically snap to lot boundaries when close.</p>
                 </div>
             </div>
@@ -218,7 +248,9 @@
     private string jobName = "Job Drawing";
     private string currentTool = "pan";
     private bool showSatellite = true;
-    private bool showBoundaries = true;
+    private bool showBoundaries = false;
+    private bool isLoadingBoundary = false;
+    private string? boundaryState = null;
     private string? selectedSegmentId = null;
 
     private List<FenceSegmentDto> fenceSegments = new();
@@ -314,8 +346,93 @@
     private async Task ToggleBoundaries()
     {
         showBoundaries = !showBoundaries;
-        await JSRuntime.InvokeVoidAsync("toggleMapLayer", "boundaries", showBoundaries);
+        await JSRuntime.InvokeVoidAsync("toggleBoundaryLayer", showBoundaries);
     }
+
+    private async Task LoadBoundaryAtCenter()
+    {
+        isLoadingBoundary = true;
+        StateHasChanged();
+
+        try
+        {
+            // Get current map center coordinates
+            var centerJson = await JSRuntime.InvokeAsync<string>("getMapCenter");
+            if (string.IsNullOrEmpty(centerJson))
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Unable to get map center coordinates");
+                return;
+            }
+
+            var center = System.Text.Json.JsonSerializer.Deserialize<MapCenter>(centerJson);
+            if (center == null)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Invalid map center data");
+                return;
+            }
+
+            // Call the cadastral API to get boundary at these coordinates
+            var response = await Http.GetAsync($"api/mapping/parcel-boundary?lat={center.Lat}&lng={center.Lng}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<CadastralParcelResult>();
+                if (result != null && !string.IsNullOrEmpty(result.GeoJson))
+                {
+                    // Load the boundary onto the map
+                    await JSRuntime.InvokeVoidAsync("loadCadastralBoundary", result.GeoJson);
+                    boundaryState = result.State;
+                    showBoundaries = true;
+                    Console.WriteLine($"Loaded boundary from {result.State}: {result.ParcelId}");
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "No parcel boundary found at this location");
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "No cadastral data available for this location. Try zooming to an Australian address.");
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Cadastral API error: {response.StatusCode} - {error}");
+                await JSRuntime.InvokeVoidAsync("alert", $"Error loading boundary: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading cadastral boundary: {ex.Message}");
+            await JSRuntime.InvokeVoidAsync("alert", $"Error loading boundary: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingBoundary = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearBoundary()
+    {
+        await JSRuntime.InvokeVoidAsync("clearCadastralBoundary");
+        boundaryState = null;
+        showBoundaries = false;
+        StateHasChanged();
+    }
+
+    // DTO for map center coordinates
+    private record MapCenter(double Lng, double Lat);
+
+    // DTO for cadastral API response
+    private record CadastralParcelResult(
+        string State,
+        string? ParcelId,
+        string? Address,
+        string GeoJson,
+        double? AreaSquareMetres,
+        DateTime? LastUpdated
+    );
 
     private void SelectSegment(string segmentId)
     {
