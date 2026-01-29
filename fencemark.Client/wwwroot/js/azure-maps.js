@@ -1,5 +1,6 @@
 // Azure Maps Drawing Integration for Fencemark
 // This provides the client-side map drawing functionality with Azure Maps
+// Compatible with Azure Maps Web SDK v3.x
 
 let map = null;
 let datasource = null;
@@ -225,4 +226,66 @@ window.getMapData = function () {
     });
 };
 
-console.log('Azure Maps drawing module loaded');
+// Load cadastral boundary from GeoJSON data
+window.loadCadastralBoundary = function (geoJson) {
+    if (!boundaryDatasource) {
+        console.error('Boundary datasource not initialized');
+        return false;
+    }
+
+    try {
+        // Clear existing boundaries
+        boundaryDatasource.clear();
+
+        if (geoJson) {
+            const feature = typeof geoJson === 'string' ? JSON.parse(geoJson) : geoJson;
+            boundaryDatasource.add(feature);
+            console.log('Cadastral boundary loaded');
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error loading cadastral boundary:', error);
+        return false;
+    }
+};
+
+// Clear cadastral boundary from map
+window.clearCadastralBoundary = function () {
+    if (boundaryDatasource) {
+        boundaryDatasource.clear();
+        console.log('Cadastral boundary cleared');
+    }
+};
+
+// Toggle boundary layer visibility
+window.toggleBoundaryLayer = function (visible) {
+    const layers = map.layers.getLayers();
+    layers.forEach(layer => {
+        if (layer.getSource() === boundaryDatasource) {
+            layer.setOptions({ visible: visible });
+        }
+    });
+};
+
+// Center map on coordinates and optionally zoom
+window.centerMapOnCoordinates = function (lng, lat, zoom) {
+    if (map) {
+        const options = { center: [lng, lat] };
+        if (zoom !== null && zoom !== undefined) {
+            options.zoom = zoom;
+        }
+        map.setCamera(options);
+    }
+};
+
+// Get current map center coordinates
+window.getMapCenter = function () {
+    if (map) {
+        const center = map.getCamera().center;
+        return JSON.stringify({ lng: center[0], lat: center[1] });
+    }
+    return null;
+};
+
+console.log('Azure Maps drawing module loaded (SDK v3 compatible)');
