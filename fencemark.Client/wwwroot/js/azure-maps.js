@@ -272,7 +272,7 @@ window.toggleBoundaryLayer = function (visible) {
 window.centerMapOnCoordinates = function (lng, lat, zoom) {
     if (map) {
         const options = { center: [lng, lat] };
-        if (zoom) {
+        if (zoom !== null && zoom !== undefined) {
             options.zoom = zoom;
         }
         map.setCamera(options);
