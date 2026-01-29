@@ -16,6 +16,7 @@ using fencemark.ApiService.Features.Parcels;
 using fencemark.ApiService.Features.Pricing;
 using fencemark.ApiService.Features.Quotes;
 using fencemark.ApiService.Features.TaxRegions;
+using fencemark.ApiService.Features.Mapping;
 using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
@@ -466,6 +467,11 @@ builder.Services.AddScoped<IQuoteExportService, QuoteExportService>();
 builder.Services.AddScoped<ISeedDataService, SeedDataService>();
 builder.Services.AddHttpContextAccessor();
 
+// Add cadastral service with configuration
+builder.Services.Configure<CadastralOptions>(builder.Configuration.GetSection(CadastralOptions.SectionName));
+builder.Services.AddHttpClient(); // For cadastral API calls
+builder.Services.AddScoped<ICadastralService, CadastralService>();
+
 // Add authorization
 builder.Services.AddAuthorization();
 
@@ -526,6 +532,7 @@ app.MapParcelEndpoints();
 app.MapDrawingEndpoints();
 app.MapFenceSegmentEndpoints();
 app.MapGatePositionEndpoints();
+app.MapMappingEndpoints();
 
 // Keep the original weather forecast endpoint for backward compatibility
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
