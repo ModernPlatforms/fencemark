@@ -144,11 +144,13 @@ public static class MappingEndpoints
     private static async Task<IResult> GetAzureMapsToken(
         IAzureMapsTokenService azureMapsTokenService,
         ICurrentUserService currentUser,
-        ILogger<MappingEndpoints> logger,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
+
+        var logger = loggerFactory.CreateLogger("MappingEndpoints");
 
         try
         {
