@@ -98,7 +98,7 @@ WASM client connects to API at `https://localhost:62010` (or Aspire-assigned por
 
 ### Key Configuration Files
 
-- `fencemark.Client/wwwroot/appsettings.json` - WASM client config (gitignored, created at build)
+- `fencemark.Client/wwwroot/appsettings*.json` - WASM client config, checked into source control per-environment (`.Development`, `.Staging`, `.dev`, `.prod`) and overwritten at deploy time by the GitHub Actions workflows. Only public OAuth client/tenant IDs and URLs belong here - the WASM bundle is delivered to every browser, so nothing in these files can ever be a real secret. `appsettings.template.json` documents the expected shape for a new environment.
 - `fencemark.ApiService/appsettings.json` - API config including AzureAd settings
 - `fencemark.AppHost/nginx.conf` - nginx config for local WASM serving
 
