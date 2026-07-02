@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public static class JobEndpoints
             .WithName("UpdateJob");
 
         group.MapDelete("/{id}", DeleteJob)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeleteJob");
 
         return app;

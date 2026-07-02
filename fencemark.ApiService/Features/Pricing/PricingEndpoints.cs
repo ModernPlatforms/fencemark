@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ public static class PricingEndpoints
             .WithName("UpdatePricingConfig");
 
         group.MapDelete("/{id}", DeletePricingConfig)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeletePricingConfig");
 
         return app;

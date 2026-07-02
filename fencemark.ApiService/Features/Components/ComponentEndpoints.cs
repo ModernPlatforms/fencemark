@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public static class ComponentEndpoints
             .WithName("UpdateComponent");
 
         group.MapDelete("/{id}", DeleteComponent)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeleteComponent");
 
         return app;
