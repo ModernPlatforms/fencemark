@@ -4,12 +4,12 @@
 @using fencemark.Client.Features.Jobs
 @using Microsoft.AspNetCore.Authorization
 @using System.Net.Http.Json
+@implements IDisposable
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject FenceSegmentApiClient FenceSegmentClient
 @inject GatePositionApiClient GatePositionClient
 @inject JobApiClient JobClient
-@inject IConfiguration Configuration
 @inject HttpClient Http
 @attribute [Authorize]
 
@@ -252,6 +252,8 @@
     private bool isLoadingBoundary = false;
     private string? boundaryState = null;
     private string? selectedSegmentId = null;
+    private DotNetObjectReference<JobDrawing>? dotNetRef;
+    private string? azureMapsClientId;
 
     private List<FenceSegmentDto> fenceSegments = new();
     private List<GatePositionDto> gatePositions = new();
@@ -260,7 +262,7 @@
     {
         // Load job details
         await LoadJobDetails();
-        
+
         // Load existing fence segments and gates
         await LoadFenceSegments();
         await LoadGatePositions();
@@ -270,13 +272,65 @@
     {
         if (firstRender)
         {
-            // Get Azure Maps subscription key from configuration
-            var subscriptionKey = Configuration["AzureMaps:SubscriptionKey"];
-            
-            // Initialize Azure Maps with the subscription key
-            await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId, subscriptionKey);
+            // Create a reference to this component for JavaScript to call back
+            dotNetRef = DotNetObjectReference.Create(this);
+
+            // Fetch initial token from server to get clientId and auth mode
+            var initialToken = await FetchAzureMapsTokenFromServerAsync();
+            if (initialToken != null)
+            {
+                azureMapsClientId = initialToken.ClientId;
+                // Initialize Azure Maps with server-side token proxy
+                // Pass token info so JS can detect subscription key mode for local development
+                await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId, initialToken.ClientId, dotNetRef,
+                    new { token = initialToken.Token, useSubscriptionKey = initialToken.UseSubscriptionKey });
+            }
+            else
+            {
+                Console.WriteLine("Failed to get Azure Maps token from server");
+            }
         }
     }
+
+    /// <summary>
+    /// Called by JavaScript to acquire an Azure Maps access token.
+    /// This fetches the token from the API server which acquires it via managed identity.
+    /// </summary>
+    [JSInvokable]
+    public async Task<string?> GetAzureMapsTokenAsync()
+    {
+        try
+        {
+            var tokenResponse = await FetchAzureMapsTokenFromServerAsync();
+            return tokenResponse?.Token;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error acquiring Azure Maps token: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task<AzureMapsTokenResponse?> FetchAzureMapsTokenFromServerAsync()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<AzureMapsTokenResponse>("/api/mapping/azure-maps-token");
+            return response;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching Azure Maps token from server: {ex.Message}");
+            return null;
+        }
+    }
+
+    public void Dispose()
+    {
+        dotNetRef?.Dispose();
+    }
+
+    private record AzureMapsTokenResponse(string Token, DateTimeOffset ExpiresOn, string ClientId, bool UseSubscriptionKey = false);
 
     private async Task LoadJobDetails()
     {

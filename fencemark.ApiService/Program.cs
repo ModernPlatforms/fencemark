@@ -26,8 +26,39 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.DataProtection.AzureKeyVault;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
+using Azure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ============================================================================
+// Azure App Configuration Setup
+// ============================================================================
+// If AppConfig__Endpoint is set (by Bicep/Container App), use Azure App Configuration
+// as a configuration source. This allows centralized configuration management
+// with environment-specific labels (dev, staging, prod).
+var appConfigEndpoint = builder.Configuration["AppConfig__Endpoint"];
+if (!string.IsNullOrEmpty(appConfigEndpoint))
+{
+    var environmentLabel = builder.Configuration["AppConfig__Label"] ?? builder.Environment.EnvironmentName.ToLowerInvariant();
+
+    builder.Configuration.AddAzureAppConfiguration(options =>
+    {
+        options
+            .Connect(new Uri(appConfigEndpoint), new DefaultAzureCredential())
+            // Load all keys with the environment label
+            .Select(KeyFilter.Any, environmentLabel)
+            // Also load keys with no label (shared config)
+            .Select(KeyFilter.Any, LabelFilter.Null)
+            // Configure Key Vault references to use managed identity
+            .ConfigureKeyVault(kv =>
+            {
+                kv.SetCredential(new DefaultAzureCredential());
+            });
+    });
+
+    Console.WriteLine($"[ApiService] Connected to Azure App Configuration: {appConfigEndpoint} (label: {environmentLabel})");
+}
 
 // Check logging level early - only log startup messages if verbose logging is enabled
 var earlyLoggingLevel = builder.Configuration.GetValue<string>("Logging:LoggingLevel") ?? "Verbose";
@@ -471,6 +502,11 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.Configure<CadastralOptions>(builder.Configuration.GetSection(CadastralOptions.SectionName));
 builder.Services.AddHttpClient(); // For cadastral API calls
 builder.Services.AddScoped<ICadastralService, CadastralService>();
+
+// Add Azure Maps token service for server-side token acquisition
+builder.Services.AddMemoryCache();
+builder.Services.Configure<AzureMapsOptions>(builder.Configuration.GetSection(AzureMapsOptions.SectionName));
+builder.Services.AddSingleton<IAzureMapsTokenService, AzureMapsTokenService>();
 
 // Add authorization
 builder.Services.AddAuthorization();

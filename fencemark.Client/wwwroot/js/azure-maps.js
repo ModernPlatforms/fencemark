@@ -1,6 +1,7 @@
 // Azure Maps Drawing Integration for Fencemark
 // This provides the client-side map drawing functionality with Azure Maps
 // Compatible with Azure Maps Web SDK v3.x
+// Uses Azure AD authentication (no subscription key exposure)
 
 let map = null;
 let datasource = null;
@@ -10,27 +11,70 @@ let currentTool = 'pan';
 let drawnSegments = [];
 let placedGates = [];
 let currentDrawing = [];
+let tokenProvider = null;
+let isSubscriptionKeyMode = false;
 
-// Initialize Azure Maps
-window.initializeAzureMap = function (jobId, subscriptionKey) {
+// Initialize Azure Maps with Azure AD authentication or subscription key
+// jobId: The job ID for this drawing session
+// clientId: The Azure Maps account client ID (from Azure Portal)
+// dotNetRef: A .NET object reference that provides getAzureMapsToken method
+// tokenInfo: Optional initial token info from server (includes useSubscriptionKey flag)
+window.initializeAzureMap = function (jobId, clientId, dotNetRef, tokenInfo) {
     currentJobId = jobId;
-    
-    // Validate subscription key is provided
-    if (!subscriptionKey || subscriptionKey === 'YOUR_AZURE_MAPS_SUBSCRIPTION_KEY') {
-        console.error('Azure Maps subscription key not configured. Please add AzureMaps:SubscriptionKey to appsettings.json');
+    tokenProvider = dotNetRef;
+
+    // Check if we should use subscription key mode (for local development)
+    if (tokenInfo && tokenInfo.useSubscriptionKey) {
+        isSubscriptionKeyMode = true;
+        console.log('Azure Maps: Using subscription key authentication (local development)');
+    }
+
+    // Validate client ID is provided (except for subscription key mode)
+    if (!clientId && !isSubscriptionKeyMode) {
+        console.error('Azure Maps client ID not configured. Please add AzureMaps:ClientId to appsettings.json');
+        return;
+    }
+
+    if (!dotNetRef && !isSubscriptionKeyMode) {
+        console.error('Token provider not provided. Azure AD authentication requires a token provider.');
         return;
     }
 
     try {
+        // Build auth options based on mode
+        let authOptions;
+        if (isSubscriptionKeyMode && tokenInfo) {
+            authOptions = {
+                authType: 'subscriptionKey',
+                subscriptionKey: tokenInfo.token
+            };
+        } else {
+            authOptions = {
+                authType: 'anonymous',
+                clientId: clientId,
+                getToken: async function (resolve, reject) {
+                    try {
+                        // Call back to Blazor to get the Azure Maps access token
+                        const token = await tokenProvider.invokeMethodAsync('GetAzureMapsTokenAsync');
+                        if (token) {
+                            resolve(token);
+                        } else {
+                            reject(new Error('Failed to acquire Azure Maps token'));
+                        }
+                    } catch (error) {
+                        console.error('Error acquiring Azure Maps token:', error);
+                        reject(error);
+                    }
+                }
+            };
+        }
+
         // Initialize the map centered on Australia
         map = new atlas.Map('map', {
             center: [133.7751, -25.2744],
             zoom: 4,
             language: 'en-US',
-            authOptions: {
-                authType: 'subscriptionKey',
-                subscriptionKey: subscriptionKey
-            },
+            authOptions: authOptions,
             style: 'satellite_road_labels'
         });
 

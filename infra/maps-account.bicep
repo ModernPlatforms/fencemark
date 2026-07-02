@@ -29,3 +29,6 @@ output name string = mapsAccount.name
 
 @description('The resource ID of the Azure Maps Account')
 output resourceId string = mapsAccount.id
+
+@description('The client ID (unique ID) of the Azure Maps Account for authentication')
+output clientId string = mapsAccount.properties.uniqueId

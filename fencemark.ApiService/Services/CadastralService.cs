@@ -85,10 +85,12 @@ public class StateConfig
 /// <summary>
 /// Implementation of cadastral service that queries Australian state cadastral APIs
 /// </summary>
+#pragma warning disable CS9113 // Parameter is unread - httpClientFactory reserved for API implementation
 public class CadastralService(
     IHttpClientFactory httpClientFactory,
     ILogger<CadastralService> logger,
     IOptions<CadastralOptions> options) : ICadastralService
+#pragma warning restore CS9113
 {
     private readonly CadastralOptions _options = options.Value;
 

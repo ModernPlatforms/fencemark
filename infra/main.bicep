@@ -76,6 +76,13 @@ param customDomain string = ''
 param bindCustomDomainCertificate bool = false
 
 // ============================================================================
+// CORS Configuration Parameters
+// ============================================================================
+
+@description('Comma-separated list of allowed CORS origins for the API')
+param corsAllowedOrigins string = ''
+
+// ============================================================================
 // Central App Configuration Parameters
 // ============================================================================
 
@@ -734,6 +741,18 @@ module apiServiceKeyVaultCryptoRoleAssignment './keyvault-access.bicep' = {
   ]
 }
 
+// Grant API Service access to Azure Maps (Data Reader for map tile access)
+module apiServiceMapsRoleAssignment './maps-role-assignment.bicep' = {
+  name: 'apiServiceMapsRoleAssignment'
+  scope: rg
+  params: {
+    mapsAccountName: mapsAccount.outputs.name
+    principalId: apiService.outputs.?systemAssignedMIPrincipalId ?? ''
+    principalType: 'ServicePrincipal'
+    roleName: 'Azure Maps Data Reader'
+  }
+}
+
 // ============================================================================
 // Populate Central App Configuration with Environment-Specific Values
 // ============================================================================
@@ -774,7 +793,7 @@ module appConfigMapsClientId './modules/app-config-key-value.bicep' = {
   params: {
     appConfigName: centralAppConfigName
     key: 'AzureMaps:ClientId'
-    value: mapsAccount.outputs.resourceId
+    value: mapsAccount.outputs.clientId
     label: environmentName
     contentType: 'text/plain'
   }
@@ -859,6 +878,257 @@ module appConfigCertificateName './modules/app-config-key-value.bicep' = if (!em
 }
 
 // ============================================================================
+// CORS Configuration
+// ============================================================================
+
+// CORS Allowed Origins (as JSON array)
+module appConfigCorsOrigins './modules/app-config-key-value.bicep' = if (!empty(corsAllowedOrigins)) {
+  name: 'cfg-cors-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cors:AllowedOrigins'
+    value: corsAllowedOrigins
+    label: environmentName
+    contentType: 'application/json'
+  }
+}
+
+// ============================================================================
+// Logging Configuration
+// ============================================================================
+
+// Default log level - more verbose in non-prod
+module appConfigLogLevelDefault './modules/app-config-key-value.bicep' = {
+  name: 'cfg-log-default-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Logging:LogLevel:Default'
+    value: environmentName == 'prod' ? 'Warning' : 'Information'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// ASP.NET Core log level
+module appConfigLogLevelAspNet './modules/app-config-key-value.bicep' = {
+  name: 'cfg-log-aspnet-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Logging:LogLevel:Microsoft.AspNetCore'
+    value: 'Warning'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// ============================================================================
+// Cadastral API Configuration (Australian State Cadastral Services)
+// ============================================================================
+
+// NSW Cadastral API
+module appConfigCadastralNswEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-nsw-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:NSW:Endpoint'
+    value: 'https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Cadastre/MapServer/9'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralNswEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-nsw-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:NSW:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// VIC Cadastral API
+module appConfigCadastralVicEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-vic-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:VIC:Endpoint'
+    value: 'https://services.land.vic.gov.au/catalogue/publicproxy/guest/dv_geoserver/wfs'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralVicEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-vic-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:VIC:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// QLD Cadastral API
+module appConfigCadastralQldEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-qld-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:QLD:Endpoint'
+    value: 'https://spatial-gis.information.qld.gov.au/arcgis/rest/services/PlanningCadastre/LandParcelPropertyFramework/MapServer/0'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralQldEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-qld-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:QLD:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// TAS Cadastral API
+module appConfigCadastralTasEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-tas-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:TAS:Endpoint'
+    value: 'https://services.thelist.tas.gov.au/arcgis/rest/services/Public/CadastreAndAdministrative/MapServer/38'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralTasEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-tas-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:TAS:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// ACT Cadastral API
+module appConfigCadastralActEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-act-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:ACT:Endpoint'
+    value: 'https://data.actmapi.act.gov.au/arcgis/rest/services/data_extract/Land_Parcels/MapServer/0'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralActEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-act-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:ACT:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// NT Cadastral API
+module appConfigCadastralNtEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-nt-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:NT:Endpoint'
+    value: 'https://www.ntlis.nt.gov.au'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralNtEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-nt-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:NT:Enabled'
+    value: 'true'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// SA Cadastral API (disabled - requires paid subscription)
+module appConfigCadastralSaEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-sa-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:SA:Endpoint'
+    value: 'https://location.sa.gov.au/arcgis/rest/services'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralSaEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-sa-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:SA:Enabled'
+    value: 'false'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// WA Cadastral API (disabled - requires Landgate SLIP subscription)
+module appConfigCadastralWaEndpoint './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-wa-ep-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:WA:Endpoint'
+    value: 'https://services.slip.wa.gov.au/arcgis/rest/services'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+module appConfigCadastralWaEnabled './modules/app-config-key-value.bicep' = {
+  name: 'cfg-cad-wa-en-${resourceToken}'
+  scope: resourceGroup(centralAppConfigResourceGroup)
+  params: {
+    appConfigName: centralAppConfigName
+    key: 'Cadastral:WA:Enabled'
+    value: 'false'
+    label: environmentName
+    contentType: 'text/plain'
+  }
+}
+
+// ============================================================================
 // Outputs
 // ============================================================================
 
@@ -898,6 +1168,9 @@ output mapsAccountResourceId string = mapsAccount.outputs.resourceId
 
 @description('The name of the Azure Maps Account')
 output mapsAccountName string = mapsAccount.outputs.name
+
+@description('The Azure Maps account client ID for authentication')
+output mapsAccountClientId string = mapsAccount.outputs.clientId
 
 @description('The custom domain (if configured)')
 output customDomainName string = computedCustomDomain

@@ -105,9 +105,9 @@ if (!string.IsNullOrEmpty(apiScope))
             options.ProviderOptions.DefaultAccessTokenScopes = new List<string>();
         }
         
-        // Add required scopes
+        // Add required scopes for API access
         options.ProviderOptions.DefaultAccessTokenScopes.Add(apiScope);
-        
+
         if (isVerboseLogging)
         {
             Console.WriteLine($"[Client] MSAL scopes configured: {options.ProviderOptions.DefaultAccessTokenScopes.Count} scope(s)");
