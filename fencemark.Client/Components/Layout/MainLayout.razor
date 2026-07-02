@@ -5,6 +5,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject IConfiguration Configuration
+@inject ILogger<MainLayout> Logger
 
 <AuthorizeView>
     <Authorized>
@@ -177,9 +178,9 @@
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail onboarding check
+            Logger.LogWarning(ex, "Onboarding status check failed");
         }
     }
 

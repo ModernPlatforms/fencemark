@@ -30,6 +30,7 @@
   <ItemGroup>
     <ProjectReference Include="..\fencemark.AppHost\fencemark.AppHost.csproj" />
     <ProjectReference Include="..\fencemark.ApiService\fencemark.ApiService.csproj" />
+    <ProjectReference Include="..\fencemark.Client\fencemark.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>
