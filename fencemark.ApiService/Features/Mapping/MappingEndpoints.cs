@@ -1,3 +1,6 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 
@@ -30,6 +33,10 @@ public static class MappingEndpoints
         group.MapGet("/azure-maps-token", GetAzureMapsToken)
             .WithName("GetAzureMapsToken")
             .WithDescription("Get Azure Maps access token for client-side map initialization");
+
+        group.MapGet("/search-address", SearchAddress)
+            .WithName("SearchAddress")
+            .WithDescription("Search for an address using Azure Maps geocoding and return candidate locations");
 
         return app;
     }
@@ -175,4 +182,79 @@ public static class MappingEndpoints
             return Results.StatusCode(500);
         }
     }
+
+    private static readonly JsonSerializerOptions AzureMapsJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private static async Task<IResult> SearchAddress(
+        string query,
+        IAzureMapsTokenService azureMapsTokenService,
+        IHttpClientFactory httpClientFactory,
+        ICurrentUserService currentUser,
+        ILoggerFactory loggerFactory,
+        CancellationToken ct)
+    {
+        if (!currentUser.IsAuthenticated)
+            return Results.Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 3)
+        {
+            return Results.BadRequest(new { error = "Query must be at least 3 characters" });
+        }
+
+        var logger = loggerFactory.CreateLogger("MappingEndpoints");
+
+        try
+        {
+            var tokenResult = await azureMapsTokenService.GetTokenAsync(ct);
+            var client = httpClientFactory.CreateClient();
+
+            var baseUrl = $"https://atlas.microsoft.com/search/address/json?api-version=1.0&countrySet=AU&limit=5&query={Uri.EscapeDataString(query.Trim())}";
+            var requestUrl = tokenResult.UseSubscriptionKey
+                ? $"{baseUrl}&subscription-key={Uri.EscapeDataString(tokenResult.Token)}"
+                : baseUrl;
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, requestUrl);
+            if (!tokenResult.UseSubscriptionKey)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenResult.Token);
+                request.Headers.Add("x-ms-client-id", tokenResult.ClientId);
+            }
+
+            var response = await client.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Azure Maps address search failed with status {StatusCode}", response.StatusCode);
+                return Results.StatusCode(502);
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<AzureMapsSearchResponse>(AzureMapsJsonOptions, ct);
+            var results = (payload?.Results ?? [])
+                .Where(r => r.Position is not null)
+                .Select(r => new AddressSearchResult(
+                    r.Address?.FreeformAddress ?? query,
+                    r.Position!.Lat,
+                    r.Position!.Lon))
+                .ToList();
+
+            return Results.Ok(results);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to search address via Azure Maps");
+            return Results.StatusCode(500);
+        }
+    }
+
+    private record AddressSearchResult(string Address, double Lat, double Lng);
+
+    private record AzureMapsSearchResponse(List<AzureMapsSearchResultItem>? Results);
+
+    private record AzureMapsSearchResultItem(AzureMapsAddress? Address, AzureMapsPosition? Position);
+
+    private record AzureMapsAddress(string? FreeformAddress);
+
+    private record AzureMapsPosition(double Lat, double Lon);
 }
