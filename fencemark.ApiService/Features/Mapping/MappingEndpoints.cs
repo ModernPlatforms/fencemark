@@ -160,7 +160,8 @@ public static class MappingEndpoints
             {
                 token = tokenResult.Token,
                 expiresOn = tokenResult.ExpiresOn,
-                clientId = tokenResult.ClientId
+                clientId = tokenResult.ClientId,
+                useSubscriptionKey = tokenResult.UseSubscriptionKey
             });
         }
         catch (InvalidOperationException ex)

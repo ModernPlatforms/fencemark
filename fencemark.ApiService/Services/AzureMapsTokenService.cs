@@ -28,7 +28,8 @@ public interface IAzureMapsTokenService
 public record AzureMapsTokenResult(
     string Token,
     DateTimeOffset ExpiresOn,
-    string ClientId
+    string ClientId,
+    bool UseSubscriptionKey = false
 );
 
 /// <summary>
@@ -42,6 +43,11 @@ public class AzureMapsOptions
     /// The Azure Maps account client ID (found in Azure Portal under Azure Maps account -> Authentication)
     /// </summary>
     public string? ClientId { get; set; }
+
+    /// <summary>
+    /// The Azure Maps subscription key (for local development fallback only - not used in production)
+    /// </summary>
+    public string? SubscriptionKey { get; set; }
 }
 
 /// <summary>
@@ -85,6 +91,22 @@ public class AzureMapsTokenService : IAzureMapsTokenService
                 _logger.LogDebug("Returning cached Azure Maps token");
                 return cachedToken;
             }
+        }
+
+        // If subscription key is configured, use it (for local development)
+        if (!string.IsNullOrEmpty(_options.SubscriptionKey))
+        {
+            _logger.LogInformation("Using subscription key for Azure Maps (local development mode)");
+            var subKeyResult = new AzureMapsTokenResult(
+                Token: _options.SubscriptionKey,
+                ExpiresOn: DateTimeOffset.UtcNow.AddHours(24), // Subscription keys don't expire
+                ClientId: _options.ClientId ?? "",
+                UseSubscriptionKey: true
+            );
+
+            // Cache for 1 hour
+            _cache.Set(CacheKey, subKeyResult, DateTimeOffset.UtcNow.AddHours(1));
+            return subKeyResult;
         }
 
         // Validate configuration

@@ -12,32 +12,44 @@ let drawnSegments = [];
 let placedGates = [];
 let currentDrawing = [];
 let tokenProvider = null;
+let isSubscriptionKeyMode = false;
 
-// Initialize Azure Maps with Azure AD authentication
+// Initialize Azure Maps with Azure AD authentication or subscription key
+// jobId: The job ID for this drawing session
 // clientId: The Azure Maps account client ID (from Azure Portal)
 // dotNetRef: A .NET object reference that provides getAzureMapsToken method
-window.initializeAzureMap = function (jobId, clientId, dotNetRef) {
+// tokenInfo: Optional initial token info from server (includes useSubscriptionKey flag)
+window.initializeAzureMap = function (jobId, clientId, dotNetRef, tokenInfo) {
     currentJobId = jobId;
     tokenProvider = dotNetRef;
 
-    // Validate client ID is provided
-    if (!clientId) {
+    // Check if we should use subscription key mode (for local development)
+    if (tokenInfo && tokenInfo.useSubscriptionKey) {
+        isSubscriptionKeyMode = true;
+        console.log('Azure Maps: Using subscription key authentication (local development)');
+    }
+
+    // Validate client ID is provided (except for subscription key mode)
+    if (!clientId && !isSubscriptionKeyMode) {
         console.error('Azure Maps client ID not configured. Please add AzureMaps:ClientId to appsettings.json');
         return;
     }
 
-    if (!dotNetRef) {
+    if (!dotNetRef && !isSubscriptionKeyMode) {
         console.error('Token provider not provided. Azure AD authentication requires a token provider.');
         return;
     }
 
     try {
-        // Initialize the map centered on Australia with Azure AD authentication
-        map = new atlas.Map('map', {
-            center: [133.7751, -25.2744],
-            zoom: 4,
-            language: 'en-US',
-            authOptions: {
+        // Build auth options based on mode
+        let authOptions;
+        if (isSubscriptionKeyMode && tokenInfo) {
+            authOptions = {
+                authType: 'subscriptionKey',
+                subscriptionKey: tokenInfo.token
+            };
+        } else {
+            authOptions = {
                 authType: 'anonymous',
                 clientId: clientId,
                 getToken: async function (resolve, reject) {
@@ -54,7 +66,15 @@ window.initializeAzureMap = function (jobId, clientId, dotNetRef) {
                         reject(error);
                     }
                 }
-            },
+            };
+        }
+
+        // Initialize the map centered on Australia
+        map = new atlas.Map('map', {
+            center: [133.7751, -25.2744],
+            zoom: 4,
+            language: 'en-US',
+            authOptions: authOptions,
             style: 'satellite_road_labels'
         });
 

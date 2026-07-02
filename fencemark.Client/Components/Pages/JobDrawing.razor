@@ -275,13 +275,15 @@
             // Create a reference to this component for JavaScript to call back
             dotNetRef = DotNetObjectReference.Create(this);
 
-            // Fetch initial token from server to get clientId
+            // Fetch initial token from server to get clientId and auth mode
             var initialToken = await FetchAzureMapsTokenFromServerAsync();
             if (initialToken != null)
             {
                 azureMapsClientId = initialToken.ClientId;
                 // Initialize Azure Maps with server-side token proxy
-                await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId, initialToken.ClientId, dotNetRef);
+                // Pass token info so JS can detect subscription key mode for local development
+                await JSRuntime.InvokeVoidAsync("initializeAzureMap", JobId, initialToken.ClientId, dotNetRef,
+                    new { token = initialToken.Token, useSubscriptionKey = initialToken.UseSubscriptionKey });
             }
             else
             {
@@ -328,7 +330,7 @@
         dotNetRef?.Dispose();
     }
 
-    private record AzureMapsTokenResponse(string Token, DateTimeOffset ExpiresOn, string ClientId);
+    private record AzureMapsTokenResponse(string Token, DateTimeOffset ExpiresOn, string ClientId, bool UseSubscriptionKey = false);
 
     private async Task LoadJobDetails()
     {
