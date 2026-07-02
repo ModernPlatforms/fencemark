@@ -212,7 +212,6 @@ jobs:
           action: 'upload'
           app_location: 'publish/blazor-wasm/wwwroot'
           skip_app_build: true
-          skip_api_build: true
 
       # ============================================================================
       # Health Checks
