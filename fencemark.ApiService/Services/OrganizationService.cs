@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -259,7 +260,7 @@ public class OrganizationService(
         }
 
         // Generate invitation token
-        var invitationToken = Guid.NewGuid().ToString();
+        var invitationToken = SecureTokenGenerator.Generate();
 
         if (existingUser is not null)
         {
