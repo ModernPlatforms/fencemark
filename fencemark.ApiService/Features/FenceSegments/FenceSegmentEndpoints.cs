@@ -107,7 +107,7 @@ public static class FenceSegmentEndpoints
         return segment != null ? Results.Ok(segment) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateFenceSegment(
+    internal static async Task<IResult> CreateFenceSegment(
         FenceSegmentRequest request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -116,10 +116,14 @@ public static class FenceSegmentEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
         // Verify job exists and belongs to the organization
         var job = await db.Jobs
-            .FirstOrDefaultAsync(j => j.Id == request.JobId && j.OrganizationId == currentUser.OrganizationId, ct);
-        
+            .FirstOrDefaultAsync(j => j.Id == request.JobId && j.OrganizationId == organizationId, ct);
+
         if (job == null)
             return Results.BadRequest(new { error = "Job not found or access denied" });
 
@@ -127,8 +131,8 @@ public static class FenceSegmentEndpoints
         if (!string.IsNullOrEmpty(request.ParcelId))
         {
             var parcel = await db.Parcels
-                .FirstOrDefaultAsync(p => p.Id == request.ParcelId && p.OrganizationId == currentUser.OrganizationId, ct);
-            
+                .FirstOrDefaultAsync(p => p.Id == request.ParcelId && p.OrganizationId == organizationId, ct);
+
             if (parcel == null)
                 return Results.BadRequest(new { error = "Parcel not found or access denied" });
         }
@@ -136,7 +140,7 @@ public static class FenceSegmentEndpoints
         var segment = new FenceSegment
         {
             Id = Guid.NewGuid().ToString(),
-            OrganizationId = currentUser.OrganizationId ?? string.Empty,
+            OrganizationId = organizationId,
             JobId = request.JobId,
             ParcelId = request.ParcelId,
             Name = request.Name,
