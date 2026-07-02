@@ -246,4 +246,24 @@ public class LoggingHelperTests
         Assert.Contains("Password=***", masked);
         Assert.Contains("User Id=***", masked);
     }
+
+    [Fact]
+    public void ShouldEnablePiiLogging_WhenDevelopment_ReturnsTrue()
+    {
+        // Act
+        var result = LoggingHelper.ShouldEnablePiiLogging(isDevelopment: true);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldEnablePiiLogging_WhenNotDevelopment_ReturnsFalse()
+    {
+        // Act
+        var result = LoggingHelper.ShouldEnablePiiLogging(isDevelopment: false);
+
+        // Assert
+        Assert.False(result, "PII logging must never be enabled outside Development - it exposes emails, names, and other JWT claims in logs.");
+    }
 }

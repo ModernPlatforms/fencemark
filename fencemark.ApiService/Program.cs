@@ -244,8 +244,10 @@ builder.Services.AddAuthentication(options =>
             Console.WriteLine($"[ApiService] Using Authority: {options.Authority}");
             Console.WriteLine($"[ApiService] Accepted Audiences: api://{audience}, {audience}");
             
-            // Enable detailed PII logging for debugging
-            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+            // Enable detailed PII logging for debugging - Development only, never in Production
+            // (PII logging exposes emails, names, and other JWT claims in logs)
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII =
+                fencemark.ApiService.Infrastructure.LoggingHelper.ShouldEnablePiiLogging(builder.Environment.IsDevelopment());
             
             options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
             {

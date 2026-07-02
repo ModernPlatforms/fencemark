@@ -34,6 +34,16 @@ public static partial class LoggingHelper
     }
 
     /// <summary>
+    /// Determines whether the Microsoft.IdentityModel PII (personally identifiable information)
+    /// logging switch should be enabled. This must only ever be true in Development, since
+    /// enabling it in Production logs emails, names, and other claims from JWT tokens.
+    /// </summary>
+    public static bool ShouldEnablePiiLogging(bool isDevelopment)
+    {
+        return isDevelopment;
+    }
+
+    /// <summary>
     /// Masks sensitive data in a connection string for safe logging
     /// </summary>
     public static string MaskConnectionString(string? connectionString)
