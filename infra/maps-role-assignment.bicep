@@ -29,7 +29,7 @@ param roleName string = 'Azure Maps Data Reader'
 // Azure Maps role definition IDs
 // See: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#azure-maps-data-reader
 var roleDefinitionIds = {
-  'Azure Maps Data Reader': '423170ca-a8f6-4b0f-8487-9e4eb8f49bca'
+  'Azure Maps Data Reader': '423170ca-a8f6-4b0f-8487-9e4eb8f49bfa'
   'Azure Maps Data Contributor': '8f5e0ce6-4f7b-4dcf-bddf-e6f48634a204'
   'Azure Maps Search and Render Data Reader': '6be48352-4f82-47c9-ad5e-0acacefdb005'
 }
