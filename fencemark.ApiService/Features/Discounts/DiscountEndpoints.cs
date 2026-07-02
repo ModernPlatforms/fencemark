@@ -65,7 +65,7 @@ public static class DiscountEndpoints
         return discount != null ? Results.Ok(discount) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateDiscount(
+    internal static async Task<IResult> CreateDiscount(
         DiscountRule request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -74,18 +74,22 @@ public static class DiscountEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
         // Validate promo code uniqueness if provided
         if (!string.IsNullOrEmpty(request.PromoCode))
         {
             var existingPromo = await db.DiscountRules
-                .AnyAsync(d => d.OrganizationId == currentUser.OrganizationId 
+                .AnyAsync(d => d.OrganizationId == organizationId
                     && d.PromoCode == request.PromoCode, ct);
-            
+
             if (existingPromo)
                 return Results.BadRequest(new { error = "Promo code already exists" });
         }
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+        request.OrganizationId = organizationId;
         request.Id = Guid.NewGuid().ToString();
         request.CreatedAt = DateTime.UtcNow;
         request.UpdatedAt = DateTime.UtcNow;

@@ -85,7 +85,7 @@ public static class GatePositionEndpoints
         return position != null ? Results.Ok(position) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateGatePosition(
+    internal static async Task<IResult> CreateGatePosition(
         GatePositionRequest request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -94,17 +94,21 @@ public static class GatePositionEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
         // Verify fence segment exists and belongs to the organization
         var segment = await db.FenceSegments
-            .FirstOrDefaultAsync(f => f.Id == request.FenceSegmentId && f.OrganizationId == currentUser.OrganizationId, ct);
-        
+            .FirstOrDefaultAsync(f => f.Id == request.FenceSegmentId && f.OrganizationId == organizationId, ct);
+
         if (segment == null)
             return Results.BadRequest(new { error = "Fence segment not found or access denied" });
 
         var position = new GatePosition
         {
             Id = Guid.NewGuid().ToString(),
-            OrganizationId = currentUser.OrganizationId ?? string.Empty,
+            OrganizationId = organizationId,
             FenceSegmentId = request.FenceSegmentId,
             GateTypeId = request.GateTypeId,
             Name = request.Name,

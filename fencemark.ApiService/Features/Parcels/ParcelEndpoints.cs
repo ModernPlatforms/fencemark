@@ -83,7 +83,7 @@ public static class ParcelEndpoints
         return parcel != null ? Results.Ok(parcel) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateParcel(
+    internal static async Task<IResult> CreateParcel(
         Parcel request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -92,14 +92,18 @@ public static class ParcelEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
         // Verify job exists and belongs to the organization
         var job = await db.Jobs
-            .FirstOrDefaultAsync(j => j.Id == request.JobId && j.OrganizationId == currentUser.OrganizationId, ct);
-        
+            .FirstOrDefaultAsync(j => j.Id == request.JobId && j.OrganizationId == organizationId, ct);
+
         if (job == null)
             return Results.BadRequest(new { error = "Job not found or access denied" });
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+        request.OrganizationId = organizationId;
         request.Id = Guid.NewGuid().ToString();
         request.CreatedAt = DateTime.UtcNow;
         request.UpdatedAt = DateTime.UtcNow;

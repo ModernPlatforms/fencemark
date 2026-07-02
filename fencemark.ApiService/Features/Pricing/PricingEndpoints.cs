@@ -64,7 +64,7 @@ public static class PricingEndpoints
         return config != null ? Results.Ok(config) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreatePricingConfig(
+    internal static async Task<IResult> CreatePricingConfig(
         PricingConfig request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -73,7 +73,11 @@ public static class PricingEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
+        request.OrganizationId = organizationId;
         request.Id = Guid.NewGuid().ToString();
         request.CreatedAt = DateTime.UtcNow;
         request.UpdatedAt = DateTime.UtcNow;
@@ -82,7 +86,7 @@ public static class PricingEndpoints
         if (request.IsDefault)
         {
             var existingDefaults = await db.PricingConfigs
-                .Where(p => p.OrganizationId == currentUser.OrganizationId && p.IsDefault)
+                .Where(p => p.OrganizationId == organizationId && p.IsDefault)
                 .ToListAsync(ct);
             
             foreach (var existing in existingDefaults)

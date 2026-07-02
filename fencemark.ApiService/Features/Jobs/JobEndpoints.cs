@@ -66,7 +66,7 @@ public static class JobEndpoints
         return job != null ? Results.Ok(job) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateJob(
+    internal static async Task<IResult> CreateJob(
         Job request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -75,7 +75,11 @@ public static class JobEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
+        request.OrganizationId = organizationId;
         request.Id = Guid.NewGuid().ToString();
         request.CreatedAt = DateTime.UtcNow;
         request.UpdatedAt = DateTime.UtcNow;

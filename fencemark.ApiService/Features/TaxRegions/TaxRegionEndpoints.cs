@@ -62,7 +62,7 @@ public static class TaxRegionEndpoints
         return region != null ? Results.Ok(region) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateTaxRegion(
+    internal static async Task<IResult> CreateTaxRegion(
         TaxRegion request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
@@ -71,7 +71,11 @@ public static class TaxRegionEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
+        var organizationId = currentUser.OrganizationId;
+        if (string.IsNullOrEmpty(organizationId))
+            return Results.BadRequest(new { error = "User must belong to an organization" });
+
+        request.OrganizationId = organizationId;
         request.Id = Guid.NewGuid().ToString();
         request.CreatedAt = DateTime.UtcNow;
         request.UpdatedAt = DateTime.UtcNow;
@@ -80,7 +84,7 @@ public static class TaxRegionEndpoints
         if (request.IsDefault)
         {
             var existingDefaults = await db.TaxRegions
-                .Where(t => t.OrganizationId == currentUser.OrganizationId && t.IsDefault)
+                .Where(t => t.OrganizationId == organizationId && t.IsDefault)
                 .ToListAsync(ct);
             
             foreach (var existing in existingDefaults)
