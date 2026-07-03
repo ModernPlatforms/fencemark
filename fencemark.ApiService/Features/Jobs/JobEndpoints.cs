@@ -66,8 +66,8 @@ public static class JobEndpoints
         return job != null ? Results.Ok(job) : Results.NotFound();
     }
 
-    private static async Task<IResult> CreateJob(
-        Job request,
+    internal static async Task<IResult> CreateJob(
+        JobRequest request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
         CancellationToken ct)
@@ -75,19 +75,35 @@ public static class JobEndpoints
         if (!currentUser.IsAuthenticated)
             return Results.Unauthorized();
 
-        request.OrganizationId = currentUser.OrganizationId ?? string.Empty;
-        request.Id = Guid.NewGuid().ToString();
-        request.CreatedAt = DateTime.UtcNow;
-        request.UpdatedAt = DateTime.UtcNow;
+        var job = new Job
+        {
+            Id = Guid.NewGuid().ToString(),
+            OrganizationId = currentUser.OrganizationId ?? string.Empty,
+            Name = request.Name,
+            CustomerName = request.CustomerName,
+            CustomerEmail = request.CustomerEmail,
+            CustomerPhone = request.CustomerPhone,
+            InstallationAddress = request.InstallationAddress,
+            Status = request.Status,
+            TotalLinearMetres = request.TotalLinearMetres,
+            LaborCost = request.LaborCost,
+            MaterialsCost = request.MaterialsCost,
+            TotalCost = request.TotalCost,
+            Notes = request.Notes,
+            EstimatedStartDate = request.EstimatedStartDate,
+            EstimatedCompletionDate = request.EstimatedCompletionDate,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
 
-        db.Jobs.Add(request);
+        db.Jobs.Add(job);
         await db.SaveChangesAsync(ct);
-        return Results.Created($"/api/jobs/{request.Id}", request);
+        return Results.Created($"/api/jobs/{job.Id}", job);
     }
 
-    private static async Task<IResult> UpdateJob(
+    internal static async Task<IResult> UpdateJob(
         string id,
-        Job request,
+        JobRequest request,
         ApplicationDbContext db,
         ICurrentUserService currentUser,
         CancellationToken ct)
@@ -135,4 +151,26 @@ public static class JobEndpoints
         await db.SaveChangesAsync(ct);
         return Results.Ok(new { success = true });
     }
+
+    /// <summary>
+    /// API contract for creating/updating a job. Deliberately excludes Id, OrganizationId,
+    /// CreatedAt, and navigation properties (Organization, LineItems) - those are either
+    /// server-controlled or would let a client mass-assign unrelated records via EF Core's
+    /// navigation-property binding if the Job domain model were bound directly.
+    /// </summary>
+    public record JobRequest(
+        string Name,
+        string CustomerName,
+        string? CustomerEmail,
+        string? CustomerPhone,
+        string? InstallationAddress,
+        JobStatus Status = JobStatus.Draft,
+        decimal TotalLinearMetres = 0,
+        decimal LaborCost = 0,
+        decimal MaterialsCost = 0,
+        decimal TotalCost = 0,
+        string? Notes = null,
+        DateTime? EstimatedStartDate = null,
+        DateTime? EstimatedCompletionDate = null
+    );
 }
