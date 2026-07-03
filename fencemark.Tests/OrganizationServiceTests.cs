@@ -114,6 +114,8 @@ public class OrganizationServiceTests
         // Assert
         Assert.True(response.Success);
         Assert.NotNull(response.InvitationToken);
+        Assert.False(Guid.TryParse(response.InvitationToken, out _),
+            "Invitation tokens must be cryptographically secure, not GUIDs.");
 
         var membership = await context.OrganizationMembers
             .FirstOrDefaultAsync(m => m.OrganizationId == org.Id && m.InvitationToken == response.InvitationToken);
