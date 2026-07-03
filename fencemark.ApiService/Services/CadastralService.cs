@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
 
 namespace fencemark.ApiService.Services;
@@ -85,12 +87,10 @@ public class StateConfig
 /// <summary>
 /// Implementation of cadastral service that queries Australian state cadastral APIs
 /// </summary>
-#pragma warning disable CS9113 // Parameter is unread - httpClientFactory reserved for API implementation
 public class CadastralService(
     IHttpClientFactory httpClientFactory,
     ILogger<CadastralService> logger,
     IOptions<CadastralOptions> options) : ICadastralService
-#pragma warning restore CS9113
 {
     private readonly CadastralOptions _options = options.Value;
 
@@ -207,20 +207,166 @@ public class CadastralService(
 
         try
         {
-            // TODO: Implement actual API calls for each state
-            // Each state has different API formats (ArcGIS REST, WFS, etc.)
-            logger.LogInformation(
-                "Would query {State} cadastral API at {Endpoint} for coordinates ({Lat}, {Lng})",
-                state, stateConfig.Endpoint, latitude, longitude);
-
-            // Placeholder - return null until real implementations are added
-            return null;
+            return state.ToUpperInvariant() switch
+            {
+                "NSW" => await GetNswParcelAsync(latitude, longitude, stateConfig.Endpoint, cancellationToken),
+                "VIC" => await GetVicParcelAsync(latitude, longitude, stateConfig.Endpoint, cancellationToken),
+                _ => LogUnimplementedState(state)
+            };
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error querying cadastral API for state {State}", state);
             return null;
         }
+    }
+
+    private CadastralParcelResult? LogUnimplementedState(string state)
+    {
+        logger.LogInformation("Cadastral API integration not yet implemented for state {State}", state);
+        return null;
+    }
+
+    /// <summary>
+    /// Queries the NSW_Cadastre "Lot" layer (id 9) on the NSW Spatial Services ArcGIS
+    /// MapServer for the parcel intersecting the given point.
+    /// See https://maps.six.nsw.gov.au/arcgis/rest/services/public/NSW_Cadastre/MapServer/9
+    /// </summary>
+    private Task<CadastralParcelResult?> GetNswParcelAsync(
+        double latitude,
+        double longitude,
+        string endpoint,
+        CancellationToken cancellationToken)
+        => QueryArcGisParcelAsync(
+            endpoint,
+            "NSW",
+            latitude,
+            longitude,
+            parcelIdField: "lotidstring",
+            fallbackIdField: "planlabel",
+            areaField: "shape_Area",
+            cancellationToken);
+
+    /// <summary>
+    /// Queries the Vicmap_Parcel "Parcel Map Polygons" layer (id 0) on the Victorian
+    /// Government's ArcGIS FeatureServer for the parcel intersecting the given point.
+    /// See https://services-ap1.arcgis.com/P744lA0wf4LlBZ84/ArcGIS/rest/services/Vicmap_Parcel/FeatureServer/0
+    /// </summary>
+    private Task<CadastralParcelResult?> GetVicParcelAsync(
+        double latitude,
+        double longitude,
+        string endpoint,
+        CancellationToken cancellationToken)
+        => QueryArcGisParcelAsync(
+            endpoint,
+            "VIC",
+            latitude,
+            longitude,
+            parcelIdField: "parcel_spi",
+            fallbackIdField: "parcel_plan_number",
+            areaField: "Shape__Area",
+            cancellationToken);
+
+    /// <summary>
+    /// Performs an ArcGIS REST "query" spatial intersection lookup for a point and returns
+    /// the first matching parcel as GeoJSON. Both NSW and VIC cadastral services expose this
+    /// same ArcGIS REST query API shape (just with different field names per state), so the
+    /// query/parsing logic is shared.
+    /// </summary>
+    private async Task<CadastralParcelResult?> QueryArcGisParcelAsync(
+        string endpoint,
+        string state,
+        double latitude,
+        double longitude,
+        string parcelIdField,
+        string fallbackIdField,
+        string areaField,
+        CancellationToken cancellationToken)
+    {
+        var queryUrl =
+            $"{endpoint.TrimEnd('/')}/query" +
+            $"?geometry={longitude.ToString(CultureInfo.InvariantCulture)},{latitude.ToString(CultureInfo.InvariantCulture)}" +
+            "&geometryType=esriGeometryPoint" +
+            "&inSR=4326" +
+            "&spatialRel=esriSpatialRelIntersects" +
+            "&outFields=*" +
+            "&returnGeometry=true" +
+            "&outSR=4326" +
+            "&f=geojson";
+
+        var client = httpClientFactory.CreateClient();
+        using var response = await client.GetAsync(queryUrl, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning(
+                "Cadastral API for {State} returned {StatusCode} for coordinates ({Lat}, {Lng})",
+                state, response.StatusCode, latitude, longitude);
+            return null;
+        }
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return ParseArcGisParcelResponse(body, state, parcelIdField, fallbackIdField, areaField);
+    }
+
+    /// <summary>
+    /// Parses an ArcGIS REST GeoJSON query response into a <see cref="CadastralParcelResult"/>.
+    /// Internal (rather than private) so it can be unit tested directly against canned
+    /// responses without requiring a live HTTP call.
+    /// </summary>
+    internal static CadastralParcelResult? ParseArcGisParcelResponse(
+        string geoJsonResponseBody,
+        string state,
+        string parcelIdField,
+        string fallbackIdField,
+        string areaField)
+    {
+        using var document = JsonDocument.Parse(geoJsonResponseBody);
+
+        if (!document.RootElement.TryGetProperty("features", out var features) ||
+            features.ValueKind != JsonValueKind.Array ||
+            features.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var firstFeature = features[0];
+        if (!firstFeature.TryGetProperty("properties", out var properties))
+        {
+            return null;
+        }
+
+        var parcelId = GetStringOrNull(properties, parcelIdField) ?? GetStringOrNull(properties, fallbackIdField);
+        var areaSquareMetres = GetDoubleOrNull(properties, areaField);
+
+        return new CadastralParcelResult(
+            State: state,
+            ParcelId: parcelId,
+            Address: null,
+            GeoJson: geoJsonResponseBody,
+            AreaSquareMetres: areaSquareMetres,
+            LastUpdated: DateTime.UtcNow);
+    }
+
+    private static string? GetStringOrNull(JsonElement properties, string fieldName)
+    {
+        if (!properties.TryGetProperty(fieldName, out var value) ||
+            value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+        {
+            return null;
+        }
+
+        return value.ValueKind == JsonValueKind.String ? value.GetString() : value.GetRawText();
+    }
+
+    private static double? GetDoubleOrNull(JsonElement properties, string fieldName)
+    {
+        if (!properties.TryGetProperty(fieldName, out var value) || value.ValueKind != JsonValueKind.Number)
+        {
+            return null;
+        }
+
+        return value.GetDouble();
     }
 
     private StateConfig? GetStateConfig(string state)
