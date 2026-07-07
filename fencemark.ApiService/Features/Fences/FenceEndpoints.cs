@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,7 @@ public static class FenceEndpoints
             .WithName("UpdateFenceType");
 
         group.MapDelete("/{id}", DeleteFence)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeleteFenceType");
 
         return app;

@@ -1,3 +1,4 @@
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using fencemark.ApiService.Services;
 
@@ -15,7 +16,7 @@ public static class OrganizationEndpoints
             .WithName("CreateOrganization");
 
         group.MapPut("/{organizationId}", UpdateOrganization)
-            .RequireAuthorization()
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("UpdateOrganization");
 
         group.MapGet("/{organizationId}/members", GetMembers)
@@ -23,18 +24,18 @@ public static class OrganizationEndpoints
             .WithName("GetOrganizationMembers");
 
         group.MapPost("/{organizationId}/invite", InviteUser)
-            .RequireAuthorization()
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("InviteUser");
 
         group.MapPost("/accept-invitation", AcceptInvitation)
             .WithName("AcceptInvitation");
 
         group.MapPut("/{organizationId}/members/role", UpdateRole)
-            .RequireAuthorization()
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("UpdateMemberRole");
 
         group.MapDelete("/{organizationId}/members/{userId}", RemoveMember)
-            .RequireAuthorization()
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("RemoveMember");
 
         group.MapPost("/seed-sample-data", SeedSampleData)

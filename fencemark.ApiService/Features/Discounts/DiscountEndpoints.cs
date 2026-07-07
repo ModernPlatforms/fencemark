@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ public static class DiscountEndpoints
             .WithName("UpdateDiscount");
 
         group.MapDelete("/{id}", DeleteDiscount)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeleteDiscount");
 
         group.MapPost("/validate-promo", ValidatePromoCode)

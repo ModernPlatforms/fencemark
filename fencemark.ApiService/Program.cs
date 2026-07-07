@@ -427,9 +427,13 @@ builder.Services.AddAuthentication(options =>
                         
                         if (membership != null)
                         {
-                            // Add OrganizationId claim to the principal
+                            // Add OrganizationId and Role claims to the principal.
+                            // Role uses the standard ClaimTypes.Role so ASP.NET Core's
+                            // role-based authorization (RequireRole/IsInRole) works without
+                            // extra configuration.
                             claims.Add(new Claim(CustomClaimTypes.OrganizationId, membership.OrganizationId));
-                            logger.LogInformation("[ApiService] Added ApplicationUserId and OrganizationId claims: UserId={UserId}, OrgId={OrgId}", user.Id, membership.OrganizationId);
+                            claims.Add(new Claim(ClaimTypes.Role, membership.Role.ToString()));
+                            logger.LogInformation("[ApiService] Added ApplicationUserId, OrganizationId, and Role claims: UserId={UserId}, OrgId={OrgId}, Role={Role}", user.Id, membership.OrganizationId, membership.Role);
                         }
                         else
                         {
@@ -511,7 +515,7 @@ builder.Services.Configure<AzureMapsOptions>(builder.Configuration.GetSection(Az
 builder.Services.AddSingleton<IAzureMapsTokenService, AzureMapsTokenService>();
 
 // Add authorization
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddFencemarkPolicies());
 
 var app = builder.Build();
 

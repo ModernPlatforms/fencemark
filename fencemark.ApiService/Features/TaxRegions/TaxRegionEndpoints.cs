@@ -1,5 +1,6 @@
 using fencemark.ApiService.Data;
 using fencemark.ApiService.Data.Models;
+using fencemark.ApiService.Infrastructure;
 using fencemark.ApiService.Middleware;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ public static class TaxRegionEndpoints
             .WithName("UpdateTaxRegion");
 
         group.MapDelete("/{id}", DeleteTaxRegion)
+            .RequireAuthorization(AuthorizationPolicies.AdminOnly)
             .WithName("DeleteTaxRegion");
 
         return app;

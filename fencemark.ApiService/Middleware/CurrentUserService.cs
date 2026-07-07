@@ -11,6 +11,7 @@ public interface ICurrentUserService
     string? UserId { get; }
     string? Email { get; }
     string? OrganizationId { get; }
+    string? Role { get; }
     bool IsAuthenticated { get; }
 }
 
@@ -49,6 +50,9 @@ public class CurrentUserService : ICurrentUserService
         ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue("email");
 
     public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+
+    public string? Role =>
+        _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role);
 
     public string? OrganizationId
     {
